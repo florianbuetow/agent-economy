@@ -2,22 +2,24 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 import pytest
 
 from reputation_service.core.state import FeedbackRecord
+from reputation_service.services import feedback as feedback_module
 from reputation_service.services.feedback import (
+    FeedbackReplay,
     ValidationError,
     get_feedback_by_id,
     get_feedback_for_agent,
     get_feedback_for_task,
-    is_visible,
+    reveal_timed_out_feedback,
     submit_feedback,
     validate_feedback,
 )
-from reputation_service.services.feedback_store import FeedbackStore
+from tests.fakes.sqlite_feedback_store import SqliteFeedbackStore as FeedbackStore
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -264,20 +266,26 @@ class TestSubmitFeedback:
     def test_submit_returns_record(self, tmp_path: Path) -> None:
         """Successful submission returns a FeedbackRecord."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, FeedbackRecord)
 
     def test_feedback_id_starts_with_fb(self, tmp_path: Path) -> None:
         """Generated feedback_id must start with 'fb-'."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, FeedbackRecord)
         assert result.feedback_id.startswith("fb-")
 
     def test_submitted_at_is_iso_timestamp(self, tmp_path: Path) -> None:
         """submitted_at must be a valid ISO format timestamp."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, FeedbackRecord)
         # Should not raise
         datetime.fromisoformat(result.submitted_at)
@@ -285,7 +293,9 @@ class TestSubmitFeedback:
     def test_record_stored_in_store(self, tmp_path: Path) -> None:
         """Record is retrievable from the store."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, FeedbackRecord)
         fetched = store.get_by_id(result.feedback_id)
         assert fetched is not None
@@ -294,7 +304,9 @@ class TestSubmitFeedback:
     def test_record_indexed_by_task(self, tmp_path: Path) -> None:
         """Record is retrievable by task_id."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, FeedbackRecord)
         records = store.get_by_task("task-1")
         assert any(r.feedback_id == result.feedback_id for r in records)
@@ -302,7 +314,9 @@ class TestSubmitFeedback:
     def test_record_indexed_by_target_agent(self, tmp_path: Path) -> None:
         """Record is retrievable by to_agent_id."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, FeedbackRecord)
         records = store.get_by_agent("agent-b")
         assert any(r.feedback_id == result.feedback_id for r in records)
@@ -310,7 +324,9 @@ class TestSubmitFeedback:
     def test_uniqueness_constraint_enforced(self, tmp_path: Path) -> None:
         """Duplicate (task_id, from_agent_id, to_agent_id) is rejected."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, FeedbackRecord)
         assert store.count() == 1
 
@@ -322,6 +338,7 @@ class TestSubmitFeedback:
             _valid_body(comment="Nice!"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         assert isinstance(result, FeedbackRecord)
         assert result.comment == "Nice!"
@@ -331,7 +348,9 @@ class TestSubmitFeedback:
         store = _make_store(tmp_path)
         body = _valid_body()
         del body["comment"]
-        result = submit_feedback(store, body, MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, body, MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, FeedbackRecord)
         assert result.comment is None
 
@@ -339,7 +358,9 @@ class TestSubmitFeedback:
         """Invalid body returns ValidationError, not FeedbackRecord."""
         store = _make_store(tmp_path)
         body = _valid_body(category="bogus")
-        result = submit_feedback(store, body, MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, body, MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, ValidationError)
         assert result.error == "invalid_category"
 
@@ -348,12 +369,33 @@ class TestSubmitFeedback:
 class TestFeedbackExists:
     """Duplicate (task_id, from_agent_id, to_agent_id) returns 409."""
 
-    def test_duplicate_submission_returns_feedback_exists(self, tmp_path: Path) -> None:
+    def test_identical_resubmission_is_a_replay(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        first = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        first = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(first, FeedbackRecord)
 
-        second = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        second = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
+        assert isinstance(second, FeedbackReplay)
+        assert second.record.feedback_id == first.feedback_id
+
+    def test_changed_resubmission_returns_feedback_exists(self, tmp_path: Path) -> None:
+        store = _make_store(tmp_path)
+        first = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
+        assert isinstance(first, FeedbackRecord)
+
+        second = submit_feedback(
+            store,
+            _valid_body(rating="dissatisfied"),
+            MAX_COMMENT_LENGTH,
+            force_visible=False,
+            source="peer",
+        )
         assert isinstance(second, ValidationError)
         assert second.error == "feedback_exists"
         assert second.status_code == 409
@@ -365,12 +407,14 @@ class TestFeedbackExists:
             _valid_body(task_id="task-1"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         result = submit_feedback(
             store,
             _valid_body(task_id="task-2"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         assert isinstance(result, FeedbackRecord)
 
@@ -381,12 +425,14 @@ class TestFeedbackExists:
             _valid_body(from_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         result = submit_feedback(
             store,
             _valid_body(from_agent_id="agent-c"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         assert isinstance(result, FeedbackRecord)
 
@@ -398,7 +444,9 @@ class TestVisibility:
     def test_first_feedback_is_sealed(self, tmp_path: Path) -> None:
         """First feedback in a pair has visible=False."""
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, FeedbackRecord)
         assert result.visible is False
 
@@ -410,6 +458,7 @@ class TestVisibility:
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         assert isinstance(first, FeedbackRecord)
         assert first.visible is False
@@ -419,6 +468,7 @@ class TestVisibility:
             _valid_body(from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         assert isinstance(second, FeedbackRecord)
         assert second.visible is True
@@ -435,6 +485,7 @@ class TestVisibility:
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         assert isinstance(first, FeedbackRecord)
 
@@ -443,6 +494,7 @@ class TestVisibility:
             _valid_body(from_agent_id="agent-c", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         # Re-fetch first from store to check visibility
         first_refetched = store.get_by_id(first.feedback_id)
@@ -451,83 +503,54 @@ class TestVisibility:
 
 
 @pytest.mark.unit
-class TestIsVisible:
-    """is_visible returns True for visible records or timed-out sealed records."""
+class TestRevealTimedOutFeedback:
+    """The sweep reveals sealed rows at or past the timeout and nothing else."""
 
-    def test_visible_record_returns_true(self) -> None:
-        record = FeedbackRecord(
-            feedback_id="fb-1",
-            task_id="task-1",
-            from_agent_id="agent-a",
-            to_agent_id="agent-b",
-            category="delivery_quality",
-            rating="satisfied",
-            comment=None,
-            submitted_at=datetime.now(UTC).isoformat(),
-            visible=True,
+    def _sealed(self, store: FeedbackStore, task_id: str) -> FeedbackRecord:
+        result = submit_feedback(
+            store,
+            _valid_body(task_id=task_id),
+            MAX_COMMENT_LENGTH,
+            force_visible=False,
+            source="peer",
         )
-        assert is_visible(record, REVEAL_TIMEOUT) is True
+        assert isinstance(result, FeedbackRecord)
+        return result
 
-    def test_sealed_record_within_timeout_returns_false(self) -> None:
-        record = FeedbackRecord(
-            feedback_id="fb-1",
-            task_id="task-1",
-            from_agent_id="agent-a",
-            to_agent_id="agent-b",
-            category="delivery_quality",
-            rating="satisfied",
-            comment=None,
-            submitted_at=datetime.now(UTC).isoformat(),
-            visible=False,
-        )
-        assert is_visible(record, REVEAL_TIMEOUT) is False
+    def _freeze(self, monkeypatch: pytest.MonkeyPatch, now: datetime) -> None:
+        monkeypatch.setattr(feedback_module, "_clock", lambda: now)
 
-    def test_sealed_record_past_timeout_returns_true(self) -> None:
-        past_time = datetime.now(UTC) - timedelta(seconds=REVEAL_TIMEOUT + 1)
-        record = FeedbackRecord(
-            feedback_id="fb-1",
-            task_id="task-1",
-            from_agent_id="agent-a",
-            to_agent_id="agent-b",
-            category="delivery_quality",
-            rating="satisfied",
-            comment=None,
-            submitted_at=past_time.isoformat(),
-            visible=False,
-        )
-        assert is_visible(record, REVEAL_TIMEOUT) is True
+    def test_sealed_record_within_timeout_stays_sealed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        store = _make_store(tmp_path)
+        record = self._sealed(store, "task-1")
+        submitted = datetime.fromisoformat(record.submitted_at)
+        self._freeze(monkeypatch, submitted + timedelta(seconds=REVEAL_TIMEOUT - 1))
+        assert reveal_timed_out_feedback(store, REVEAL_TIMEOUT) == 0
 
-    def test_sealed_record_at_exact_timeout_returns_true(self) -> None:
-        """At exactly the timeout boundary, record should be visible."""
-        past_time = datetime.now(UTC) - timedelta(seconds=REVEAL_TIMEOUT)
-        record = FeedbackRecord(
-            feedback_id="fb-1",
-            task_id="task-1",
-            from_agent_id="agent-a",
-            to_agent_id="agent-b",
-            category="delivery_quality",
-            rating="satisfied",
-            comment=None,
-            submitted_at=past_time.isoformat(),
-            visible=False,
-        )
-        # At exactly the timeout boundary, elapsed >= timeout should be true
-        assert is_visible(record, REVEAL_TIMEOUT) is True
+    def test_sealed_record_at_exact_timeout_is_revealed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        store = _make_store(tmp_path)
+        record = self._sealed(store, "task-1")
+        submitted = datetime.fromisoformat(record.submitted_at)
+        self._freeze(monkeypatch, submitted + timedelta(seconds=REVEAL_TIMEOUT))
+        assert reveal_timed_out_feedback(store, REVEAL_TIMEOUT) == 1
+        assert get_feedback_by_id(store, record.feedback_id) is not None
 
-    def test_sealed_record_with_zero_timeout_returns_true(self) -> None:
-        """With timeout=0, any sealed record is immediately visible."""
-        record = FeedbackRecord(
-            feedback_id="fb-1",
-            task_id="task-1",
-            from_agent_id="agent-a",
-            to_agent_id="agent-b",
-            category="delivery_quality",
-            rating="satisfied",
-            comment=None,
-            submitted_at=datetime.now(UTC).isoformat(),
-            visible=False,
+    def test_zero_timeout_reveals_immediately(self, tmp_path: Path) -> None:
+        store = _make_store(tmp_path)
+        record = self._sealed(store, "task-1")
+        assert reveal_timed_out_feedback(store, 0) == 1
+        assert get_feedback_by_id(store, record.feedback_id) is not None
+
+    def test_already_visible_records_are_not_counted(self, tmp_path: Path) -> None:
+        store = _make_store(tmp_path)
+        submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=True, source="court"
         )
-        assert is_visible(record, 0) is True
+        assert reveal_timed_out_feedback(store, 0) == 0
 
 
 @pytest.mark.unit
@@ -536,15 +559,17 @@ class TestGetFeedbackById:
 
     def test_returns_none_for_missing_id(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        assert get_feedback_by_id(store, "fb-nonexistent", REVEAL_TIMEOUT) is None
+        assert get_feedback_by_id(store, "fb-nonexistent") is None
 
     def test_returns_none_for_sealed_feedback(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, FeedbackRecord)
         assert result.visible is False
         # Sealed record should not be returned
-        assert get_feedback_by_id(store, result.feedback_id, REVEAL_TIMEOUT) is None
+        assert get_feedback_by_id(store, result.feedback_id) is None
 
     def test_returns_record_for_visible_feedback(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
@@ -554,25 +579,30 @@ class TestGetFeedbackById:
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         second = submit_feedback(
             store,
             _valid_body(from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         assert isinstance(second, FeedbackRecord)
         assert second.visible is True
-        fetched = get_feedback_by_id(store, second.feedback_id, REVEAL_TIMEOUT)
+        fetched = get_feedback_by_id(store, second.feedback_id)
         assert fetched is not None
         assert fetched.feedback_id == second.feedback_id
 
     def test_returns_record_for_timed_out_feedback(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        result = submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
+        result = submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
         assert isinstance(result, FeedbackRecord)
-        # Use a timeout of 0 to simulate timeout behavior
-        fetched = get_feedback_by_id(store, result.feedback_id, 0)
+        # A zero-timeout sweep durably reveals it; reads then follow the stored flag.
+        assert reveal_timed_out_feedback(store, 0) == 1
+        fetched = get_feedback_by_id(store, result.feedback_id)
         assert fetched is not None
 
 
@@ -582,7 +612,7 @@ class TestGetFeedbackForTask:
 
     def test_empty_store_returns_empty_list(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        result = get_feedback_for_task(store, "task-1", REVEAL_TIMEOUT)
+        result = get_feedback_for_task(store, "task-1")
         assert result == []
 
     def test_unknown_task_returns_empty_list(self, tmp_path: Path) -> None:
@@ -592,14 +622,17 @@ class TestGetFeedbackForTask:
             _valid_body(task_id="task-1"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
-        result = get_feedback_for_task(store, "task-999", REVEAL_TIMEOUT)
+        result = get_feedback_for_task(store, "task-999")
         assert result == []
 
     def test_sealed_feedback_not_returned(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
-        result = get_feedback_for_task(store, "task-1", REVEAL_TIMEOUT)
+        submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
+        result = get_feedback_for_task(store, "task-1")
         assert result == []
 
     def test_visible_feedback_returned(self, tmp_path: Path) -> None:
@@ -609,14 +642,16 @@ class TestGetFeedbackForTask:
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         submit_feedback(
             store,
             _valid_body(from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
-        result = get_feedback_for_task(store, "task-1", REVEAL_TIMEOUT)
+        result = get_feedback_for_task(store, "task-1")
         assert len(result) == 2
 
     def test_results_sorted_by_submitted_at(self, tmp_path: Path) -> None:
@@ -626,14 +661,16 @@ class TestGetFeedbackForTask:
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         submit_feedback(
             store,
             _valid_body(from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
-        records = get_feedback_for_task(store, "task-1", REVEAL_TIMEOUT)
+        records = get_feedback_for_task(store, "task-1")
         timestamps = [r.submitted_at for r in records]
         assert timestamps == sorted(timestamps)
 
@@ -644,19 +681,23 @@ class TestGetFeedbackForAgent:
 
     def test_empty_store_returns_empty_list(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        result = get_feedback_for_agent(store, "agent-b", REVEAL_TIMEOUT)
+        result = get_feedback_for_agent(store, "agent-b")
         assert result == []
 
     def test_unknown_agent_returns_empty_list(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
-        result = get_feedback_for_agent(store, "agent-zzz", REVEAL_TIMEOUT)
+        submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
+        result = get_feedback_for_agent(store, "agent-zzz")
         assert result == []
 
     def test_sealed_feedback_not_returned(self, tmp_path: Path) -> None:
         store = _make_store(tmp_path)
-        submit_feedback(store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False)
-        result = get_feedback_for_agent(store, "agent-b", REVEAL_TIMEOUT)
+        submit_feedback(
+            store, _valid_body(), MAX_COMMENT_LENGTH, force_visible=False, source="peer"
+        )
+        result = get_feedback_for_agent(store, "agent-b")
         assert result == []
 
     def test_visible_feedback_returned_for_target_agent(self, tmp_path: Path) -> None:
@@ -666,15 +707,17 @@ class TestGetFeedbackForAgent:
             _valid_body(from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         submit_feedback(
             store,
             _valid_body(from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         # agent-b has one visible feedback record (from agent-a)
-        result = get_feedback_for_agent(store, "agent-b", REVEAL_TIMEOUT)
+        result = get_feedback_for_agent(store, "agent-b")
         assert len(result) == 1
         assert result[0].to_agent_id == "agent-b"
 
@@ -686,25 +729,29 @@ class TestGetFeedbackForAgent:
             _valid_body(task_id="task-1", from_agent_id="agent-a", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         submit_feedback(
             store,
             _valid_body(task_id="task-1", from_agent_id="agent-b", to_agent_id="agent-a"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         submit_feedback(
             store,
             _valid_body(task_id="task-2", from_agent_id="agent-c", to_agent_id="agent-b"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
         submit_feedback(
             store,
             _valid_body(task_id="task-2", from_agent_id="agent-b", to_agent_id="agent-c"),
             MAX_COMMENT_LENGTH,
             force_visible=False,
+            source="peer",
         )
-        records = get_feedback_for_agent(store, "agent-b", REVEAL_TIMEOUT)
+        records = get_feedback_for_agent(store, "agent-b")
         timestamps = [r.submitted_at for r in records]
         assert timestamps == sorted(timestamps)

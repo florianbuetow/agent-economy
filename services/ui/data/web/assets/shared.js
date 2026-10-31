@@ -25,6 +25,83 @@
     return Math.floor(seconds / 3600) + 'h ago';
   }
 
+  function escapeHTML(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function bindStaticActions() {
+    document.querySelectorAll('[data-nav]').forEach(function(element) {
+      if (element.tagName === 'A' && element.hasAttribute('href')) return;
+      element.addEventListener('click', function() {
+        window.location = element.getAttribute('data-nav');
+      });
+    });
+    document.querySelectorAll('[data-scroll-target]').forEach(function(element) {
+      element.addEventListener('click', function() {
+        var target = document.getElementById(element.getAttribute('data-scroll-target'));
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+  }
+
+  // Every page nav carries Jobs and Post anchors. Pages whose HTML already has them are left alone.
+  function ensureJobNav() {
+    document.querySelectorAll('.topnav-links').forEach(function(container) {
+      if (container.querySelector('[data-job-nav]')) return;
+      var legacy = container.querySelector('a[href="/task.html"], [data-nav="/task.html"]');
+      var jobs = document.createElement('a');
+      jobs.className = 'topnav-link';
+      jobs.href = '/task.html?view=list';
+      jobs.textContent = 'Jobs';
+      jobs.setAttribute('data-job-nav', 'jobs');
+      var post = document.createElement('a');
+      post.className = 'topnav-link';
+      post.href = '/task.html';
+      post.textContent = 'Post';
+      post.setAttribute('data-job-nav', 'post');
+      if (legacy) {
+        legacy.parentNode.insertBefore(jobs, legacy);
+        legacy.parentNode.insertBefore(post, legacy);
+        legacy.remove();
+      } else {
+        container.appendChild(jobs);
+        container.appendChild(post);
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', ensureJobNav);
+  document.addEventListener('DOMContentLoaded', bindStaticActions);
+
+  var browserConfigPromise = null;
+
+  async function proxyFetch(url, options) {
+    var target = new URL(url, window.location.origin);
+    var requestOptions = Object.assign({}, options || {});
+    var method = String(requestOptions.method || '').toUpperCase();
+    if (target.origin !== window.location.origin || target.username || target.password ||
+        target.hash || !target.pathname.startsWith('/api/proxy/') ||
+        ['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(method) === -1) {
+      throw new Error('Browser writes require a same-origin proxy target');
+    }
+    if (!browserConfigPromise) {
+      browserConfigPromise = fetch('/api/proxy/browser-config').then(function(response) {
+        if (!response.ok) throw new Error('Browser security configuration unavailable');
+        return response.json();
+      });
+    }
+    var browserConfig = await browserConfigPromise;
+    requestOptions.method = method;
+    requestOptions.headers = new Headers(requestOptions.headers || {});
+    requestOptions.headers.set(browserConfig.csrf_header_name, browserConfig.csrf_header_value);
+    return fetch(target.href, requestOptions);
+  }
+
   function renderSparkSVG(data, w, h, fill) {
     if (!data || data.length < 2) {
       return '<svg class="sparkline" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '"></svg>';
@@ -137,6 +214,19 @@
   }
 
   /**
+   * Canonical task-creation-trend -> visual mapping. The trend vocabulary
+   * ('increasing'/'decreasing'/'stable', matching the API's economy_phase.
+   * task_creation_trend) is defined ONLY here; every consumer (landing.js,
+   * observatory.js) reads its arrow/up/color from this.
+   * Returns { arrow, up, color }.
+   */
+  function trendVisual(trend) {
+    if (trend === 'increasing') return { arrow: '↑', up: true, color: 'var(--green)' };
+    if (trend === 'decreasing') return { arrow: '↓', up: false, color: 'var(--red)' };
+    return { arrow: '→', up: null, color: 'var(--amber)' };
+  }
+
+  /**
    * Generate a deterministic color from an agent ID string.
    */
   function agentColor(agentId) {
@@ -182,8 +272,7 @@
             es: a.stats.spec_quality.extremely_satisfied,
             s: a.stats.spec_quality.satisfied,
             d: a.stats.spec_quality.dissatisfied
-          },
-          streak: a.stats.current_streak || 0
+          }
         });
       });
 
@@ -280,53 +369,86 @@
     return source;
   }
 
+  // ── Event / badge / status taxonomies (single source of truth) ──
+  // These vocabularies are declared exactly once here and consumed by every
+  // page script (observatory.js, task.js) via the ATE namespace. The frontend
+  // badge taxonomy is intentionally finer than the backend one; do not unify.
+
+  // Canonical event_type -> feed type.
+  var EVENT_TYPE_TO_FEED_TYPE = {
+    'task.created': 'TASK',
+    'bid.submitted': 'BID',
+    'task.accepted': 'CONTRACT',
+    'asset.uploaded': 'SUBMIT',
+    'task.submitted': 'SUBMIT',
+    'task.approved': 'PAYOUT',
+    'task.auto_approved': 'PAYOUT',
+    'task.disputed': 'DISPUTE',
+    'task.ruled': 'RULING',
+    'task.cancelled': 'CANCEL',
+    'task.expired': 'CANCEL',
+    'escrow.locked': 'ESCROW',
+    'escrow.released': 'PAYOUT',
+    'escrow.split': 'PAYOUT',
+    'feedback.revealed': 'REP',
+    'salary.paid': 'SALARY',
+    'agent.registered': 'AGENT'
+  };
+
+  // Canonical feed type -> badge CSS class. The key order defines the
+  // observatory filter order; SALARY is not user-filterable so it is listed
+  // last and excluded from EVENT_FILTER_TYPES below.
+  var FEED_TYPE_TO_BADGE_CLASS = {
+    'TASK': 'badge-task',
+    'BID': 'badge-bid',
+    'PAYOUT': 'badge-payout',
+    'CONTRACT': 'badge-contract',
+    'ESCROW': 'badge-escrow',
+    'SUBMIT': 'badge-submit',
+    'REP': 'badge-rep',
+    'DISPUTE': 'badge-dispute',
+    'RULING': 'badge-ruling',
+    'CANCEL': 'badge-cancel',
+    'AGENT': 'badge-agent',
+    'SALARY': 'badge-salary'
+  };
+
+  // Observatory feed filters: 'ALL' plus every filterable feed type (all badge
+  // types except SALARY). Derived so adding a feed type updates the filters too.
+  var EVENT_FILTER_TYPES = ['ALL'].concat(
+    Object.keys(FEED_TYPE_TO_BADGE_CLASS).filter(function(t) { return t !== 'SALARY'; })
+  );
+
+  // Canonical task status -> { text, cls } badge mapping (frontend).
+  var TASK_STATUS_BADGE = {
+    'open': { text: 'OPEN', cls: 'status-open' },
+    'accepted': { text: 'ACTIVE', cls: 'status-active' },
+    'submitted': { text: 'SUBMITTED', cls: 'status-submitted' },
+    'disputed': { text: 'DISPUTED', cls: 'status-disputed' },
+    'ruled': { text: 'RULED', cls: 'status-ruled' },
+    'approved': { text: 'APPROVED', cls: 'status-approved' },
+    'cancelled': { text: 'CANCELLED', cls: 'status-open' },
+    'expired': { text: 'EXPIRED', cls: 'status-open' }
+  };
+
   /**
    * Map an API event object to a feed display object.
    * Returns { type, badge, text, time }.
    */
   function mapEventToFeed(event) {
-    var typeMap = {
-      'task.created': 'TASK',
-      'bid.submitted': 'BID',
-      'task.accepted': 'CONTRACT',
-      'asset.uploaded': 'SUBMIT',
-      'task.submitted': 'SUBMIT',
-      'task.approved': 'PAYOUT',
-      'task.auto_approved': 'PAYOUT',
-      'task.disputed': 'DISPUTE',
-      'task.ruled': 'RULING',
-      'task.cancelled': 'CANCEL',
-      'task.expired': 'CANCEL',
-      'escrow.locked': 'ESCROW',
-      'escrow.released': 'PAYOUT',
-      'escrow.split': 'PAYOUT',
-      'feedback.revealed': 'REP',
-      'salary.paid': 'SALARY',
-      'agent.registered': 'AGENT'
-    };
-
-    var badgeMap = {
-      'TASK': 'badge-task',
-      'BID': 'badge-bid',
-      'CONTRACT': 'badge-contract',
-      'SUBMIT': 'badge-submit',
-      'PAYOUT': 'badge-payout',
-      'DISPUTE': 'badge-dispute',
-      'RULING': 'badge-ruling',
-      'CANCEL': 'badge-cancel',
-      'ESCROW': 'badge-escrow',
-      'REP': 'badge-rep',
-      'SALARY': 'badge-salary',
-      'AGENT': 'badge-agent'
-    };
-
-    var feedType = typeMap[event.event_type] || 'TASK';
+    var feedType = EVENT_TYPE_TO_FEED_TYPE[event.event_type] || 'TASK';
+    var payload = event.payload && typeof event.payload === 'object' ? event.payload : {};
     return {
       type: feedType,
-      badge: badgeMap[feedType] || 'badge-task',
+      badge: FEED_TYPE_TO_BADGE_CLASS[feedType] || 'badge-task',
       text: event.summary || event.event_type,
       time: new Date(event.timestamp).getTime(),
-      eventId: event.event_id
+      eventId: event.event_id,
+      eventType: event.event_type,
+      isAssetUpload: event.event_type === 'asset.uploaded',
+      taskId: event.task_id || null,
+      agentId: event.agent_id || null,
+      assetId: event.asset_id || payload.asset_id || null
     };
   }
 
@@ -376,28 +498,28 @@
     var topPoster = AGENTS.filter(function(a) { return a.role === 'poster'; }).sort(function(a, b) { return b.spent - a.spent; })[0];
 
     var items = [
-      { sym: 'TASKS/ALL', val: S.tasks.completedAll.toLocaleString(), chg: '+' + S.tasks.completed24h + ' today', up: true },
-      { sym: 'GDP/TOTAL', val: S.gdp.total.toLocaleString() + ' \u00a9', chg: '+' + S.gdp.last24h.toLocaleString() + ' 24h', up: true },
+      { sym: 'TASKS/ALL', val: S.tasks.completedAll.toLocaleString(), chg: '+' + S.tasks.completed24h + ' today', up: true, href: '/task.html?view=list' },
+      { sym: 'GDP/TOTAL', val: S.gdp.total.toLocaleString() + ' \u00a9', chg: '+' + S.gdp.last24h.toLocaleString() + ' 24h', up: true, href: '/quarterly-report.html' },
       { sym: 'ESCROW/LOCK', val: S.escrow.locked.toLocaleString() + ' \u00a9', chg: 'in escrow', up: null },
       { sym: 'PAID/OUT', val: totalPaidOut.toLocaleString() + ' \u00a9', chg: 'released', up: true },
       { sym: 'GDP/RATE', val: S.gdp.rate.toFixed(1) + ' \u00a9/hr', chg: S.gdp.delta1h != null ? (S.gdp.delta1h >= 0 ? '+' : '') + S.gdp.delta1h.toFixed(1) + '%' : '\u2013', up: S.gdp.delta1h != null ? S.gdp.delta1h >= 0 : null },
-      { sym: 'POST/RATE', val: S.tasks.postingRate.toFixed(1) + '/hr', chg: 'new tasks', up: null },
-      { sym: 'BID/AVG', val: S.labor.avgBids.toFixed(1) + '/task', chg: S.labor.deltaAvgBids != null ? (S.labor.deltaAvgBids >= 0 ? '+' : '') + S.labor.deltaAvgBids.toFixed(1) + '%' : '\u2013', up: S.labor.deltaAvgBids != null ? S.labor.deltaAvgBids >= 0 : null },
-      { sym: 'COMP/RATE', val: (S.tasks.completionRate * 100).toFixed(0) + '%', chg: S.tasks.deltaCompleted24h != null ? (S.tasks.deltaCompleted24h >= 0 ? '+' : '') + S.tasks.deltaCompleted24h.toFixed(1) + '%' : '\u2013', up: S.tasks.deltaCompleted24h != null ? S.tasks.deltaCompleted24h >= 0 : null },
-      { sym: 'SPEC/QUAL', val: Math.round(S.specQ.avg) + '%', chg: (S.specQ.delta >= 0 ? '\u2191' : '\u2193') + Math.abs(S.specQ.delta).toFixed(1) + '%', up: S.specQ.delta > 0 ? true : S.specQ.delta < 0 ? false : null },
+      { sym: 'POST/RATE', val: S.tasks.postingRate.toFixed(1) + '/hr', chg: 'new tasks', up: null, href: '/task.html?view=list' },
+      { sym: 'BID/AVG', val: S.labor.avgBids.toFixed(1) + '/task', chg: S.labor.deltaAvgBids != null ? (S.labor.deltaAvgBids >= 0 ? '+' : '') + S.labor.deltaAvgBids.toFixed(1) + '%' : '\u2013', up: S.labor.deltaAvgBids != null ? S.labor.deltaAvgBids >= 0 : null, href: '/quarterly-report.html' },
+      { sym: 'COMP/RATE', val: (S.tasks.completionRate * 100).toFixed(0) + '%', chg: S.tasks.deltaCompleted24h != null ? (S.tasks.deltaCompleted24h >= 0 ? '+' : '') + S.tasks.deltaCompleted24h.toFixed(1) + '%' : '\u2013', up: S.tasks.deltaCompleted24h != null ? S.tasks.deltaCompleted24h >= 0 : null, href: '/quarterly-report.html' },
+      { sym: 'SPEC/QUAL', val: Math.round(S.specQ.avg) + '%', chg: (S.specQ.delta >= 0 ? '\u2191' : '\u2193') + Math.abs(S.specQ.delta).toFixed(1) + '%', up: S.specQ.delta > 0 ? true : S.specQ.delta < 0 ? false : null, href: '/quarterly-report.html' },
       { sym: 'UNEMP', val: (S.labor.unemployment * 100).toFixed(1) + '%', chg: '\u2013', up: null },
-      { sym: 'LATENCY', val: S.labor.acceptLatency.toFixed(0) + ' min', chg: 'avg accept', up: null },
-      { sym: 'AVG/RWD', val: Math.round(S.labor.avgReward) + ' \u00a9', chg: 'per task', up: null }
+      { sym: 'LATENCY', val: S.labor.acceptLatency.toFixed(0) + ' min', chg: 'avg accept', up: null, href: '/quarterly-report.html' },
+      { sym: 'AVG/RWD', val: Math.round(S.labor.avgReward) + ' \u00a9', chg: 'per task', up: null, href: '/quarterly-report.html' }
     ];
 
     if (topEarner) {
-      items.push({ sym: 'TOP/EARNER', val: topEarner.name, chg: topEarner.earned + ' \u00a9 earned', up: true });
+      items.push({ sym: 'TOP/EARNER', val: topEarner.name, chg: topEarner.earned + ' \u00a9 earned', up: true, href: '/agent.html?agent_id=' + encodeURIComponent(topEarner.id) });
     }
     if (topPoster) {
-      items.push({ sym: 'TOP/POSTER', val: topPoster.name, chg: topPoster.spent + ' \u00a9 spent', up: null });
+      items.push({ sym: 'TOP/POSTER', val: topPoster.name, chg: topPoster.spent + ' \u00a9 spent', up: null, href: '/agent.html?agent_id=' + encodeURIComponent(topPoster.id) });
     }
 
-    items.push({ sym: 'AGENTS/REG', val: String(S.agents.total), chg: S.agents.active + ' active', up: null });
+    items.push({ sym: 'AGENTS/REG', val: String(S.agents.total), chg: S.agents.active + ' active', up: null, href: '/agent.html' });
 
     var doubled = items.concat(items);
     trackEl.innerHTML = doubled.map(function(item) {
@@ -406,7 +528,8 @@
         return '<span class="bt-item"><span class="bt-alert" style="border-color:' + color + ';color:' + color + '">' + (item.alert === 'alert' ? '\u26a1 ALERT' : '\u2139 INFO') + '</span><span>' + item.text + '</span><span class="bt-sep">\u00b7</span></span>';
       }
       var color2 = item.up === true ? 'var(--green)' : item.up === false ? 'var(--red)' : 'var(--text-dim)';
-      return '<span class="bt-item"><span class="bt-sym">' + item.sym + '</span><span class="bt-val">' + item.val + '</span><span class="bt-chg" style="color:' + color2 + '">' + item.chg + '</span><span class="bt-sep">\u00b7</span></span>';
+      var content = '<span class="bt-sym">' + escapeHTML(item.sym) + '</span><span class="bt-val">' + escapeHTML(item.val) + '</span><span class="bt-chg" style="color:' + color2 + '">' + escapeHTML(item.chg) + '</span><span class="bt-sep">\u00b7</span>';
+      return item.href ? '<a class="bt-item" href="' + escapeHTML(item.href) + '">' + content + '</a>' : '<span class="bt-item">' + content + '</span>';
     }).join('');
   }
 
@@ -414,11 +537,19 @@
   window.ATE = {
     AGENTS: AGENTS,
     S: S,
+    // Taxonomies (single source of truth)
+    EVENT_TYPE_TO_FEED_TYPE: EVENT_TYPE_TO_FEED_TYPE,
+    FEED_TYPE_TO_BADGE_CLASS: FEED_TYPE_TO_BADGE_CLASS,
+    EVENT_FILTER_TYPES: EVENT_FILTER_TYPES,
+    TASK_STATUS_BADGE: TASK_STATUS_BADGE,
     // Utilities
     timeAgo: timeAgo,
     renderSparkSVG: renderSparkSVG,
     animateCounter: animateCounter,
     agentColor: agentColor,
+    trendVisual: trendVisual,
+    escapeHTML: escapeHTML,
+    proxyFetch: proxyFetch,
     // API client
     fetchMetrics: fetchMetrics,
     fetchAgents: fetchAgents,

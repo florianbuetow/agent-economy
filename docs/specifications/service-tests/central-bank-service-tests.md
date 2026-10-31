@@ -1,5 +1,36 @@
 # Central Bank Service — Production Release Test Specification
 
+## MP-04 receipt acceptance amendment
+
+This amendment supersedes historical flat-response and reference-only replay assertions below;
+their monetary, authorization and no-effect intent remains required through the receipt contract.
+The supplemental `test_mp04_public_settlement_race.py` sends opposing public release/split requests
+through signed Gateway middleware into independent SQLite writers. It asserts one winner, exact
+winner-referencing conflict, immutable replay, balances, receipt/leg/transaction/event identity and
+no duplicated effects. It is green boundary coverage of already red-proven native behavior.
+
+Use the [financial receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md) for the
+new request/response and replay assertions. Valid monetary fixtures must provide explicit
+operation IDs and settlement references. Reconcile old flat-response assertions to the new
+receipt/result/current projection while preserving their money, authentication and event intent.
+Fresh negative tests must prove missing/invalid IDs, changed kind/parties/amount/percentage,
+true winning-operation conflicts, and no mutation of any ledger/event/receipt surface.
+
+Response-loss tests must prove a real commit before loss, then exact receipt replay for release
+and 0/partial/100% splits. Receipt IDs must join to actual persisted event and ledger facts; hash
+assertions compute the canonical business request independently. Split always exposes two logical
+legs, and a zero-value recipient need not have a Bank account. Lock replay retains its immutable
+receipt while truthfully projecting settled status. These baseline proofs do not close T-116 or
+replace separate issuance, concurrency, migration/history and atomic rollback coverage.
+
+The SDK and shared Bank client must reject native success bodies whose operation identity, kind,
+canonical hash, source, result, ordered legs or current projection do not match the submitted
+command. Required identity and timestamp text is nonempty valid UTF-8; receipt version and event
+identity are strict integers. Zero split legs retain null transaction and balance fields. The
+funding commands must fail before success output or logs on invalid receipts and close clients.
+Zero-account creation validates the current account projection while permitting a positive current
+balance after a concurrent credit. Financial route logs use the immutable receipt and leg facts.
+
 ## Purpose
 
 This document is the release-gate test specification for the Central Bank Service.
@@ -10,7 +41,9 @@ It is intentionally strict and unambiguous:
 - Any behavior not listed here is out of scope for release sign-off.
 
 This document focuses only on core functionality and endpoint abuse resistance.
-Nice-to-have tests are intentionally excluded.
+Nice-to-have tests are intentionally excluded. Authentication/authorization concerns
+(JWS verification mechanics, the two-tier local-vs-Identity verification split, and
+error precedence) are specified separately in `central-bank-service-auth-tests.md`.
 
 ---
 
@@ -20,42 +53,45 @@ All failing responses must be JSON in this format:
 
 ```json
 {
-  "error": "ERROR_CODE",
+  "error": "error_code",
   "message": "Human-readable description",
   "details": {}
 }
 ```
 
-Required status/error mappings:
+Error codes are lowercase `snake_case` (R1). Required status/error mappings:
 
 | Status | Error Code                  | Required When |
-|--------|-----------------------------|---------------|
-| 400    | `INVALID_JWS`              | JWS token is malformed, missing, empty, or not a string |
-| 400    | `INVALID_JSON`             | Request body is not valid JSON or not a JSON object |
-| 400    | `INVALID_PAYLOAD`          | JWS payload missing required fields, wrong `action`, or wrong field type for a payload field |
-| 400    | `INVALID_AMOUNT`           | Amount or balance is not a valid integer in the required range |
-| 400    | `PAYLOAD_MISMATCH`         | JWS payload field does not match URL parameter, or duplicate credit reference with different amount |
-| 402    | `INSUFFICIENT_FUNDS`       | Escrow lock would cause negative balance |
-| 403    | `FORBIDDEN`                | Agent accessing another's account, non-platform agent doing platform ops, or JWS signature verification failed |
-| 404    | `ACCOUNT_NOT_FOUND`        | No account with this ID |
-| 404    | `AGENT_NOT_FOUND`          | Agent does not exist in the Identity service |
-| 404    | `ESCROW_NOT_FOUND`         | No escrow with this ID |
-| 405    | `METHOD_NOT_ALLOWED`       | Unsupported HTTP method on a defined route |
-| 409    | `ACCOUNT_EXISTS`           | Account already created for this agent |
-| 409    | `ESCROW_ALREADY_RESOLVED`  | Escrow has already been released or split |
-| 409    | `ESCROW_ALREADY_LOCKED`    | Escrow already locked for this task with a different amount |
-| 413    | `PAYLOAD_TOO_LARGE`        | Request body exceeds configured `request.max_body_size` |
-| 415    | `UNSUPPORTED_MEDIA_TYPE`   | `Content-Type` is not `application/json` for JSON endpoints |
-| 502    | `IDENTITY_SERVICE_UNAVAILABLE` | Cannot reach the Identity service for JWS verification or agent lookup |
+|--------|------------------------------|---------------|
+| 400    | `invalid_jws`               | JWS token is malformed, missing, empty, or not a string |
+| 400    | `invalid_json`              | Request body is not valid JSON or not a JSON object |
+| 400    | `invalid_payload`           | JWS payload missing required fields, wrong `action`, or wrong field type for a payload field |
+| 400    | `invalid_amount`            | Amount/balance has an invalid type or sign, or integer `worker_pct` lies outside 0–100 |
+| 400    | `amount_out_of_range`       | Monetary input exceeds the signed-64-bit representation |
+| 400    | `payload_mismatch`          | JWS payload field does not match URL parameter, or duplicate credit reference with different amount, or `poster_account_id` does not match escrow payer |
+| 402    | `insufficient_funds`        | Escrow lock would cause negative balance |
+| 403    | `forbidden`                 | Agent accessing another's account, non-platform agent doing platform-only work, or JWS signature verification failed |
+| 404    | `account_not_found`         | No account with this ID |
+| 404    | `agent_not_found`           | Agent does not exist in the Identity service |
+| 404    | `escrow_not_found`          | No escrow with this ID |
+| 405    | `method_not_allowed`        | Unsupported HTTP method on a defined route |
+| 409    | `account_exists`            | Account already created for this agent |
+| 409    | `escrow_already_resolved`   | Escrow has already been released or split |
+| 409    | `escrow_already_locked`     | Escrow already locked for this task with a different amount |
+| 409    | `amount_out_of_range`       | Credit or settlement would exceed a recipient balance limit |
+| 413    | `payload_too_large`         | Request body exceeds configured `request.max_body_size` |
+| 415    | `unsupported_media_type`    | `Content-Type` is not `application/json` for JSON endpoints |
+| 502    | `identity_service_unavailable` | Cannot reach the Identity service for JWS verification or agent lookup (never on `credit`/`escrow_release`/`escrow_split`, which verify locally) |
+| 503    | `service_not_ready`         | The ledger, Identity client, or platform agent is not initialized, or (on `GET /health`) the DB Gateway is unreachable |
 
 ---
 
 ## Test Data Conventions
 
-- `jws(signer, payload)` constructs a valid JWS compact token signed by the given agent's Ed25519 private key with the given JSON payload. The JWS header is `{"alg": "EdDSA", "kid": "<signer_agent_id>"}`.
-- `tampered_jws(signer, payload)` constructs a JWS token where the signature does not match the payload (e.g., the payload was modified after signing).
-- `platform` refers to the platform agent whose `agent_id` matches the configured `platform.agent_id`.
-- `alice`, `bob`, `carol` are regular agents registered in the Identity service, each with their own Ed25519 keypair and a corresponding account in the Central Bank (unless otherwise stated).
+- `jws(signer, payload)` constructs a valid strict-profile compact JWS using the signer's Ed25519 private key. The protected header contains exactly `alg: "EdDSA"`, `typ: "JWT"`, the registered signer `kid`, controlled integer `iat` and `exp`, `aud: "central-bank"`, and the test request's concrete uppercase `METHOD /path` resource. The helper supplies explicit lifetime/context values within the configured policy; booleans are not valid timestamps.
+- `tampered_jws(signer, payload)` starts from the same valid seven-field profile and then modifies the signed bytes so the signature no longer matches, without accidentally testing a missing-header-field failure instead.
+- `platform` refers to the registered platform agent — whichever agent the Central Bank's own `PlatformAgent` (loaded via `platform.agent_config_path`) is running as. There is no `platform.agent_id` config value to reference.
+- `alice`, `bob`, `carol` are regular agents registered in the Identity service, each with their own Ed25519 keypair. Unless a test's Setup explicitly creates an account for an agent, assume no account exists yet — `create_account` may be called by the agent itself (self-service) or by `platform`.
 - All account IDs equal the agent's `agent_id` (e.g., `a-<uuid4>`).
 - Transaction IDs match `tx-<uuid4>`.
 - Escrow IDs match `esc-<uuid4>`.
@@ -66,7 +102,9 @@ Required status/error mappings:
 
 ## Category 1: Account Creation (`POST /accounts`)
 
-### ACC-01 Create valid account with positive initial balance
+`POST /accounts` has two modes, both verified via Identity's `POST /agents/verify-jws` (see the `create_account` exception in `central-bank-service-auth-specs.md`): **self-service** (any registered agent creates their own account at zero balance) and **platform-funded** (the platform creates an account for any agent at any non-negative balance).
+
+### ACC-01 Platform creates account with positive initial balance
 **Setup:** Register agent `alice` in the Identity service. Generate platform JWS.
 **Action:** `POST /accounts` with body `{"token": jws(platform, {"action": "create_account", "agent_id": alice, "initial_balance": 50})}`.
 **Expected:**
@@ -76,7 +114,7 @@ Required status/error mappings:
 - `balance` is `50`
 - `created_at` is valid ISO 8601 timestamp
 
-### ACC-02 Create valid account with zero initial balance
+### ACC-02 Platform creates account with zero initial balance
 **Setup:** Register agent `bob` in the Identity service.
 **Action:** `POST /accounts` with body `{"token": jws(platform, {"action": "create_account", "agent_id": bob, "initial_balance": 0})}`.
 **Expected:**
@@ -84,7 +122,7 @@ Required status/error mappings:
 - `balance` is `0`
 
 ### ACC-03 Initial balance greater than zero creates credit transaction
-**Setup:** Create account for `alice` with `initial_balance: 50`.
+**Setup:** Create account for `alice` with `initial_balance: 50` (platform-funded).
 **Action:** Query `alice`'s transaction history.
 **Expected:**
 - Transaction list contains exactly 1 entry
@@ -98,68 +136,90 @@ Required status/error mappings:
 **Action:** `POST /accounts` with `{"token": jws(platform, {"action": "create_account", "agent_id": alice, "initial_balance": 10})}`.
 **Expected:**
 - `409 Conflict`
-- `error = ACCOUNT_EXISTS`
+- `error = account_exists`
 
 ### ACC-05 Agent not found in Identity service
 **Action:** `POST /accounts` with `{"token": jws(platform, {"action": "create_account", "agent_id": "a-nonexistent-uuid", "initial_balance": 10})}` where the agent does not exist in the Identity service.
 **Expected:**
 - `404 Not Found`
-- `error = AGENT_NOT_FOUND`
+- `error = agent_not_found`
 
-### ACC-06 Non-platform signer is rejected
+### ACC-06 Non-platform signer creating another agent's account is rejected
 **Setup:** Register agent `alice` with her own keypair.
-**Action:** `POST /accounts` with `{"token": jws(alice, {"action": "create_account", "agent_id": alice, "initial_balance": 10})}`.
+**Action:** `POST /accounts` with `{"token": jws(alice, {"action": "create_account", "agent_id": "a-someone-else", "initial_balance": 0})}`.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ### ACC-07 Negative initial balance is rejected
 **Action:** `POST /accounts` with `{"token": jws(platform, {"action": "create_account", "agent_id": alice, "initial_balance": -1})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_AMOUNT`
+- `error = invalid_amount`
 
 ### ACC-08 Non-integer initial balance is rejected
 **Action:** `POST /accounts` with `{"token": jws(platform, {"action": "create_account", "agent_id": alice, "initial_balance": 10.5})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_AMOUNT`
+- `error = invalid_amount`
 
 ### ACC-09 Missing agent_id in JWS payload
 **Action:** `POST /accounts` with `{"token": jws(platform, {"action": "create_account", "initial_balance": 10})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### ACC-10 Missing initial_balance in JWS payload
 **Action:** `POST /accounts` with `{"token": jws(platform, {"action": "create_account", "agent_id": alice})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### ACC-11 Wrong action in JWS payload
 **Action:** `POST /accounts` with `{"token": jws(platform, {"action": "credit", "agent_id": alice, "initial_balance": 10})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### ACC-12 Malformed JSON body
 **Action:** `POST /accounts` with body `{not valid json`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JSON`
+- `error = invalid_json`
 
 ### ACC-13 Missing token field in body
 **Action:** `POST /accounts` with body `{"nottoken": "something"}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ### ACC-14 Tampered JWS token
 **Action:** `POST /accounts` with `{"token": tampered_jws(platform, {"action": "create_account", "agent_id": alice, "initial_balance": 10})}`.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
+
+### ACC-15 Self-service: agent creates their own zero-balance account
+**Setup:** Register agent `alice` in the Identity service. No account exists for her yet.
+**Action:** `POST /accounts` with `{"token": jws(alice, {"action": "create_account", "agent_id": alice, "initial_balance": 0})}` — signed by Alice herself, not the platform.
+**Expected:**
+- `201 Created`
+- `account_id` equals `alice`'s agent ID
+- `balance` is `0`
+
+### ACC-16 Self-service: agent requesting a non-zero balance for their own account is rejected
+**Setup:** Register agent `alice` in the Identity service.
+**Action:** `POST /accounts` with `{"token": jws(alice, {"action": "create_account", "agent_id": alice, "initial_balance": 100})}`.
+**Expected:**
+- `403 Forbidden`
+- `error = forbidden`
+
+### ACC-17 Self-service duplicate account is rejected
+**Setup:** Agent `alice` self-creates her own zero-balance account (ACC-15).
+**Action:** `POST /accounts` again with the same self-service token (or a fresh equivalent one).
+**Expected:**
+- `409 Conflict`
+- `error = account_exists`
 
 ---
 
@@ -195,51 +255,51 @@ Required status/error mappings:
 **Action:** Credit `alice` with `amount: 30, reference: "salary_round_1"`.
 **Expected:**
 - `400 Bad Request`
-- `error = PAYLOAD_MISMATCH`
+- `error = payload_mismatch`
 
 ### CR-05 Account not found
 **Action:** `POST /accounts/a-nonexistent-uuid/credit` with valid platform JWS.
 **Expected:**
 - `404 Not Found`
-- `error = ACCOUNT_NOT_FOUND`
+- `error = account_not_found`
 
 ### CR-06 Non-platform signer is rejected
 **Setup:** Create account for `alice`.
 **Action:** `POST /accounts/{alice}/credit` with `{"token": jws(alice, {"action": "credit", "account_id": alice, "amount": 10, "reference": "self_credit"})}`.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ### CR-07 Zero amount is rejected
 **Action:** `POST /accounts/{alice}/credit` with `{"token": jws(platform, {"action": "credit", "account_id": alice, "amount": 0, "reference": "zero_credit"})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_AMOUNT`
+- `error = invalid_amount`
 
 ### CR-08 Negative amount is rejected
 **Action:** `POST /accounts/{alice}/credit` with `{"token": jws(platform, {"action": "credit", "account_id": alice, "amount": -10, "reference": "neg_credit"})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_AMOUNT`
+- `error = invalid_amount`
 
 ### CR-09 Missing reference in JWS payload
 **Action:** `POST /accounts/{alice}/credit` with `{"token": jws(platform, {"action": "credit", "account_id": alice, "amount": 10})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### CR-10 Payload account_id mismatch with URL
 **Setup:** Create accounts for `alice` and `bob`.
 **Action:** `POST /accounts/{alice}/credit` with `{"token": jws(platform, {"action": "credit", "account_id": bob, "amount": 10, "reference": "mismatch"})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = PAYLOAD_MISMATCH`
+- `error = payload_mismatch`
 
 ### CR-11 Wrong action in JWS payload
 **Action:** `POST /accounts/{alice}/credit` with `{"token": jws(platform, {"action": "create_account", "account_id": alice, "amount": 10, "reference": "wrong_action"})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ---
 
@@ -266,35 +326,35 @@ Required status/error mappings:
 **Action:** `GET /accounts/a-nonexistent-uuid` with bearer token signed by a valid agent whose account does not exist at that ID.
 **Expected:**
 - `404 Not Found`
-- `error = ACCOUNT_NOT_FOUND`
+- `error = account_not_found`
 
 ### BAL-04 Wrong agent accessing another's account
 **Setup:** Create accounts for `alice` and `bob`.
 **Action:** `GET /accounts/{alice}` with header `Authorization: Bearer jws(bob, {"action": "get_balance", "account_id": alice})`.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ### BAL-05 Wrong action in JWS payload
 **Setup:** Create account for `alice`.
 **Action:** `GET /accounts/{alice}` with header `Authorization: Bearer jws(alice, {"action": "get_transactions", "account_id": alice})`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### BAL-06 Payload account_id mismatch with URL
 **Setup:** Create accounts for `alice` and `bob`.
 **Action:** `GET /accounts/{alice}` with header `Authorization: Bearer jws(alice, {"action": "get_balance", "account_id": bob})`.
 **Expected:**
 - `400 Bad Request`
-- `error = PAYLOAD_MISMATCH`
+- `error = payload_mismatch`
 
 ### BAL-07 Missing Bearer token
 **Setup:** Create account for `alice`.
 **Action:** `GET /accounts/{alice}` with no `Authorization` header.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_JWS`
+- `error = invalid_jws`
 
 ---
 
@@ -338,21 +398,21 @@ Required status/error mappings:
 **Action:** `GET /accounts/a-nonexistent-uuid/transactions` with bearer token signed by a valid agent whose account does not exist at that ID.
 **Expected:**
 - `404 Not Found`
-- `error = ACCOUNT_NOT_FOUND`
+- `error = account_not_found`
 
 ### TX-06 Wrong agent accessing another's transactions
 **Setup:** Create accounts for `alice` and `bob`.
 **Action:** `GET /accounts/{alice}/transactions` with header `Authorization: Bearer jws(bob, {"action": "get_transactions", "account_id": alice})`.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ### TX-07 Wrong action in JWS payload
 **Setup:** Create account for `alice`.
 **Action:** `GET /accounts/{alice}/transactions` with header `Authorization: Bearer jws(alice, {"action": "get_balance", "account_id": alice})`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ---
 
@@ -386,20 +446,20 @@ Required status/error mappings:
 **Action:** `POST /escrow/lock` with `{"token": jws(alice, {"action": "escrow_lock", "agent_id": alice, "amount": 50, "task_id": "T-002"})}`.
 **Expected:**
 - `402 Payment Required`
-- `error = INSUFFICIENT_FUNDS`
+- `error = insufficient_funds`
 
 ### ESC-05 Account not found
 **Action:** `POST /escrow/lock` with `{"token": jws(alice, {"action": "escrow_lock", "agent_id": alice, "amount": 10, "task_id": "T-003"})}` where `alice` has no account.
 **Expected:**
 - `404 Not Found`
-- `error = ACCOUNT_NOT_FOUND`
+- `error = account_not_found`
 
 ### ESC-06 Agent locking another's funds
 **Setup:** Create accounts for `alice` and `bob`.
 **Action:** `POST /escrow/lock` with `{"token": jws(bob, {"action": "escrow_lock", "agent_id": alice, "amount": 10, "task_id": "T-004"})}` (signed by `bob` but claims `alice`'s agent_id).
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ### ESC-07 Idempotent lock returns same escrow_id
 **Setup:** Create account for `alice` with `initial_balance: 100`. Lock escrow with `amount: 30, task_id: "T-005"` and capture `escrow_id`.
@@ -414,41 +474,43 @@ Required status/error mappings:
 **Action:** Lock escrow for `alice` with `amount: 50, task_id: "T-006"`.
 **Expected:**
 - `409 Conflict`
-- `error = ESCROW_ALREADY_LOCKED`
+- `error = escrow_already_locked`
 
 ### ESC-09 Zero amount is rejected
 **Action:** `POST /escrow/lock` with `{"token": jws(alice, {"action": "escrow_lock", "agent_id": alice, "amount": 0, "task_id": "T-007"})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_AMOUNT`
+- `error = invalid_amount`
 
 ### ESC-10 Negative amount is rejected
 **Action:** `POST /escrow/lock` with `{"token": jws(alice, {"action": "escrow_lock", "agent_id": alice, "amount": -10, "task_id": "T-008"})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_AMOUNT`
+- `error = invalid_amount`
 
 ### ESC-11 Missing task_id in JWS payload
 **Action:** `POST /escrow/lock` with `{"token": jws(alice, {"action": "escrow_lock", "agent_id": alice, "amount": 10})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### ESC-12 Missing agent_id in JWS payload
 **Action:** `POST /escrow/lock` with `{"token": jws(alice, {"action": "escrow_lock", "amount": 10, "task_id": "T-009"})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### ESC-13 Wrong action in JWS payload
 **Action:** `POST /escrow/lock` with `{"token": jws(alice, {"action": "credit", "agent_id": alice, "amount": 10, "task_id": "T-010"})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ---
 
 ## Category 6: Escrow Release (`POST /escrow/{escrow_id}/release`)
+
+In production this endpoint is called by the Task Board (platform-signed), on approval, review-timeout auto-approve, cancel/expiry (refund to poster), or after a ruling with `worker_pct` of 0 or 100. These tests exercise the endpoint directly.
 
 ### REL-01 Valid full release to recipient
 **Setup:** Create accounts for `alice` (poster, `initial_balance: 100`) and `bob` (worker, `initial_balance: 0`). Lock escrow of `amount: 50` from `alice` for `task_id: "T-100"`. Capture `escrow_id`.
@@ -476,46 +538,48 @@ Required status/error mappings:
 **Action:** `POST /escrow/esc-nonexistent-uuid/release` with valid platform JWS.
 **Expected:**
 - `404 Not Found`
-- `error = ESCROW_NOT_FOUND`
+- `error = escrow_not_found`
 
 ### REL-05 Already resolved escrow
 **Setup:** Lock escrow from `alice`, release it to `bob`.
 **Action:** Attempt to release the same escrow again.
 **Expected:**
 - `409 Conflict`
-- `error = ESCROW_ALREADY_RESOLVED`
+- `error = escrow_already_resolved`
 
 ### REL-06 Non-platform signer is rejected
 **Setup:** Lock escrow from `alice`. Capture `escrow_id`.
 **Action:** `POST /escrow/{escrow_id}/release` with `{"token": jws(alice, {"action": "escrow_release", "escrow_id": escrow_id, "recipient_account_id": bob})}`.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ### REL-07 Recipient account not found
 **Setup:** Lock escrow from `alice`. Capture `escrow_id`.
 **Action:** `POST /escrow/{escrow_id}/release` with `{"token": jws(platform, {"action": "escrow_release", "escrow_id": escrow_id, "recipient_account_id": "a-nonexistent-uuid"})}`.
 **Expected:**
 - `404 Not Found`
-- `error = ACCOUNT_NOT_FOUND`
+- `error = account_not_found`
 
 ### REL-08 Payload escrow_id mismatch with URL
 **Setup:** Lock escrow from `alice`. Capture `escrow_id`.
 **Action:** `POST /escrow/{escrow_id}/release` with `{"token": jws(platform, {"action": "escrow_release", "escrow_id": "esc-different-uuid", "recipient_account_id": bob})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = PAYLOAD_MISMATCH`
+- `error = payload_mismatch`
 
 ### REL-09 Missing recipient_account_id in JWS payload
 **Setup:** Lock escrow from `alice`. Capture `escrow_id`.
 **Action:** `POST /escrow/{escrow_id}/release` with `{"token": jws(platform, {"action": "escrow_release", "escrow_id": escrow_id})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ---
 
 ## Category 7: Escrow Split (`POST /escrow/{escrow_id}/split`)
+
+In production this endpoint is called by the Task Board (platform-signed) after a Court ruling — Court never calls the Central Bank directly (R4).
 
 ### SPL-01 Even 50/50 split
 **Setup:** Create accounts for `alice` (poster, `initial_balance: 1000`) and `bob` (worker, `initial_balance: 0`). Lock escrow of `amount: 500` from `alice` for `task_id: "T-200"`. Capture `escrow_id`.
@@ -542,6 +606,7 @@ Required status/error mappings:
 - `200 OK`
 - `worker_amount` is `100`
 - `poster_amount` is `0`
+- No transaction row is written on the poster's account for this split (zero-amount leg skipped)
 
 ### SPL-04 Poster gets all (0/100 split)
 **Setup:** Lock escrow of `amount: 100` from `alice`. Capture `escrow_id`.
@@ -550,6 +615,7 @@ Required status/error mappings:
 - `200 OK`
 - `worker_amount` is `0`
 - `poster_amount` is `100`
+- No transaction row is written on the worker's account for this split (zero-amount leg skipped)
 
 ### SPL-05 Odd amount with floor rounding
 **Setup:** Lock escrow of `amount: 101` from `alice`. Capture `escrow_id`.
@@ -583,56 +649,64 @@ Required status/error mappings:
 **Action:** `POST /escrow/esc-nonexistent-uuid/split` with valid platform JWS.
 **Expected:**
 - `404 Not Found`
-- `error = ESCROW_NOT_FOUND`
+- `error = escrow_not_found`
 
 ### SPL-10 Already resolved escrow
 **Setup:** Lock escrow from `alice`, release it to `bob`.
 **Action:** Attempt to split the same escrow.
 **Expected:**
 - `409 Conflict`
-- `error = ESCROW_ALREADY_RESOLVED`
+- `error = escrow_already_resolved`
 
 ### SPL-11 Non-platform signer is rejected
 **Setup:** Lock escrow from `alice`. Capture `escrow_id`.
 **Action:** `POST /escrow/{escrow_id}/split` with `{"token": jws(alice, {"action": "escrow_split", "escrow_id": escrow_id, "worker_account_id": bob, "worker_pct": 50, "poster_account_id": alice})}`.
 **Expected:**
 - `403 Forbidden`
-- `error = FORBIDDEN`
+- `error = forbidden`
 
 ### SPL-12 worker_pct greater than 100
 **Setup:** Lock escrow from `alice`. Capture `escrow_id`.
 **Action:** Split with `worker_pct: 101`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_AMOUNT`
+- `error = invalid_amount`
 
 ### SPL-13 worker_pct less than 0
 **Setup:** Lock escrow from `alice`. Capture `escrow_id`.
 **Action:** Split with `worker_pct: -1`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_AMOUNT`
+- `error = invalid_amount`
 
 ### SPL-14 Non-integer worker_pct
 **Setup:** Lock escrow from `alice`. Capture `escrow_id`.
 **Action:** Split with `worker_pct: 33.5`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_PAYLOAD`
+- `error = invalid_payload`
 
 ### SPL-15 Poster account_id does not match escrow payer
 **Setup:** Create accounts for `alice`, `bob`, and `carol`. Lock escrow from `alice`. Capture `escrow_id`.
 **Action:** `POST /escrow/{escrow_id}/split` with `{"token": jws(platform, {"action": "escrow_split", "escrow_id": escrow_id, "worker_account_id": bob, "worker_pct": 50, "poster_account_id": carol})}`.
 **Expected:**
 - `400 Bad Request`
-- `error = PAYLOAD_MISMATCH`
+- `error = payload_mismatch`
 
 ### SPL-16 Worker account not found
 **Setup:** Lock escrow from `alice`. Capture `escrow_id`.
 **Action:** `POST /escrow/{escrow_id}/split` with `{"token": jws(platform, {"action": "escrow_split", "escrow_id": escrow_id, "worker_account_id": "a-nonexistent-uuid", "worker_pct": 50, "poster_account_id": alice})}`.
 **Expected:**
 - `404 Not Found`
-- `error = ACCOUNT_NOT_FOUND`
+- `error = account_not_found`
+
+### SPL-17 Zero-amount split legs are skipped identically on both storage backends
+**Setup:** Lock escrow of `amount: 100` from `alice`. Capture `escrow_id`. Note the number of transactions on `bob`'s (worker) account before the split.
+**Action:** Split with `worker_pct: 0`.
+**Expected:**
+- `worker_amount` is `0`, `poster_amount` is `100`
+- The count of `bob`'s transactions is unchanged (no zero-amount transaction row written)
+- This holds identically whether the ledger is backed by `InMemoryLedgerStore` or the DB-Gateway-backed `LedgerDbClient` (contract-tested by `tests/unit/test_ledger_store_contract.py` against both)
 
 ---
 
@@ -666,6 +740,14 @@ Required status/error mappings:
 **Expected:**
 - Second `uptime_seconds` is strictly greater than first `uptime_seconds`
 
+### HLTH-05 Degrades to 503 when the DB Gateway is unreachable
+**Setup:** Configure (or fake) the ledger so its `count_accounts`/`total_escrowed` calls raise as they would against a downed DB Gateway.
+**Action:** `GET /health`
+**Expected:**
+- `503 Service Unavailable` (not `500`)
+- `error = service_not_ready`
+- Response still conforms to the standard 3-field error envelope
+
 ---
 
 ## Category 9: HTTP Method Misuse
@@ -693,7 +775,7 @@ Required status/error mappings:
 - `PUT /escrow/{escrow_id}/split`
 - `DELETE /escrow/{escrow_id}/split`
 - `POST /health` (GET only)
-**Expected:** `405`, `error = METHOD_NOT_ALLOWED` for each
+**Expected:** `405`, `error = method_not_allowed` for each
 
 ---
 
@@ -701,13 +783,13 @@ Required status/error mappings:
 
 ### SEC-01 Error envelope consistency
 **Action:** For at least one failing test per error code, assert response has exactly:
-- top-level `error` (string)
+- top-level `error` (string, lowercase `snake_case`)
 - top-level `message` (string)
 - top-level `details` (object)
 **Expected:** All failures comply. `details` is an object (may be empty `{}`).
 
 ### SEC-02 No internal error leakage
-**Action:** Trigger representative failures (`INVALID_JSON`, `INVALID_JWS`, `ACCOUNT_NOT_FOUND`, `ESCROW_NOT_FOUND`, `INSUFFICIENT_FUNDS`, `PAYLOAD_MISMATCH`).
+**Action:** Trigger representative failures (`invalid_json`, `invalid_jws`, `account_not_found`, `escrow_not_found`, `insufficient_funds`, `payload_mismatch`).
 **Expected:** `message` never includes stack traces, SQL fragments, file paths, or driver internals.
 
 ### SEC-03 IDs are correctly formatted
@@ -734,25 +816,61 @@ Service is release-ready only if:
 
 | Category | IDs | Count |
 |----------|-----|-------|
-| Account Creation | ACC-01 to ACC-14 | 14 |
+| Account Creation | ACC-01 to ACC-17 | 17 |
 | Credit | CR-01 to CR-11 | 11 |
 | Balance Query | BAL-01 to BAL-07 | 7 |
 | Transaction History | TX-01 to TX-07 | 7 |
 | Escrow Lock | ESC-01 to ESC-13 | 13 |
 | Escrow Release | REL-01 to REL-09 | 9 |
-| Escrow Split | SPL-01 to SPL-16 | 16 |
-| Health | HLTH-01 to HLTH-04 | 4 |
+| Escrow Split | SPL-01 to SPL-17 | 17 |
+| Health | HLTH-01 to HLTH-05 | 5 |
 | HTTP misuse | HTTP-01 | 1 |
 | Cross-cutting security | SEC-01 to SEC-03 | 3 |
-| **Total** |  | **85** |
+| **Total** |  | **90** |
 
 | Endpoint | Covered By |
 |----------|------------|
-| `POST /accounts` | ACC-01 to ACC-14, SEC-01, SEC-02 |
+| `POST /accounts` | ACC-01 to ACC-17, SEC-01, SEC-02 |
 | `POST /accounts/{account_id}/credit` | CR-01 to CR-11, SEC-01, SEC-02 |
 | `GET /accounts/{account_id}` | BAL-01 to BAL-07, ESC-02, SPL-06 |
 | `GET /accounts/{account_id}/transactions` | TX-01 to TX-07, ACC-03, ESC-03, REL-03, SPL-07 |
 | `POST /escrow/lock` | ESC-01 to ESC-13, SEC-01, SEC-02 |
 | `POST /escrow/{escrow_id}/release` | REL-01 to REL-09, SEC-01, SEC-02 |
-| `POST /escrow/{escrow_id}/split` | SPL-01 to SPL-16, SEC-01, SEC-02 |
-| `GET /health` | HLTH-01 to HLTH-04 |
+| `POST /escrow/{escrow_id}/split` | SPL-01 to SPL-17, SEC-01, SEC-02 |
+| `GET /health` | HLTH-01 to HLTH-05 |
+
+## MP-06 monetary boundary release gates
+
+These additional gates extend the 90-case legacy index above. They apply to public signed routes
+and both ledger implementations; they do not replace the original assertions.
+
+### MP06-BANK-01 Strict values before effects
+
+Account creation, credit and lock reject booleans and non-integer amounts. The individual monetary
+limit is `9223372036854775807`; larger inputs return 400 `amount_out_of_range`. Negative balances
+and non-positive credit/lock amounts return 400 `invalid_amount`. A boolean or non-integer
+`worker_pct` returns 400 `invalid_payload`; integer percentages outside 0–100 return 400
+`invalid_amount`. Verify no account, transaction, escrow or Gateway mutation occurs on rejection.
+
+### MP06-BANK-02 Overflow remains a financial rejection
+
+Credit, release and split that exceed a recipient's balance limit return 409 `amount_out_of_range`
+from both ledger implementations. The Gateway-backed adapter must preserve the code and status,
+not return a generic server failure or falsely claim that the escrow was already resolved. The
+in-memory implementation must validate all credits before mutating any leg, including a split where
+worker and poster are the same account. Existing balances, histories and escrow state remain exact.
+
+### MP06-BANK-03 Lifetime lock replay is truthful
+
+Lock and then release or split an escrow. Exact lock replay returns the original escrow identity
+and actual settled status, without another debit, ledger leg or escrow. Changed amounts conflict.
+The Gateway adapter consumes the required returned status and rejects missing or invalid status
+instead of fabricating `locked`. Also preserve exact replay when available balance is insufficient
+for a second lock. Durable release/split replay receipts remain a separate MP-04 requirement.
+
+### MP06-BANK-04 Aggregates retain exact large totals
+
+Multiple individually valid amounts may sum above the individual signed-64-bit bound. Two
+maximum-sized locked escrows return exactly twice that maximum from `total_escrowed`, with Python
+integer arithmetic and no float conversion or aggregate cap. Settlement removes the corresponding
+locked amount from the aggregate without changing conservation.

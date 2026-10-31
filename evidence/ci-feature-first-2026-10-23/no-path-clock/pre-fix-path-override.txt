@@ -1,0 +1,9 @@
+Pre-fix inspection of tests/runtime/test_git_office_hours.py
+
+The two subprocess environments explicitly replaced PATH so that an unqualified
+`date` command in the production hook resolved to the tmp_path test double:
+
+line 48: env={**os.environ, "PATH": f"{tmp_path}:/usr/bin:/bin", "TEST_CLOCK_VALUE": stamp},
+line 68: env={**os.environ, "PATH": f"{tmp_path}:/usr/bin:/bin"},
+
+Captured before the fixture repair on 2026-10-24.

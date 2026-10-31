@@ -1,0 +1,1076 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1159 items
+
+tests/unit/routers/test_bank.py ........................................ [  3%]
+....................                                                     [  5%]
+tests/unit/routers/test_bank_reads.py ........                           [  5%]
+tests/unit/routers/test_board.py FFFF...F.FFFFF..FFFFFFFF....FFFF....F   [  9%]
+tests/unit/routers/test_board_reads.py .............                     [ 10%]
+tests/unit/routers/test_board_tasks_limit_offset_validation.py ...       [ 10%]
+tests/unit/routers/test_court.py FF.....FFFFFFF..FFFFF.....F             [ 12%]
+tests/unit/routers/test_court_reads.py F..FF.FFF.                        [ 13%]
+tests/unit/routers/test_court_status_update_integrity.py ..              [ 13%]
+tests/unit/routers/test_health.py ....                                   [ 14%]
+tests/unit/routers/test_identity.py .............                        [ 15%]
+tests/unit/routers/test_identity_reads.py ........                       [ 15%]
+tests/unit/routers/test_mp04_operation_identity.py ..................... [ 17%]
+......................                                                   [ 19%]
+tests/unit/routers/test_mp07_task_operation_boundary.py ..               [ 19%]
+tests/unit/routers/test_reader_not_ready_503.py ...                      [ 20%]
+tests/unit/routers/test_reputation.py ..........                         [ 20%]
+tests/unit/routers/test_reputation_reads.py ......                       [ 21%]
+tests/unit/routers/test_t072_bank_reads_gaps.py ......                   [ 22%]
+tests/unit/routers/test_t072_board_reads_gaps.py ..........              [ 22%]
+tests/unit/routers/test_t072_court_reads_gaps.py FF.F.                   [ 23%]
+tests/unit/routers/test_t072_court_status_and_ruling_delete_gaps.py .... [ 23%]
+....                                                                     [ 23%]
+tests/unit/routers/test_t072_reputation_reads_gaps.py ..                 [ 24%]
+tests/unit/test_config.py F...                                           [ 24%]
+tests/unit/test_constraints.py FFFFFFF                                   [ 25%]
+tests/unit/test_cross_cutting.py ..F......F............                  [ 27%]
+tests/unit/test_db_reader.py ......                                      [ 27%]
+tests/unit/test_db_reader_transactions.py ..                             [ 27%]
+tests/unit/test_db_writer.py .......                                     [ 28%]
+tests/unit/test_feedback_reveal_atomicity.py EEEEEEEEF                   [ 29%]
+tests/unit/test_gap_c7_error_mapping.py ..FF.                            [ 29%]
+tests/unit/test_gap_c7_error_mapping_domains.py ..                       [ 29%]
+tests/unit/test_gap_e13_bid_count.py FFFF                                [ 30%]
+tests/unit/test_migration_cli.py ..............                          [ 31%]
+tests/unit/test_migration_evidence.py ........................           [ 33%]
+tests/unit/test_migration_money_audit.py ............................... [ 35%]
+.                                                                        [ 36%]
+tests/unit/test_migration_source.py ...................................  [ 39%]
+tests/unit/test_migration_transaction_mode.py ..                         [ 39%]
+tests/unit/test_mp01_fixture_log_isolation.py .                          [ 39%]
+tests/unit/test_mp02_gateway_authority.py .............................. [ 41%]
+..                                                                       [ 42%]
+tests/unit/test_mp02_gateway_write_admission.py ........................ [ 44%]
+...............................                                          [ 46%]
+tests/unit/test_mp04_legacy_observations.py ............................ [ 49%]
+....                                                                     [ 49%]
+tests/unit/test_mp04_migration.py .................                      [ 51%]
+tests/unit/test_mp04_migration_cli.py ..........                         [ 51%]
+tests/unit/test_mp04_native_receipts.py .........                        [ 52%]
+tests/unit/test_mp04_receipt_audit.py .................................. [ 55%]
+....                                                                     [ 55%]
+tests/unit/test_mp04_request_contract.py ............................... [ 58%]
+................                                                         [ 60%]
+tests/unit/test_mp04_schema_v2.py ........                               [ 60%]
+tests/unit/test_mp04_startup.py .......                                  [ 61%]
+tests/unit/test_mp06_maintenance_lock.py .....                           [ 61%]
+tests/unit/test_mp06_migration.py ...................................... [ 65%]
+..............                                                           [ 66%]
+tests/unit/test_mp06_money_concurrency.py ...                            [ 66%]
+tests/unit/test_mp06_money_guards.py ................................... [ 69%]
+......                                                                   [ 70%]
+tests/unit/test_mp06_recovery.py ....................................... [ 73%]
+..................................                                       [ 76%]
+tests/unit/test_mp06_schema.py ......................................... [ 79%]
+........                                                                 [ 80%]
+tests/unit/test_mp07_board_authority.py .............                    [ 81%]
+tests/unit/test_mp07_claim_write_exclusion.py .......                    [ 82%]
+tests/unit/test_mp07_court_operation_contract.py .......                 [ 82%]
+tests/unit/test_mp07_legacy_effect_migration.py .......                  [ 83%]
+tests/unit/test_mp07_migration_contract.py ..                            [ 83%]
+tests/unit/test_mp07_migration_rejection.py .                            [ 83%]
+tests/unit/test_mp07_native_write_boundary.py .......................... [ 86%]
+                                                                         [ 86%]
+tests/unit/test_mp07_operation_regressions.py .....................      [ 87%]
+tests/unit/test_mp07_publication_contract.py .                           [ 87%]
+tests/unit/test_mp07_pure_finalization.py ....                           [ 88%]
+tests/unit/test_mp07_rebuttal_linkage.py ..                              [ 88%]
+tests/unit/test_mp07_rebuttal_projection.py ...............              [ 89%]
+tests/unit/test_mp07_receipt_current_view.py ....                        [ 90%]
+tests/unit/test_mp07_ruling_startup.py ......                            [ 90%]
+tests/unit/test_mp07_runtime_schema.py ...                               [ 90%]
+tests/unit/test_mp07_schema_admission.py .                               [ 90%]
+tests/unit/test_mp07_schema_regressions.py ............                  [ 91%]
+tests/unit/test_mp07_task_audit_resolution.py ..............             [ 93%]
+tests/unit/test_mp07_task_read_projection.py .......                     [ 93%]
+tests/unit/test_mp07_verified_gateway_caller.py ......                   [ 94%]
+tests/unit/test_mp07_writer_transaction_cleanup.py ..                    [ 94%]
+tests/unit/test_recovery_cli.py ..........                               [ 95%]
+tests/unit/test_recovery_read_races.py ......                            [ 95%]
+tests/unit/test_schema_additions.py FFFFFF                               [ 96%]
+tests/unit/test_schema_review_regressions.py .........                   [ 97%]
+tests/unit/test_schema_startup_health.py .......                         [ 97%]
+tests/unit/test_t072_constraints_gaps.py FFFFFF                          [ 98%]
+tests/unit/test_task_dispute_id_column.py ...FFF                         [ 98%]
+tests/unit/test_write_integrity.py EE.EE.........                        [100%]
+
+==================================== ERRORS ====================================
+__ ERROR at setup of TestGatewayOwnedReveal.test_first_feedback_stays_sealed ___
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ ERROR at setup of TestGatewayOwnedReveal.test_counter_feedback_reveals_both_rows _
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ ERROR at setup of TestGatewayOwnedReveal.test_stale_caller_reveal_flag_is_ignored _
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+__ ERROR at setup of TestGatewayOwnedReveal.test_unrelated_pair_is_unaffected __
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ ERROR at setup of TestGatewayOwnedReveal.test_platform_feedback_is_visible_without_a_reverse _
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ ERROR at setup of TestGatewayOwnedReveal.test_platform_feedback_still_reveals_an_existing_reverse _
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+______ ERROR at setup of TestGatewayOwnedReveal.test_reveal_is_idempotent ______
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ ERROR at setup of TestGatewayOwnedReveal.test_reveal_emits_one_feedback_revealed_event _
+tests/unit/test_feedback_reveal_atomicity.py:133: in writer
+    w = DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ ERROR at setup of TestDeleteRulingEmitsEvent.test_delete_ruling_writes_event_in_same_transaction _
+tests/unit/test_write_integrity.py:171: in court_case
+    task_id = _create_task(db_writer, alice)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_write_integrity.py:87: in _create_task
+    writer.create_task(
+src/db_gateway_service/services/db_writer.py:400: in create_task
+    return self._board.create_task(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/board_writer.py:156: in create_task
+    window_seconds, bidding_us, acceptance_us = _publication_cutoffs(data)
+                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/board_writer.py:115: in _publication_cutoffs
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Missing required field: acceptance_window_seconds
+_ ERROR at setup of TestDeleteRulingEmitsEvent.test_delete_ruling_rolls_back_when_event_insert_fails _
+tests/unit/test_write_integrity.py:171: in court_case
+    task_id = _create_task(db_writer, alice)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_write_integrity.py:87: in _create_task
+    writer.create_task(
+src/db_gateway_service/services/db_writer.py:400: in create_task
+    return self._board.create_task(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/board_writer.py:156: in create_task
+    window_seconds, bidding_us, acceptance_us = _publication_cutoffs(data)
+                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/board_writer.py:115: in _publication_cutoffs
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Missing required field: acceptance_window_seconds
+_ ERROR at setup of TestUpdateClaimStatusRequiresEvent.test_missing_event_is_rejected_and_row_unchanged _
+tests/unit/test_write_integrity.py:171: in court_case
+    task_id = _create_task(db_writer, alice)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_write_integrity.py:87: in _create_task
+    writer.create_task(
+src/db_gateway_service/services/db_writer.py:400: in create_task
+    return self._board.create_task(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/board_writer.py:156: in create_task
+    window_seconds, bidding_us, acceptance_us = _publication_cutoffs(data)
+                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/board_writer.py:115: in _publication_cutoffs
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Missing required field: acceptance_window_seconds
+_ ERROR at setup of TestUpdateClaimStatusRequiresEvent.test_event_is_written_with_the_status_update _
+tests/unit/test_write_integrity.py:171: in court_case
+    task_id = _create_task(db_writer, alice)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_write_integrity.py:87: in _create_task
+    writer.create_task(
+src/db_gateway_service/services/db_writer.py:400: in create_task
+    return self._board.create_task(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/board_writer.py:156: in create_task
+    window_seconds, bidding_us, acceptance_us = _publication_cutoffs(data)
+                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/board_writer.py:115: in _publication_cutoffs
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Missing required field: acceptance_window_seconds
+=================================== FAILURES ===================================
+___________________ TestTaskCreation.test_create_valid_task ____________________
+tests/unit/routers/test_board.py:179: in test_create_valid_task
+    assert resp.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_______________ TestTaskCreation.test_duplicate_task_id_rejected _______________
+tests/unit/routers/test_board.py:209: in test_duplicate_task_id_rejected
+    assert resp.status_code == 409
+E   assert 400 == 409
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_________________ TestTaskCreation.test_fk_violation_poster_id _________________
+tests/unit/routers/test_board.py:236: in test_fk_violation_poster_id
+    assert resp.status_code == 409
+E   assert 400 == 409
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_________________ TestTaskCreation.test_fk_violation_escrow_id _________________
+tests/unit/routers/test_board.py:263: in test_fk_violation_escrow_id
+    assert resp.status_code == 409
+E   assert 400 == 409
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_________________ TestTaskCreation.test_task_and_event_atomic __________________
+tests/unit/routers/test_board.py:353: in test_task_and_event_atomic
+    assert task_row is not None
+E   assert None is not None
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+___________________ TestBidSubmission.test_submit_valid_bid ____________________
+tests/unit/routers/test_board.py:416: in test_submit_valid_bid
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+________________ TestBidSubmission.test_duplicate_bid_rejected _________________
+tests/unit/routers/test_board.py:441: in test_duplicate_bid_rejected
+    assert resp.json()["error"] == "bid_exists"
+E   AssertionError: assert 'native_operation_required' == 'bid_exists'
+E     
+E     - bid_exists
+E     + native_operation_required
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+_______________ TestBidSubmission.test_different_bidders_succeed _______________
+tests/unit/routers/test_board.py:471: in test_different_bidders_succeed
+    assert resp1.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+{"timestamp": "2026-10-18 03:35:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+_________________ TestBidSubmission.test_fk_violation_task_id __________________
+tests/unit/routers/test_board.py:491: in test_fk_violation_task_id
+    assert resp.json()["error"] == "foreign_key_violation"
+E   AssertionError: assert 'native_operation_required' == 'foreign_key_violation'
+E     
+E     - foreign_key_violation
+E     + native_operation_required
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+________________ TestBidSubmission.test_fk_violation_bidder_id _________________
+tests/unit/routers/test_board.py:510: in test_fk_violation_bidder_id
+    assert resp.json()["error"] == "foreign_key_violation"
+E   AssertionError: assert 'native_operation_required' == 'foreign_key_violation'
+E     
+E     - foreign_key_violation
+E     + native_operation_required
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/bids"}}
+_________________ TestTaskStatusUpdate.test_update_to_accepted _________________
+tests/unit/routers/test_board.py:579: in test_update_to_accepted
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-aa3344d3-e719-4820-bce6-82f34c8c4e6b/status"}}
+________________ TestTaskStatusUpdate.test_update_to_submitted _________________
+tests/unit/routers/test_board.py:617: in test_update_to_submitted
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-cf23fe0f-d672-4932-b36d-06c5e796eb4d/status"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-cf23fe0f-d672-4932-b36d-06c5e796eb4d/status"}}
+_________________ TestTaskStatusUpdate.test_update_to_approved _________________
+tests/unit/routers/test_board.py:661: in test_update_to_approved
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-369544ff-daa4-4525-afbd-ab50ea142e44/status"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-369544ff-daa4-4525-afbd-ab50ea142e44/status"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-369544ff-daa4-4525-afbd-ab50ea142e44/status"}}
+________________ TestTaskStatusUpdate.test_update_to_cancelled _________________
+tests/unit/routers/test_board.py:678: in test_update_to_cancelled
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-dfc23e5e-3f39-421f-b119-4a041c5e47fa/status"}}
+_________________ TestTaskStatusUpdate.test_update_to_disputed _________________
+tests/unit/routers/test_board.py:723: in test_update_to_disputed
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-75ad5c7a-fc66-44d0-a8c2-7705d81eb69c/status"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-75ad5c7a-fc66-44d0-a8c2-7705d81eb69c/status"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-75ad5c7a-fc66-44d0-a8c2-7705d81eb69c/status"}}
+__________________ TestTaskStatusUpdate.test_update_to_ruled ___________________
+tests/unit/routers/test_board.py:756: in test_update_to_ruled
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-65083eaa-6377-4846-8495-b961f9b4905e/status"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-65083eaa-6377-4846-8495-b961f9b4905e/status"}}
+_________________ TestTaskStatusUpdate.test_update_to_expired __________________
+tests/unit/routers/test_board.py:773: in test_update_to_expired
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-19bbd670-2ecb-4c0f-8862-ae5cdd1baae6/status"}}
+___________________ TestTaskStatusUpdate.test_task_not_found ___________________
+tests/unit/routers/test_board.py:787: in test_task_not_found
+    assert resp.status_code == 404
+E   assert 409 == 404
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-d797739c-be8c-47eb-b83c-91105c732fbb/status"}}
+______________ TestTaskStatusUpdate.test_multiple_fields_updated _______________
+tests/unit/routers/test_board.py:868: in test_multiple_fields_updated
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-8cd752c7-4920-4523-aa50-b76606380c1d/status"}}
+_______ TestTaskStatusUpdate.test_gateway_does_not_validate_transitions ________
+tests/unit/routers/test_board.py:899: in test_gateway_does_not_validate_transitions
+    assert resp.status_code == 200
+E   assert 409 == 200
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-2e91adfa-b23c-4fa5-a551-0c0aad9b9583/status"}}
+__________________ TestAssetRecording.test_record_valid_asset __________________
+tests/unit/routers/test_board.py:932: in test_record_valid_asset
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/board/assets"}}
+_____________ TestAssetRecording.test_duplicate_asset_id_rejected ______________
+tests/unit/routers/test_board.py:974: in test_duplicate_asset_id_rejected
+    assert resp.json()["error"] == "asset_exists"
+E   AssertionError: assert 'foreign_key_violation' == 'asset_exists'
+E     
+E     - asset_exists
+E     + foreign_key_violation
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/board/assets"}}
+{"timestamp": "2026-10-18 03:35:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/board/assets"}}
+______________ TestAssetRecording.test_multiple_assets_same_task _______________
+tests/unit/routers/test_board.py:1097: in test_multiple_assets_same_task
+    assert resp1.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/board/assets"}}
+{"timestamp": "2026-10-18 03:35:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/board/assets"}}
+___________________ TestDisputeClaims.test_file_valid_claim ____________________
+tests/unit/routers/test_court.py:182: in test_file_valid_claim
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+______________ TestDisputeClaims.test_duplicate_claim_id_rejected ______________
+tests/unit/routers/test_court.py:209: in test_duplicate_claim_id_rejected
+    assert resp.json()["error"] == "claim_exists"
+E   AssertionError: assert 'foreign_key_violation' == 'claim_exists'
+E     
+E     - claim_exists
+E     + foreign_key_violation
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+________________ TestDisputeClaims.test_claim_and_event_atomic _________________
+tests/unit/routers/test_court.py:333: in test_claim_and_event_atomic
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+___________________ TestRebuttals.test_submit_valid_rebuttal ___________________
+tests/unit/routers/test_court.py:378: in test_submit_valid_rebuttal
+    assert resp.status_code == 201
+E   assert 404 == 201
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+_____________ TestRebuttals.test_rebuttal_with_claim_status_update _____________
+tests/unit/routers/test_court.py:403: in test_rebuttal_with_claim_status_update
+    assert resp.status_code == 201
+E   assert 404 == 201
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+___________ TestRebuttals.test_rebuttal_without_claim_status_update ____________
+tests/unit/routers/test_court.py:432: in test_rebuttal_without_claim_status_update
+    assert resp.status_code == 201
+E   assert 404 == 201
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+______________ TestRebuttals.test_duplicate_rebuttal_id_rejected _______________
+tests/unit/routers/test_court.py:472: in test_duplicate_rebuttal_id_rejected
+    assert resp.status_code == 409
+E   assert 404 == 409
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+___________________ TestRebuttals.test_fk_violation_claim_id ___________________
+tests/unit/routers/test_court.py:491: in test_fk_violation_claim_id
+    assert resp.status_code == 409
+E   assert 404 == 409
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+___________________ TestRebuttals.test_fk_violation_agent_id ___________________
+tests/unit/routers/test_court.py:511: in test_fk_violation_agent_id
+    assert resp.status_code == 409
+E   assert 404 == 409
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+_____________ TestRebuttals.test_rebuttal_and_claim_update_atomic ______________
+tests/unit/routers/test_court.py:572: in test_rebuttal_and_claim_update_atomic
+    assert resp.status_code == 201
+E   assert 404 == 201
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+_____________________ TestRulings.test_record_valid_ruling _____________________
+tests/unit/routers/test_court.py:634: in test_record_valid_ruling
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+_______________ TestRulings.test_ruling_with_claim_status_update _______________
+tests/unit/routers/test_court.py:667: in test_ruling_with_claim_status_update
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+_____________ TestRulings.test_ruling_without_claim_status_update ______________
+tests/unit/routers/test_court.py:704: in test_ruling_without_claim_status_update
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+________________ TestRulings.test_duplicate_ruling_id_rejected _________________
+tests/unit/routers/test_court.py:759: in test_duplicate_ruling_id_rejected
+    assert resp.json()["error"] == "ruling_exists"
+E   AssertionError: assert 'foreign_key_violation' == 'ruling_exists'
+E     
+E     - ruling_exists
+E     + foreign_key_violation
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+_______________ TestRulings.test_ruling_and_claim_update_atomic ________________
+tests/unit/routers/test_court.py:915: in test_ruling_and_claim_update_atomic
+    assert resp.status_code == 201
+E   assert 409 == 201
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:35:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+_____________________ TestCourtReads.test_get_claim_by_id ______________________
+tests/unit/routers/test_court_reads.py:178: in test_get_claim_by_id
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/claims/clm-29d1621d-c005-4cad-b237-c6aea9f24b1b"}}
+_________________ TestCourtReads.test_list_claims_returns_all __________________
+tests/unit/routers/test_court_reads.py:217: in test_list_claims_returns_all
+    assert len(claims) == 2
+E   assert 0 == 2
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+_______________ TestCourtReads.test_list_claims_filter_by_status _______________
+tests/unit/routers/test_court_reads.py:240: in test_list_claims_filter_by_status
+    assert len(claims) == 1
+E   assert 0 == 1
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/claims/clm-1632a74f-ee8a-43c7-834f-b92a3a1ae0b2/status"}}
+________________ TestCourtReads.test_count_claims_after_filing _________________
+tests/unit/routers/test_court_reads.py:265: in test_count_claims_after_filing
+    assert response.json() == {"count": 3}
+E   AssertionError: assert {'count': 0} == {'count': 3}
+E     
+E     Differing items:
+E     {'count': 0} != {'count': 3}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+______________ TestCourtReads.test_count_active_claims_all_active ______________
+tests/unit/routers/test_court_reads.py:278: in test_count_active_claims_all_active
+    assert response.json() == {"count": 2}
+E   AssertionError: assert {'count': 0} == {'count': 2}
+E     
+E     Differing items:
+E     {'count': 0} != {'count': 2}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+______________ TestCourtReads.test_count_active_claims_some_ruled ______________
+tests/unit/routers/test_court_reads.py:300: in test_count_active_claims_some_ruled
+    assert response.json() == {"count": 1}
+E   AssertionError: assert {'count': 0} == {'count': 1}
+E     
+E     Differing items:
+E     {'count': 0} != {'count': 1}
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:00", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/claims/clm-8779fa7c-75c7-4b26-961e-d0e3d96774cf/status"}}
+_________ TestReadClaimsFilterByClaimantId.test_filter_by_claimant_id __________
+tests/unit/routers/test_t072_court_reads_gaps.py:205: in test_filter_by_claimant_id
+    assert len(claims) == 1
+E   assert 0 == 1
+E    +  where 0 = len([])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+________ TestReadRebuttalByClaimId.test_get_rebuttal_returns_the_record ________
+tests/unit/routers/test_t072_court_reads_gaps.py:222: in test_get_rebuttal_returns_the_record
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "claim_not_found", "status_code": 404, "path": "/court/rebuttals"}}
+{"timestamp": "2026-10-18 03:36:18", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "rebuttal_not_found", "status_code": 404, "path": "/court/claims/clm-879f1429-c230-4f76-987a-2cde52249006/rebuttal"}}
+__________ TestReadRulingByClaimId.test_get_ruling_returns_the_record __________
+tests/unit/routers/test_t072_court_reads_gaps.py:251: in test_get_ruling_returns_the_record
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+{"timestamp": "2026-10-18 03:36:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/claims"}}
+{"timestamp": "2026-10-18 03:36:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "foreign_key_violation", "status_code": 409, "path": "/court/rulings"}}
+{"timestamp": "2026-10-18 03:36:19", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "ruling_not_found", "status_code": 404, "path": "/court/rulings/clm-0221d1b6-5296-40fa-9eef-dfddc8c645a4"}}
+______________________ TestConfig.test_valid_config_loads ______________________
+tests/unit/test_config.py:20: in test_valid_config_loads
+    settings = Settings(
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...way.identity.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+_______ TestConstraintEnforcement.test_update_task_with_valid_constraint _______
+tests/unit/test_constraints.py:114: in test_update_task_with_valid_constraint
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_constraints.py:93: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:21", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_____ TestConstraintEnforcement.test_update_task_with_violated_constraint ______
+tests/unit/test_constraints.py:134: in test_update_task_with_violated_constraint
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_constraints.py:93: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:21", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_______ TestConstraintEnforcement.test_constraint_violation_error_format _______
+tests/unit/test_constraints.py:159: in test_constraint_violation_error_format
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_constraints.py:93: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:21", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+__________ TestConstraintEnforcement.test_update_without_constraints ___________
+tests/unit/test_constraints.py:187: in test_update_without_constraints
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_constraints.py:93: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:21", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+___________ TestConstraintEnforcement.test_empty_constraints_object ____________
+tests/unit/test_constraints.py:202: in test_empty_constraints_object
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_constraints.py:93: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:21", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+____ TestConstraintEnforcement.test_escrow_release_owns_locked_precondition ____
+tests/unit/test_constraints.py:220: in test_escrow_release_owns_locked_precondition
+    task_id, escrow_id = _create_task(app_with_writer, poster_id=payer_id)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_constraints.py:93: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:22", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+__________ TestConstraintEnforcement.test_cross_table_bid_constraint ___________
+tests/unit/test_constraints.py:250: in test_cross_table_bid_constraint
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_constraints.py:93: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:22", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_______ TestEventIntegrity.test_event_task_id_and_agent_id_match_request _______
+tests/unit/test_cross_cutting.py:331: in test_event_task_id_and_agent_id_match_request
+    assert resp.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:22", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+___________ TestAtomicity.test_rebuttal_with_fk_violation_is_atomic ____________
+tests/unit/test_cross_cutting.py:542: in test_rebuttal_with_fk_violation_is_atomic
+    task_id = _create_task_for_agent(db_writer, alice, esc_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_cross_cutting.py:110: in _create_task_for_agent
+    db_writer.create_task(
+src/db_gateway_service/services/db_writer.py:400: in create_task
+    return self._board.create_task(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/board_writer.py:156: in create_task
+    window_seconds, bidding_us, acceptance_us = _publication_cutoffs(data)
+                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/board_writer.py:115: in _publication_cutoffs
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Missing required field: acceptance_window_seconds
+_ TestConcurrentReveal.test_concurrent_counter_feedback_never_leaves_both_sealed _
+tests/unit/test_feedback_reveal_atomicity.py:397: in test_concurrent_counter_feedback_never_leaves_both_sealed
+    DbWriter(
+src/db_gateway_service/services/db_writer.py:150: in __init__
+    self._admit_task_contracts()
+src/db_gateway_service/services/db_writer.py:226: in _admit_task_contracts
+    raise ServiceError(
+E   service_commons.exceptions.ServiceError: Task contract admission failed
+_ TestFileClaimDistinguishesTaskFromClaimCollision.test_second_claim_against_disputed_task_is_not_claim_exists _
+tests/unit/test_gap_c7_error_mapping.py:178: in test_second_claim_against_disputed_task_is_not_claim_exists
+    task_id = _create_task(app_with_writer, poster)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_gap_c7_error_mapping.py:143: in _create_task
+    assert created.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_ TestFileClaimDistinguishesTaskFromClaimCollision.test_duplicate_claim_id_is_still_claim_exists _
+tests/unit/test_gap_c7_error_mapping.py:197: in test_duplicate_claim_id_is_still_claim_exists
+    task_id = _create_task(app_with_writer, poster)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_gap_c7_error_mapping.py:143: in _create_task
+    assert created.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:27", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+______ TestBidCountReflectsReality.test_bid_count_is_zero_before_any_bids ______
+tests/unit/test_gap_e13_bid_count.py:144: in test_bid_count_is_zero_before_any_bids
+    task_id = _create_task(app_with_writer, poster)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_gap_e13_bid_count.py:117: in _create_task
+    assert created.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:28", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+______ TestBidCountReflectsReality.test_bid_count_increments_on_each_bid _______
+tests/unit/test_gap_e13_bid_count.py:156: in test_bid_count_increments_on_each_bid
+    task_id = _create_task(app_with_writer, poster)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_gap_e13_bid_count.py:117: in _create_task
+    assert created.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:28", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_ TestBidCountReflectsReality.test_bid_count_matches_get_bids_for_task_length __
+tests/unit/test_gap_e13_bid_count.py:173: in test_bid_count_matches_get_bids_for_task_length
+    task_id = _create_task(app_with_writer, poster)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_gap_e13_bid_count.py:117: in _create_task
+    assert created.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:28", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_ TestBidCountReflectsReality.test_duplicate_bid_rejection_does_not_double_increment _
+tests/unit/test_gap_e13_bid_count.py:193: in test_duplicate_bid_rejection_does_not_double_increment
+    task_id = _create_task(app_with_writer, poster)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_gap_e13_bid_count.py:117: in _create_task
+    assert created.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:36:28", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_______________ TestSchemaAdditions.test_submit_bid_with_amount ________________
+tests/unit/test_schema_additions.py:118: in test_submit_bid_with_amount
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_schema_additions.py:98: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_________ TestSchemaAdditions.test_submit_bid_without_amount_uses_zero _________
+tests/unit/test_schema_additions.py:149: in test_submit_bid_without_amount_uses_zero
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_schema_additions.py:98: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+___________ TestSchemaAdditions.test_record_asset_with_content_hash ____________
+tests/unit/test_schema_additions.py:178: in test_record_asset_with_content_hash
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_schema_additions.py:98: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+__________ TestSchemaAdditions.test_record_asset_without_content_hash __________
+tests/unit/test_schema_additions.py:211: in test_record_asset_without_content_hash
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_schema_additions.py:98: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+__ TestSchemaAdditions.test_create_task_defaults_bid_count_and_escrow_pending __
+tests/unit/test_schema_additions.py:243: in test_create_task_defaults_bid_count_and_escrow_pending
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_schema_additions.py:98: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:55", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+__________ TestSchemaAdditions.test_file_claim_with_rebuttal_deadline __________
+tests/unit/test_schema_additions.py:260: in test_file_claim_with_rebuttal_deadline
+    task_id, _ = _create_task(app_with_writer, poster_id=poster_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_schema_additions.py:98: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:56", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_ TestCas04Cas05NotFoundNuance.test_constrained_update_on_missing_task_returns_generic_not_found _
+tests/unit/test_t072_constraints_gaps.py:138: in test_constrained_update_on_missing_task_returns_generic_not_found
+    assert response.status_code == 404
+E   assert 409 == 404
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-does-not-exist/status"}}
+_ TestCas04Cas05NotFoundNuance.test_unconstrained_update_on_missing_task_returns_task_not_found _
+tests/unit/test_t072_constraints_gaps.py:159: in test_unconstrained_update_on_missing_task_returns_task_not_found
+    assert response.status_code == 404
+E   assert 409 == 404
+E    +  where 409 = <Response [409 Conflict]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "native_operation_required", "status_code": 409, "path": "/board/tasks/t-does-not-exist/status"}}
+_ TestCas09AssetCrossTableConstraint.test_asset_recording_rejected_when_task_no_longer_open _
+tests/unit/test_t072_constraints_gaps.py:172: in test_asset_recording_rejected_when_task_no_longer_open
+    task_id, _escrow_id = _create_task(app_with_writer, poster_id=poster_id)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_t072_constraints_gaps.py:110: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:57", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_ TestCas10RebuttalConstraint.test_rebuttal_with_matching_claim_status_constraint_succeeds _
+tests/unit/test_t072_constraints_gaps.py:211: in test_rebuttal_with_matching_claim_status_constraint_succeeds
+    task_id, _escrow_id = _create_task(app_with_writer, poster_id=alice)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_t072_constraints_gaps.py:110: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_ TestCas07AlreadyResolvedEscrow.test_opposing_split_returns_true_release_winner _
+tests/unit/test_t072_constraints_gaps.py:259: in test_opposing_split_returns_true_release_winner
+    task_id, escrow_id = _create_task(app_with_writer, poster_id=poster_id)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_t072_constraints_gaps.py:110: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+__ TestCas11InvalidConstraintsType.test_string_constraints_value_is_rejected ___
+tests/unit/test_t072_constraints_gaps.py:304: in test_string_constraints_value_is_rejected
+    task_id, _escrow_id = _create_task(app_with_writer, poster_id=poster_id)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_t072_constraints_gaps.py:110: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:58", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+____________ TestDisputeIdWrites.test_status_update_sets_dispute_id ____________
+tests/unit/test_task_dispute_id_column.py:199: in test_status_update_sets_dispute_id
+    task_id = _create_task(app_with_writer, poster_id=poster_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_task_dispute_id_column.py:150: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+____________ TestDisputeIdWrites.test_task_read_returns_dispute_id _____________
+tests/unit/test_task_dispute_id_column.py:226: in test_task_read_returns_dispute_id
+    task_id = _create_task(app_with_writer, poster_id=poster_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_task_dispute_id_column.py:150: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+_________ TestDisputeIdWrites.test_create_task_leaves_dispute_id_null __________
+tests/unit/test_task_dispute_id_column.py:246: in test_create_task_leaves_dispute_id_null
+    task_id = _create_task(app_with_writer, poster_id=poster_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_task_dispute_id_column.py:150: in _create_task
+    assert task_response.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 03:39:59", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "missing_field", "status_code": 400, "path": "/board/tasks"}}
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_board.py::TestTaskCreation::test_create_valid_task
+FAILED tests/unit/routers/test_board.py::TestTaskCreation::test_duplicate_task_id_rejected
+FAILED tests/unit/routers/test_board.py::TestTaskCreation::test_fk_violation_poster_id
+FAILED tests/unit/routers/test_board.py::TestTaskCreation::test_fk_violation_escrow_id
+FAILED tests/unit/routers/test_board.py::TestTaskCreation::test_task_and_event_atomic
+FAILED tests/unit/routers/test_board.py::TestBidSubmission::test_submit_valid_bid
+FAILED tests/unit/routers/test_board.py::TestBidSubmission::test_duplicate_bid_rejected
+FAILED tests/unit/routers/test_board.py::TestBidSubmission::test_different_bidders_succeed
+FAILED tests/unit/routers/test_board.py::TestBidSubmission::test_fk_violation_task_id
+FAILED tests/unit/routers/test_board.py::TestBidSubmission::test_fk_violation_bidder_id
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_accepted
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_submitted
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_approved
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_cancelled
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_disputed
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_ruled
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_update_to_expired
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_task_not_found
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_multiple_fields_updated
+FAILED tests/unit/routers/test_board.py::TestTaskStatusUpdate::test_gateway_does_not_validate_transitions
+FAILED tests/unit/routers/test_board.py::TestAssetRecording::test_record_valid_asset
+FAILED tests/unit/routers/test_board.py::TestAssetRecording::test_duplicate_asset_id_rejected
+FAILED tests/unit/routers/test_board.py::TestAssetRecording::test_multiple_assets_same_task
+FAILED tests/unit/routers/test_court.py::TestDisputeClaims::test_file_valid_claim
+FAILED tests/unit/routers/test_court.py::TestDisputeClaims::test_duplicate_claim_id_rejected
+FAILED tests/unit/routers/test_court.py::TestDisputeClaims::test_claim_and_event_atomic
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_submit_valid_rebuttal
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_rebuttal_with_claim_status_update
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_rebuttal_without_claim_status_update
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_duplicate_rebuttal_id_rejected
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_fk_violation_claim_id
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_fk_violation_agent_id
+FAILED tests/unit/routers/test_court.py::TestRebuttals::test_rebuttal_and_claim_update_atomic
+FAILED tests/unit/routers/test_court.py::TestRulings::test_record_valid_ruling
+FAILED tests/unit/routers/test_court.py::TestRulings::test_ruling_with_claim_status_update
+FAILED tests/unit/routers/test_court.py::TestRulings::test_ruling_without_claim_status_update
+FAILED tests/unit/routers/test_court.py::TestRulings::test_duplicate_ruling_id_rejected
+FAILED tests/unit/routers/test_court.py::TestRulings::test_ruling_and_claim_update_atomic
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_get_claim_by_id
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_list_claims_returns_all
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_list_claims_filter_by_status
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_count_claims_after_filing
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_count_active_claims_all_active
+FAILED tests/unit/routers/test_court_reads.py::TestCourtReads::test_count_active_claims_some_ruled
+FAILED tests/unit/routers/test_t072_court_reads_gaps.py::TestReadClaimsFilterByClaimantId::test_filter_by_claimant_id
+FAILED tests/unit/routers/test_t072_court_reads_gaps.py::TestReadRebuttalByClaimId::test_get_rebuttal_returns_the_record
+FAILED tests/unit/routers/test_t072_court_reads_gaps.py::TestReadRulingByClaimId::test_get_ruling_returns_the_record
+FAILED tests/unit/test_config.py::TestConfig::test_valid_config_loads - pydan...
+FAILED tests/unit/test_constraints.py::TestConstraintEnforcement::test_update_task_with_valid_constraint
+FAILED tests/unit/test_constraints.py::TestConstraintEnforcement::test_update_task_with_violated_constraint
+FAILED tests/unit/test_constraints.py::TestConstraintEnforcement::test_constraint_violation_error_format
+FAILED tests/unit/test_constraints.py::TestConstraintEnforcement::test_update_without_constraints
+FAILED tests/unit/test_constraints.py::TestConstraintEnforcement::test_empty_constraints_object
+FAILED tests/unit/test_constraints.py::TestConstraintEnforcement::test_escrow_release_owns_locked_precondition
+FAILED tests/unit/test_constraints.py::TestConstraintEnforcement::test_cross_table_bid_constraint
+FAILED tests/unit/test_cross_cutting.py::TestEventIntegrity::test_event_task_id_and_agent_id_match_request
+FAILED tests/unit/test_cross_cutting.py::TestAtomicity::test_rebuttal_with_fk_violation_is_atomic
+FAILED tests/unit/test_feedback_reveal_atomicity.py::TestConcurrentReveal::test_concurrent_counter_feedback_never_leaves_both_sealed
+FAILED tests/unit/test_gap_c7_error_mapping.py::TestFileClaimDistinguishesTaskFromClaimCollision::test_second_claim_against_disputed_task_is_not_claim_exists
+FAILED tests/unit/test_gap_c7_error_mapping.py::TestFileClaimDistinguishesTaskFromClaimCollision::test_duplicate_claim_id_is_still_claim_exists
+FAILED tests/unit/test_gap_e13_bid_count.py::TestBidCountReflectsReality::test_bid_count_is_zero_before_any_bids
+FAILED tests/unit/test_gap_e13_bid_count.py::TestBidCountReflectsReality::test_bid_count_increments_on_each_bid
+FAILED tests/unit/test_gap_e13_bid_count.py::TestBidCountReflectsReality::test_bid_count_matches_get_bids_for_task_length
+FAILED tests/unit/test_gap_e13_bid_count.py::TestBidCountReflectsReality::test_duplicate_bid_rejection_does_not_double_increment
+FAILED tests/unit/test_schema_additions.py::TestSchemaAdditions::test_submit_bid_with_amount
+FAILED tests/unit/test_schema_additions.py::TestSchemaAdditions::test_submit_bid_without_amount_uses_zero
+FAILED tests/unit/test_schema_additions.py::TestSchemaAdditions::test_record_asset_with_content_hash
+FAILED tests/unit/test_schema_additions.py::TestSchemaAdditions::test_record_asset_without_content_hash
+FAILED tests/unit/test_schema_additions.py::TestSchemaAdditions::test_create_task_defaults_bid_count_and_escrow_pending
+FAILED tests/unit/test_schema_additions.py::TestSchemaAdditions::test_file_claim_with_rebuttal_deadline
+FAILED tests/unit/test_t072_constraints_gaps.py::TestCas04Cas05NotFoundNuance::test_constrained_update_on_missing_task_returns_generic_not_found
+FAILED tests/unit/test_t072_constraints_gaps.py::TestCas04Cas05NotFoundNuance::test_unconstrained_update_on_missing_task_returns_task_not_found
+FAILED tests/unit/test_t072_constraints_gaps.py::TestCas09AssetCrossTableConstraint::test_asset_recording_rejected_when_task_no_longer_open
+FAILED tests/unit/test_t072_constraints_gaps.py::TestCas10RebuttalConstraint::test_rebuttal_with_matching_claim_status_constraint_succeeds
+FAILED tests/unit/test_t072_constraints_gaps.py::TestCas07AlreadyResolvedEscrow::test_opposing_split_returns_true_release_winner
+FAILED tests/unit/test_t072_constraints_gaps.py::TestCas11InvalidConstraintsType::test_string_constraints_value_is_rejected
+FAILED tests/unit/test_task_dispute_id_column.py::TestDisputeIdWrites::test_status_update_sets_dispute_id
+FAILED tests/unit/test_task_dispute_id_column.py::TestDisputeIdWrites::test_task_read_returns_dispute_id
+FAILED tests/unit/test_task_dispute_id_column.py::TestDisputeIdWrites::test_create_task_leaves_dispute_id_null
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_first_feedback_stays_sealed
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_counter_feedback_reveals_both_rows
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_stale_caller_reveal_flag_is_ignored
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_unrelated_pair_is_unaffected
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_platform_feedback_is_visible_without_a_reverse
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_platform_feedback_still_reveals_an_existing_reverse
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_reveal_is_idempotent
+ERROR tests/unit/test_feedback_reveal_atomicity.py::TestGatewayOwnedReveal::test_reveal_emits_one_feedback_revealed_event
+ERROR tests/unit/test_write_integrity.py::TestDeleteRulingEmitsEvent::test_delete_ruling_writes_event_in_same_transaction
+ERROR tests/unit/test_write_integrity.py::TestDeleteRulingEmitsEvent::test_delete_ruling_rolls_back_when_event_insert_fails
+ERROR tests/unit/test_write_integrity.py::TestUpdateClaimStatusRequiresEvent::test_missing_event_is_rejected_and_row_unchanged
+ERROR tests/unit/test_write_integrity.py::TestUpdateClaimStatusRequiresEvent::test_event_is_written_with_the_status_update
+====== 79 failed, 1068 passed, 1 warning, 12 errors in 250.53s (0:04:10) =======

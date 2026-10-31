@@ -1,12 +1,10 @@
 """Tasks route handlers."""
 
-from __future__ import annotations
-
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
-from ui_service.core.state import get_app_state
+from ui_service.core.deps import DbConn, TaskBoardRead
 from ui_service.schemas import (
     AgentRef,
     AssetItem,
@@ -32,9 +30,12 @@ from ui_service.services import tasks as tasks_service
 router = APIRouter()
 
 
-@router.get("/tasks")
+@router.get("/tasks")  # nosemgrep
 async def get_task_list(
+    task_board_reader: TaskBoardRead,
     status: str | None = Query(None),
+    poster_id: str | None = Query(None, min_length=1),
+    worker_id: str | None = Query(None, min_length=1),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ) -> JSONResponse:
@@ -48,18 +49,13 @@ async def get_task_list(
             details={"parameter": "status", "value": status},
         )
 
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
     tasks_data, total_count = await tasks_service.get_task_list(
-        db, status=status, limit=limit, offset=offset
+        task_board_reader,
+        status=status,
+        poster_id=poster_id,
+        worker_id=worker_id,
+        limit=limit,
+        offset=offset,
     )
 
     tasks = [
@@ -71,6 +67,7 @@ async def get_task_list(
             poster_id=t["poster_id"],
             created_at=t["created_at"],
             bid_count=t["bid_count"],
+            financial_effect=t["financial_effect"],
         )
         for t in tasks_data
     ]
@@ -86,20 +83,11 @@ async def get_task_list(
 
 @router.get("/tasks/-/competitive")  # nosemgrep
 async def get_competitive_tasks(
+    db: DbConn,
     limit: int = Query(5, ge=1, le=20),
     status: str = Query("open"),
 ) -> JSONResponse:
     """Return tasks sorted by bid count descending."""
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
     data = await tasks_service.get_competitive_tasks(db, limit=limit, status=status)
 
     tasks = [
@@ -122,20 +110,11 @@ async def get_competitive_tasks(
 
 @router.get("/tasks/-/uncontested")  # nosemgrep
 async def get_uncontested_tasks(
+    db: DbConn,
     min_age_minutes: int = Query(10, ge=0),
     limit: int = Query(10, ge=1, le=50),
 ) -> JSONResponse:
     """Return open tasks with zero bids older than min_age_minutes."""
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
     data = await tasks_service.get_uncontested_tasks(
         db, min_age_minutes=min_age_minutes, limit=limit
     )
@@ -158,27 +137,13 @@ async def get_uncontested_tasks(
 
 
 @router.get("/tasks/{task_id}")
-async def get_task_drilldown(task_id: str) -> JSONResponse:
+async def get_task_drilldown(
+    task_id: str,
+    db: DbConn,
+    task_board_reader: TaskBoardRead,
+) -> JSONResponse:
     """Return full task drilldown with bids, assets, feedback, and dispute."""
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
-
-    data = await tasks_service.get_task_drilldown(db, task_id)
-
-    if data is None:
-        raise ServiceError(
-            error="task_not_found",
-            message=f"Task '{task_id}' not found",
-            status_code=404,
-            details={"task_id": task_id},
-        )
+    data = await tasks_service.get_task_drilldown(db, task_board_reader, task_id)
 
     bids = [
         BidItem(
@@ -188,7 +153,7 @@ async def get_task_drilldown(task_id: str) -> JSONResponse:
                 name=b["bidder"]["name"],
                 delivery_quality=DeliveryQualityStats(**b["bidder"]["delivery_quality"]),
             ),
-            proposal=b["proposal"],
+            amount=b["amount"],
             submitted_at=b["submitted_at"],
             accepted=b["accepted"],
         )
@@ -198,9 +163,11 @@ async def get_task_drilldown(task_id: str) -> JSONResponse:
     assets = [
         AssetItem(
             asset_id=a["asset_id"],
+            uploader_id=a["uploader_id"],
             filename=a["filename"],
             content_type=a["content_type"],
             size_bytes=a["size_bytes"],
+            content_hash=a["content_hash"],
             uploaded_at=a["uploaded_at"],
         )
         for a in data["assets"]
@@ -209,7 +176,9 @@ async def get_task_drilldown(task_id: str) -> JSONResponse:
     feedback = [
         FeedbackDetail(
             feedback_id=fb["feedback_id"],
+            from_agent_id=fb["from_agent_id"],
             from_agent_name=fb["from_agent_name"],
+            to_agent_id=fb["to_agent_id"],
             to_agent_name=fb["to_agent_name"],
             category=fb["category"],
             rating=fb["rating"],
@@ -256,12 +225,18 @@ async def get_task_drilldown(task_id: str) -> JSONResponse:
         spec=data["spec"],
         reward=data["reward"],
         status=data["status"],
+        lifecycle_version=data["lifecycle_version"],
+        bid_count=data["bid_count"],
+        accepted_price=data["accepted_price"],
+        worker_payment=data["worker_payment"],
+        poster_refund=data["poster_refund"],
         deadlines=TaskDeadlines(**data["deadlines"]),
         timestamps=TaskTimestamps(**data["timestamps"]),
         bids=bids,
         assets=assets,
         feedback=feedback,
         dispute=dispute,
+        financial_effect=data["financial_effect"],
     )
 
     return JSONResponse(content=response.model_dump(by_alias=True))

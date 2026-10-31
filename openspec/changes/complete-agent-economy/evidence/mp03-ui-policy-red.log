@@ -1,0 +1,134 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 12 items
+
+tests/unit/test_mp03_operator_credentials.py ....FFFFF                   [ 75%]
+tests/unit/test_mp03_e2e_fixture_credentials.py F..                      [100%]
+
+=================================== FAILURES ===================================
+______________ test_invalid_operator_keys_abort_startup[missing] _______________
+tests/unit/test_mp03_operator_credentials.py:66: in test_invalid_operator_keys_abort_startup
+    async with lifespan(FastAPI()):
+               ^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+src/ui_service/core/lifespan.py:37: in lifespan
+    factory = AgentFactory(config_path=config_path.resolve())
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+______________ test_invalid_operator_keys_abort_startup[partial] _______________
+tests/unit/test_mp03_operator_credentials.py:66: in test_invalid_operator_keys_abort_startup
+    async with lifespan(FastAPI()):
+               ^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+src/ui_service/core/lifespan.py:37: in lifespan
+    factory = AgentFactory(config_path=config_path.resolve())
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+_____________ test_invalid_operator_keys_abort_startup[mismatched] _____________
+tests/unit/test_mp03_operator_credentials.py:66: in test_invalid_operator_keys_abort_startup
+    async with lifespan(FastAPI()):
+               ^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+src/ui_service/core/lifespan.py:37: in lifespan
+    factory = AgentFactory(config_path=config_path.resolve())
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+______________ test_invalid_operator_keys_abort_startup[corrupt] _______________
+tests/unit/test_mp03_operator_credentials.py:66: in test_invalid_operator_keys_abort_startup
+    async with lifespan(FastAPI()):
+               ^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+src/ui_service/core/lifespan.py:37: in lifespan
+    factory = AgentFactory(config_path=config_path.resolve())
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+____________ test_invalid_operator_keys_abort_startup[unsafe_mode] _____________
+tests/unit/test_mp03_operator_credentials.py:66: in test_invalid_operator_keys_abort_startup
+    async with lifespan(FastAPI()):
+               ^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+src/ui_service/core/lifespan.py:37: in lifespan
+    factory = AgentFactory(config_path=config_path.resolve())
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/factory.py:53: in __init__
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+__________ test_browser_fixture_provisions_isolated_loadable_operator __________
+tests/unit/test_mp03_e2e_fixture_credentials.py:51: in test_browser_fixture_provisions_isolated_loadable_operator
+    config = load_agent_config(handle, agent_config_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/config.py:107: in load_agent_config
+    file_settings = _FileSettings(**raw)
+                    ^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 2 validation errors for _FileSettings
+E   signing.max_lifetime_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   signing.clock_skew_seconds
+E     Field required [type=missing, input_value={'token_ttl_seconds': 60}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp03_operator_credentials.py::test_invalid_operator_keys_abort_startup[missing]
+FAILED tests/unit/test_mp03_operator_credentials.py::test_invalid_operator_keys_abort_startup[partial]
+FAILED tests/unit/test_mp03_operator_credentials.py::test_invalid_operator_keys_abort_startup[mismatched]
+FAILED tests/unit/test_mp03_operator_credentials.py::test_invalid_operator_keys_abort_startup[corrupt]
+FAILED tests/unit/test_mp03_operator_credentials.py::test_invalid_operator_keys_abort_startup[unsafe_mode]
+FAILED tests/unit/test_mp03_e2e_fixture_credentials.py::test_browser_fixture_provisions_isolated_loadable_operator
+========================= 6 failed, 6 passed in 0.19s ==========================

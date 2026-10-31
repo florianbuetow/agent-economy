@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
+
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
 
@@ -23,37 +25,46 @@ async def test_download_uploaded_asset(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker AS1", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Asset download task",
             spec="Upload a file",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
 
         original_content = b"Hello World from asset store test"
         asset = await worker.upload_asset(task["task_id"], "result.txt", original_content)
         assert isinstance(asset.get("asset_id"), str)
 
         # List assets to get the asset_id
-        assets_response = await worker._request(
-            "GET",
-            f"{worker.config.task_board_url}/tasks/{task['task_id']}/assets",
-        )
-        assets = assets_response["assets"]
+        assets = await worker.list_assets(task["task_id"])
         assert len(assets) == 1
         asset_id = assets[0]["asset_id"]
 
         # Download the asset
-        download_response = await worker._request_raw(
-            "GET",
-            f"{worker.config.task_board_url}/tasks/{task['task_id']}/assets/{asset_id}",
-        )
-        assert download_response.status_code == 200
-        assert download_response.content == original_content
+        downloaded = await worker.download_asset(task["task_id"], asset_id)
+        assert downloaded == original_content
     finally:
         await _close_agents(agents_to_close)
 
@@ -68,26 +79,39 @@ async def test_multiple_asset_uploads(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker AS2", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="Multi asset task",
             spec="Upload multiple files",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
 
         await worker.upload_asset(task["task_id"], "code.py", b"print(1)")
         await worker.upload_asset(task["task_id"], "readme.md", b"# Hello")
         await worker.upload_asset(task["task_id"], "data.json", b'{"key": 1}')
 
-        assets_response = await worker._request(
-            "GET",
-            f"{worker.config.task_board_url}/tasks/{task['task_id']}/assets",
-        )
-        assets = assets_response["assets"]
+        assets = await worker.list_assets(task["task_id"])
         assert len(assets) == 3
 
         filenames = {a["filename"] for a in assets}
@@ -110,16 +134,33 @@ async def test_submit_without_assets_rejected(make_funded_agent) -> None:
         worker = await make_funded_agent(name="Worker AS3", balance=0)
         agents_to_close.extend([poster, worker])
 
-        task = await poster.post_task(
+        task = await publish_task(
+            poster,
             title="No assets task",
             spec="Do something",
             reward=500,
             bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
             execution_deadline_seconds=7200,
             review_deadline_seconds=3600,
         )
-        bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-        await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+        bid_response = await worker.submit_bid(
+            task_id=task["task_id"],
+            amount=400,
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert bid_response.status_code == 201
+        bid = bid_response.body
+        accept_response = await poster.accept_bid(
+            task_id=task["task_id"],
+            bid_id=bid["bid_id"],
+            operation_id=new_operation_id(),
+            expected_lifecycle_version=lifecycle_version(task),
+        )
+        assert accept_response.status_code == 200
+        accepted_task = accept_response.body
+        assert accepted_task["status"] == "accepted"
 
         # Try to submit without uploading any assets
         response = await worker._request_raw(
@@ -129,9 +170,13 @@ async def test_submit_without_assets_rejected(make_funded_agent) -> None:
                 "token": worker._sign_jws(
                     {
                         "action": "submit_deliverable",
+                        "operation_id": new_operation_id(),
+                        "expected_lifecycle_version": lifecycle_version(accepted_task),
                         "task_id": task["task_id"],
                         "worker_id": worker.agent_id,
-                    }
+                    },
+                    audience="task-board",
+                    resource=f"POST /tasks/{task['task_id']}/submit",
                 )
             },
         )

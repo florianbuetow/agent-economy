@@ -1,0 +1,376 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 67 items
+
+tests/unit/test_mp04_sdk_receipt_validation.py ....FFFFFFFFFFFFFFFFFFFFF [ 37%]
+FFFFFFFFF...FFFFFFFFFFFFFF...FFFFFFFFFFFFF                               [100%]
+
+=================================== FAILURES ===================================
+_ test_platform_issuance_rejects_corrupt_native_receipts[path0-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff] _
+tests/unit/test_mp04_sdk_receipt_validation.py:334: in test_platform_issuance_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_ test_platform_issuance_rejects_corrupt_native_receipts[path1-changed-source] _
+tests/unit/test_mp04_sdk_receipt_validation.py:334: in test_platform_issuance_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+____ test_platform_issuance_rejects_corrupt_native_receipts[path2-a-other] _____
+tests/unit/test_mp04_sdk_receipt_validation.py:334: in test_platform_issuance_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+______ test_platform_issuance_rejects_corrupt_native_receipts[path3-101] _______
+tests/unit/test_mp04_sdk_receipt_validation.py:334: in test_platform_issuance_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+____ test_platform_issuance_rejects_corrupt_native_receipts[path4-a-other] _____
+tests/unit/test_mp04_sdk_receipt_validation.py:334: in test_platform_issuance_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+______ test_platform_issuance_rejects_corrupt_native_receipts[path5-101] _______
+tests/unit/test_mp04_sdk_receipt_validation.py:334: in test_platform_issuance_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+__ test_platform_issuance_rejects_corrupt_native_receipts[path6-replacement6] __
+tests/unit/test_mp04_sdk_receipt_validation.py:334: in test_platform_issuance_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+______ test_platform_issuance_rejects_corrupt_native_receipts[path7-True] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:334: in test_platform_issuance_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+______ test_platform_issuance_rejects_corrupt_native_receipts[path8-True] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:334: in test_platform_issuance_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_______ test_platform_issuance_rejects_corrupt_native_receipts[path9-0] ________
+tests/unit/test_mp04_sdk_receipt_validation.py:334: in test_platform_issuance_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_ test_platform_credit_rejects_corrupt_native_receipts[path0-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff] _
+tests/unit/test_mp04_sdk_receipt_validation.py:364: in test_platform_credit_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+__ test_platform_credit_rejects_corrupt_native_receipts[path1-changed-source] __
+tests/unit/test_mp04_sdk_receipt_validation.py:364: in test_platform_credit_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_____ test_platform_credit_rejects_corrupt_native_receipts[path2-a-other] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:364: in test_platform_credit_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+________ test_platform_credit_rejects_corrupt_native_receipts[path3-99] ________
+tests/unit/test_mp04_sdk_receipt_validation.py:364: in test_platform_credit_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_ test_platform_credit_rejects_corrupt_native_receipts[path4-changed-reference] _
+tests/unit/test_mp04_sdk_receipt_validation.py:364: in test_platform_credit_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_____ test_platform_credit_rejects_corrupt_native_receipts[path5-a-other] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:364: in test_platform_credit_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+________ test_platform_credit_rejects_corrupt_native_receipts[path6-99] ________
+tests/unit/test_mp04_sdk_receipt_validation.py:364: in test_platform_credit_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_______ test_platform_credit_rejects_corrupt_native_receipts[path7-101] ________
+tests/unit/test_mp04_sdk_receipt_validation.py:364: in test_platform_credit_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+___ test_platform_credit_rejects_corrupt_native_receipts[path8-replacement8] ___
+tests/unit/test_mp04_sdk_receipt_validation.py:364: in test_platform_credit_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+___ test_platform_credit_rejects_corrupt_native_receipts[path9-replacement9] ___
+tests/unit/test_mp04_sdk_receipt_validation.py:364: in test_platform_credit_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_ test_platform_release_rejects_corrupt_native_receipts[path0-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff] _
+tests/unit/test_mp04_sdk_receipt_validation.py:390: in test_platform_release_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_ test_platform_release_rejects_corrupt_native_receipts[path1-changed-source] __
+tests/unit/test_mp04_sdk_receipt_validation.py:390: in test_platform_release_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+____ test_platform_release_rejects_corrupt_native_receipts[path2-esc-other] ____
+tests/unit/test_mp04_sdk_receipt_validation.py:390: in test_platform_release_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_____ test_platform_release_rejects_corrupt_native_receipts[path3-locked] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:390: in test_platform_release_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_____ test_platform_release_rejects_corrupt_native_receipts[path4-a-other] _____
+tests/unit/test_mp04_sdk_receipt_validation.py:390: in test_platform_release_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_______ test_platform_release_rejects_corrupt_native_receipts[path5-49] ________
+tests/unit/test_mp04_sdk_receipt_validation.py:390: in test_platform_release_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_______ test_platform_release_rejects_corrupt_native_receipts[path6-49] ________
+tests/unit/test_mp04_sdk_receipt_validation.py:390: in test_platform_release_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_____ test_platform_release_rejects_corrupt_native_receipts[path7-locked] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:390: in test_platform_release_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+______ test_platform_release_rejects_corrupt_native_receipts[path8-None] _______
+tests/unit/test_mp04_sdk_receipt_validation.py:390: in test_platform_release_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+__ test_platform_release_rejects_corrupt_native_receipts[path9-replacement9] ___
+tests/unit/test_mp04_sdk_receipt_validation.py:390: in test_platform_release_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_ test_platform_split_rejects_corrupt_native_receipts[path0-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff] _
+tests/unit/test_mp04_sdk_receipt_validation.py:440: in test_platform_split_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+__ test_platform_split_rejects_corrupt_native_receipts[path1-changed-source] ___
+tests/unit/test_mp04_sdk_receipt_validation.py:440: in test_platform_split_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+________ test_platform_split_rejects_corrupt_native_receipts[path2-41] _________
+tests/unit/test_mp04_sdk_receipt_validation.py:440: in test_platform_split_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+______ test_platform_split_rejects_corrupt_native_receipts[path3-poster] _______
+tests/unit/test_mp04_sdk_receipt_validation.py:440: in test_platform_split_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+______ test_platform_split_rejects_corrupt_native_receipts[path4-a-other] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:440: in test_platform_split_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+________ test_platform_split_rejects_corrupt_native_receipts[path5-41] _________
+tests/unit/test_mp04_sdk_receipt_validation.py:440: in test_platform_split_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+______ test_platform_split_rejects_corrupt_native_receipts[path6-a-other] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:440: in test_platform_split_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+________ test_platform_split_rejects_corrupt_native_receipts[path7-101] ________
+tests/unit/test_mp04_sdk_receipt_validation.py:440: in test_platform_split_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_____ test_platform_split_rejects_corrupt_native_receipts[path8-released] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:440: in test_platform_split_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+___ test_platform_split_rejects_corrupt_native_receipts[path9-replacement9] ____
+tests/unit/test_mp04_sdk_receipt_validation.py:440: in test_platform_split_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_ test_platform_split_rejects_materialized_zero_legs[0-transaction_id-tx-for-zero] _
+tests/unit/test_mp04_sdk_receipt_validation.py:470: in test_platform_split_rejects_materialized_zero_legs
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+____ test_platform_split_rejects_materialized_zero_legs[0-balance_after-0] _____
+tests/unit/test_mp04_sdk_receipt_validation.py:470: in test_platform_split_rejects_materialized_zero_legs
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_ test_platform_split_rejects_materialized_zero_legs[1-transaction_id-tx-for-zero] _
+tests/unit/test_mp04_sdk_receipt_validation.py:470: in test_platform_split_rejects_materialized_zero_legs
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+____ test_platform_split_rejects_materialized_zero_legs[1-balance_after-0] _____
+tests/unit/test_mp04_sdk_receipt_validation.py:470: in test_platform_split_rejects_materialized_zero_legs
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_ test_base_agent_lock_rejects_corrupt_native_receipts[path0-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff] _
+tests/unit/test_mp04_sdk_receipt_validation.py:527: in test_base_agent_lock_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+___ test_base_agent_lock_rejects_corrupt_native_receipts[path1-changed-task] ___
+tests/unit/test_mp04_sdk_receipt_validation.py:527: in test_base_agent_lock_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_____ test_base_agent_lock_rejects_corrupt_native_receipts[path2-released] _____
+tests/unit/test_mp04_sdk_receipt_validation.py:527: in test_base_agent_lock_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_____ test_base_agent_lock_rejects_corrupt_native_receipts[path3-a-other] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:527: in test_base_agent_lock_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+________ test_base_agent_lock_rejects_corrupt_native_receipts[path4-79] ________
+tests/unit/test_mp04_sdk_receipt_validation.py:527: in test_base_agent_lock_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+______ test_base_agent_lock_rejects_corrupt_native_receipts[path5-credit] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:527: in test_base_agent_lock_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_____ test_base_agent_lock_rejects_corrupt_native_receipts[path6-a-other] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:527: in test_base_agent_lock_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_____ test_base_agent_lock_rejects_corrupt_native_receipts[path7-t-other] ______
+tests/unit/test_mp04_sdk_receipt_validation.py:527: in test_base_agent_lock_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+________ test_base_agent_lock_rejects_corrupt_native_receipts[path8-79] ________
+tests/unit/test_mp04_sdk_receipt_validation.py:527: in test_base_agent_lock_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+_ test_base_agent_lock_rejects_corrupt_native_receipts[path9-2026-10-17T15:00:00Z] _
+tests/unit/test_mp04_sdk_receipt_validation.py:527: in test_base_agent_lock_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+__ test_base_agent_lock_rejects_corrupt_native_receipts[path10-replacement10] __
+tests/unit/test_mp04_sdk_receipt_validation.py:527: in test_base_agent_lock_rejects_corrupt_native_receipts
+    with pytest.raises(RuntimeError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+__ test_fund_feeder_rejects_corrupt_receipt_before_success_and_closes_clients __
+tests/unit/test_mp04_sdk_receipt_validation.py:586: in test_fund_feeder_rejects_corrupt_receipt_before_success_and_closes_clients
+    pytest.raises(RuntimeError),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+----------------------------- Captured stdout call -----------------------------
+agent_id=a-feeder
+funded_amount=500
+balance=500
+operation_id=op-00000000-0000-4000-8000-000000000102
+------------------------------ Captured log call -------------------------------
+INFO     fund_feeder_cli:__main__.py:63 Platform agent registered: agent_id=a-platform
+INFO     fund_feeder_cli:__main__.py:66 Feeder agent registered: agent_id=a-feeder
+INFO     fund_feeder_cli:__main__.py:76 Bank account created for feeder
+INFO     fund_feeder_cli:__main__.py:97 Funding confirmed for 500 coins (operation_id=op-00000000-0000-4000-8000-000000000102, tx_id=tx-credit, balance_after=500)
+___ test_treasury_rejects_corrupt_receipt_before_success_and_closes_clients ____
+tests/unit/test_mp04_sdk_receipt_validation.py:628: in test_treasury_rejects_corrupt_receipt_before_success_and_closes_clients
+    pytest.raises(RuntimeError),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'RuntimeError'>
+----------------------------- Captured stdout call -----------------------------
+agent_id=a-operator
+genesis_amount=500
+balance=500
+operation_id=op-9d4d1c16-e6af-5132-9ed8-3ece0a4f500a
+------------------------------ Captured log call -------------------------------
+INFO     treasury_provision_cli:__main__.py:40 Platform agent registered: agent_id=a-platform
+INFO     treasury_provision_cli:__main__.py:43 Operator agent registered: agent_id=a-operator
+INFO     treasury_provision_cli:__main__.py:55 Bank account created for operator
+INFO     treasury_provision_cli:__main__.py:79 Treasury funding confirmed (operation_id=op-9d4d1c16-e6af-5132-9ed8-3ece0a4f500a, tx_id=tx-credit, balance_after=500)
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_issuance_rejects_corrupt_native_receipts[path0-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_issuance_rejects_corrupt_native_receipts[path1-changed-source]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_issuance_rejects_corrupt_native_receipts[path2-a-other]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_issuance_rejects_corrupt_native_receipts[path3-101]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_issuance_rejects_corrupt_native_receipts[path4-a-other]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_issuance_rejects_corrupt_native_receipts[path5-101]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_issuance_rejects_corrupt_native_receipts[path6-replacement6]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_issuance_rejects_corrupt_native_receipts[path7-True]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_issuance_rejects_corrupt_native_receipts[path8-True]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_issuance_rejects_corrupt_native_receipts[path9-0]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_credit_rejects_corrupt_native_receipts[path0-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_credit_rejects_corrupt_native_receipts[path1-changed-source]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_credit_rejects_corrupt_native_receipts[path2-a-other]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_credit_rejects_corrupt_native_receipts[path3-99]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_credit_rejects_corrupt_native_receipts[path4-changed-reference]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_credit_rejects_corrupt_native_receipts[path5-a-other]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_credit_rejects_corrupt_native_receipts[path6-99]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_credit_rejects_corrupt_native_receipts[path7-101]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_credit_rejects_corrupt_native_receipts[path8-replacement8]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_credit_rejects_corrupt_native_receipts[path9-replacement9]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_release_rejects_corrupt_native_receipts[path0-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_release_rejects_corrupt_native_receipts[path1-changed-source]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_release_rejects_corrupt_native_receipts[path2-esc-other]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_release_rejects_corrupt_native_receipts[path3-locked]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_release_rejects_corrupt_native_receipts[path4-a-other]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_release_rejects_corrupt_native_receipts[path5-49]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_release_rejects_corrupt_native_receipts[path6-49]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_release_rejects_corrupt_native_receipts[path7-locked]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_release_rejects_corrupt_native_receipts[path8-None]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_release_rejects_corrupt_native_receipts[path9-replacement9]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_corrupt_native_receipts[path0-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_corrupt_native_receipts[path1-changed-source]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_corrupt_native_receipts[path2-41]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_corrupt_native_receipts[path3-poster]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_corrupt_native_receipts[path4-a-other]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_corrupt_native_receipts[path5-41]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_corrupt_native_receipts[path6-a-other]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_corrupt_native_receipts[path7-101]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_corrupt_native_receipts[path8-released]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_corrupt_native_receipts[path9-replacement9]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_materialized_zero_legs[0-transaction_id-tx-for-zero]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_materialized_zero_legs[0-balance_after-0]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_materialized_zero_legs[1-transaction_id-tx-for-zero]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_platform_split_rejects_materialized_zero_legs[1-balance_after-0]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_base_agent_lock_rejects_corrupt_native_receipts[path0-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_base_agent_lock_rejects_corrupt_native_receipts[path1-changed-task]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_base_agent_lock_rejects_corrupt_native_receipts[path2-released]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_base_agent_lock_rejects_corrupt_native_receipts[path3-a-other]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_base_agent_lock_rejects_corrupt_native_receipts[path4-79]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_base_agent_lock_rejects_corrupt_native_receipts[path5-credit]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_base_agent_lock_rejects_corrupt_native_receipts[path6-a-other]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_base_agent_lock_rejects_corrupt_native_receipts[path7-t-other]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_base_agent_lock_rejects_corrupt_native_receipts[path8-79]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_base_agent_lock_rejects_corrupt_native_receipts[path9-2026-10-17T15:00:00Z]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_base_agent_lock_rejects_corrupt_native_receipts[path10-replacement10]
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_fund_feeder_rejects_corrupt_receipt_before_success_and_closes_clients
+FAILED tests/unit/test_mp04_sdk_receipt_validation.py::test_treasury_rejects_corrupt_receipt_before_success_and_closes_clients
+======================== 57 failed, 10 passed in 7.00s =========================

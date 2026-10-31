@@ -23,3 +23,59 @@ database:
 
 request:
   max_body_size: 1048576
+
+recovery:
+  maintenance_lock_path: "../../data/maintenance.lock"
+  backup_root: "../../data/backups"
+
+board_authority:
+  platform_public_key_path: "../../data/keys/platform.pub"
+  deadline_actor_id: "system-task-board-deadline"
+
+board_effect_recovery:
+  current_task_board_caller_kid: "gateway-task-board"
+  max_attempts_per_delivery: 8
+  initial_backoff_seconds: 2
+  max_backoff_seconds: 60
+  lease_duration_seconds: 45
+  evidence_interval_seconds: 60
+  gateway_timeout_seconds: 10
+  bank_timeout_seconds: 10
+
+auth:
+  audience: "db-gateway"
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 30
+  trusted_callers:
+    gateway-identity:
+      public_key_path: "../../data/keys/gateway-identity.pub"
+      capabilities:
+        - "gateway.identity.read"
+        - "gateway.identity.write"
+    gateway-central-bank:
+      public_key_path: "../../data/keys/gateway-central-bank.pub"
+      capabilities:
+        - "gateway.bank.read"
+        - "gateway.bank.write"
+    gateway-task-board:
+      public_key_path: "../../data/keys/gateway-task-board.pub"
+      capabilities:
+        - "gateway.board.read"
+        - "gateway.board.write"
+    gateway-reputation:
+      public_key_path: "../../data/keys/gateway-reputation.pub"
+      capabilities:
+        - "gateway.reputation.read"
+        - "gateway.reputation.write"
+    gateway-court:
+      public_key_path: "../../data/keys/gateway-court.pub"
+      capabilities:
+        - "gateway.court.read"
+        - "gateway.court.write"
+        - "gateway.board.task.read"
+
+telemetry:
+  enabled: true
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"

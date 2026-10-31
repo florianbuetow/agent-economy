@@ -4,6 +4,7 @@ Shared exception primitives and handlers for services.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, cast
 
 from fastapi.responses import JSONResponse
@@ -72,7 +73,8 @@ def create_exception_handlers(
     ) -> JSONResponse:
         """Handle ServiceError exceptions."""
         logger = logger_factory()
-        logger.warning(
+        logger.log(
+            logging.INFO if exc.status_code < 500 else logging.WARNING,
             "Service error",
             extra={
                 "error_code": exc.error,
@@ -142,7 +144,7 @@ def middleware_error_response(
     error: str,
     message: str,
     status_code: int,
-    details: dict[str, object] | None = None,
+    details: dict[str, object],
 ) -> JSONResponse:
     """Build a standard error JSONResponse for use in ASGI middleware.
 
@@ -155,6 +157,6 @@ def middleware_error_response(
         content={
             "error": error,
             "message": message,
-            "details": details if details is not None else {},
+            "details": details,
         },
     )

@@ -1,0 +1,381 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 61 items
+
+tests/unit/test_runtime_config.py FEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE [ 62%]
+EEEEEEEEEEEEEEEEEEEEEEE                                                  [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_valid_model_preserves_exact_environment_and_canonical_directory _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_______________ ERROR at setup of test_runtime_config_is_frozen ________________
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_model_requires_every_runtime_state_field[environment_id] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+__ ERROR at setup of test_model_requires_every_runtime_state_field[directory] __
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_model_requires_every_runtime_state_field[diagnostic_limit] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_model_requires_every_runtime_state_field[max_record_bytes] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+________ ERROR at setup of test_model_rejects_extra_runtime_state_field ________
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_________ ERROR at setup of test_environment_id_rejects_blank_values[] _________
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+________ ERROR at setup of test_environment_id_rejects_blank_values[ ] _________
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+________ ERROR at setup of test_environment_id_rejects_blank_values[\t] ________
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+________ ERROR at setup of test_environment_id_rejects_blank_values[\n] ________
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+___ ERROR at setup of test_model_rejects_wrong_field_types[environment_id-1] ___
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_model_rejects_wrong_field_types[environment_id-invalid_value1] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_____ ERROR at setup of test_model_rejects_wrong_field_types[directory-1] ______
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_model_rejects_wrong_field_types[directory-invalid_value3] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+__ ERROR at setup of test_model_rejects_wrong_field_types[diagnostic_limit-8] __
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_model_rejects_wrong_field_types[diagnostic_limit-8.0] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_model_rejects_wrong_field_types[max_record_bytes-65536] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_model_rejects_wrong_field_types[max_record_bytes-65536.0] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_integer_limits_reject_booleans[True-diagnostic_limit] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_integer_limits_reject_booleans[True-max_record_bytes] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_integer_limits_reject_booleans[False-diagnostic_limit] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_integer_limits_reject_booleans[False-max_record_bytes] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+__ ERROR at setup of test_integer_limits_must_be_positive[0-diagnostic_limit] __
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+__ ERROR at setup of test_integer_limits_must_be_positive[0-max_record_bytes] __
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_integer_limits_must_be_positive[-1-diagnostic_limit] __
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_integer_limits_must_be_positive[-1-max_record_bytes] __
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_____ ERROR at setup of test_integer_limits_accept_exact_positive_boundary _____
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+____ ERROR at setup of test_loader_requires_top_level_runtime_state_section ____
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_________ ERROR at setup of test_loader_rejects_non_mapping_document[] _________
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_______ ERROR at setup of test_loader_rejects_non_mapping_document[[]\n] _______
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_loader_rejects_non_mapping_document[runtime_state\n] __
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_loader_rejects_non_mapping_runtime_state_section[None] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_loader_rejects_non_mapping_runtime_state_section[section1] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_loader_rejects_non_mapping_runtime_state_section[state] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+__ ERROR at setup of test_loader_rejects_non_mapping_runtime_state_section[1] __
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_loader_rejects_non_mapping_runtime_state_section[True] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+___ ERROR at setup of test_loader_requires_every_yaml_field[environment_id] ____
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+______ ERROR at setup of test_loader_requires_every_yaml_field[directory] ______
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+__ ERROR at setup of test_loader_requires_every_yaml_field[diagnostic_limit] ___
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+__ ERROR at setup of test_loader_requires_every_yaml_field[max_record_bytes] ___
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+____________ ERROR at setup of test_loader_rejects_extra_yaml_field ____________
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+__ ERROR at setup of test_loader_rejects_yaml_coercions[environment_id-True] ___
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+____ ERROR at setup of test_loader_rejects_yaml_coercions[environment_id-7] ____
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_____ ERROR at setup of test_loader_rejects_yaml_coercions[directory-True] _____
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+______ ERROR at setup of test_loader_rejects_yaml_coercions[directory-7] _______
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_loader_rejects_yaml_coercions[diagnostic_limit-True] __
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+___ ERROR at setup of test_loader_rejects_yaml_coercions[diagnostic_limit-8] ___
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_loader_rejects_yaml_coercions[max_record_bytes-False] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_loader_rejects_yaml_coercions[max_record_bytes-65536] _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_relative_directory_is_resolved_from_explicit_config_file _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+______ ERROR at setup of test_loader_returns_canonical_absolute_directory ______
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+___ ERROR at setup of test_loading_nonexistent_directory_does_not_create_it ____
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+___________ ERROR at setup of test_loader_rejects_blank_directory[] ____________
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+___________ ERROR at setup of test_loader_rejects_blank_directory[ ] ___________
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+__________ ERROR at setup of test_loader_rejects_blank_directory[\t] ___________
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+___ ERROR at setup of test_loader_rejects_directory_that_is_an_existing_file ___
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+______ ERROR at setup of test_loader_rejects_directory_that_is_a_symlink _______
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+______ ERROR at setup of test_loader_rejects_symlinked_directory_ancestor ______
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+_ ERROR at setup of test_symlink_component_is_rejected_before_dotdot_resolution _
+tests/unit/test_runtime_config.py:64: in _required_runtime_config_interface
+    assert _runtime_config is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_config is required
+E   assert None is not None
+=================================== FAILURES ===================================
+__________________ test_runtime_config_interface_is_available __________________
+tests/unit/test_runtime_config.py:73: in test_runtime_config_interface_is_available
+    assert _runtime_config is not None, (
+E   AssertionError: T-181 capability missing: base_agent.runtime_config has not been implemented
+E   assert None is not None
+=========================== short test summary info ============================
+FAILED tests/unit/test_runtime_config.py::test_runtime_config_interface_is_available
+ERROR tests/unit/test_runtime_config.py::test_valid_model_preserves_exact_environment_and_canonical_directory
+ERROR tests/unit/test_runtime_config.py::test_runtime_config_is_frozen - Asse...
+ERROR tests/unit/test_runtime_config.py::test_model_requires_every_runtime_state_field[environment_id]
+ERROR tests/unit/test_runtime_config.py::test_model_requires_every_runtime_state_field[directory]
+ERROR tests/unit/test_runtime_config.py::test_model_requires_every_runtime_state_field[diagnostic_limit]
+ERROR tests/unit/test_runtime_config.py::test_model_requires_every_runtime_state_field[max_record_bytes]
+ERROR tests/unit/test_runtime_config.py::test_model_rejects_extra_runtime_state_field
+ERROR tests/unit/test_runtime_config.py::test_environment_id_rejects_blank_values[]
+ERROR tests/unit/test_runtime_config.py::test_environment_id_rejects_blank_values[ ]
+ERROR tests/unit/test_runtime_config.py::test_environment_id_rejects_blank_values[\t]
+ERROR tests/unit/test_runtime_config.py::test_environment_id_rejects_blank_values[\n]
+ERROR tests/unit/test_runtime_config.py::test_model_rejects_wrong_field_types[environment_id-1]
+ERROR tests/unit/test_runtime_config.py::test_model_rejects_wrong_field_types[environment_id-invalid_value1]
+ERROR tests/unit/test_runtime_config.py::test_model_rejects_wrong_field_types[directory-1]
+ERROR tests/unit/test_runtime_config.py::test_model_rejects_wrong_field_types[directory-invalid_value3]
+ERROR tests/unit/test_runtime_config.py::test_model_rejects_wrong_field_types[diagnostic_limit-8]
+ERROR tests/unit/test_runtime_config.py::test_model_rejects_wrong_field_types[diagnostic_limit-8.0]
+ERROR tests/unit/test_runtime_config.py::test_model_rejects_wrong_field_types[max_record_bytes-65536]
+ERROR tests/unit/test_runtime_config.py::test_model_rejects_wrong_field_types[max_record_bytes-65536.0]
+ERROR tests/unit/test_runtime_config.py::test_integer_limits_reject_booleans[True-diagnostic_limit]
+ERROR tests/unit/test_runtime_config.py::test_integer_limits_reject_booleans[True-max_record_bytes]
+ERROR tests/unit/test_runtime_config.py::test_integer_limits_reject_booleans[False-diagnostic_limit]
+ERROR tests/unit/test_runtime_config.py::test_integer_limits_reject_booleans[False-max_record_bytes]
+ERROR tests/unit/test_runtime_config.py::test_integer_limits_must_be_positive[0-diagnostic_limit]
+ERROR tests/unit/test_runtime_config.py::test_integer_limits_must_be_positive[0-max_record_bytes]
+ERROR tests/unit/test_runtime_config.py::test_integer_limits_must_be_positive[-1-diagnostic_limit]
+ERROR tests/unit/test_runtime_config.py::test_integer_limits_must_be_positive[-1-max_record_bytes]
+ERROR tests/unit/test_runtime_config.py::test_integer_limits_accept_exact_positive_boundary
+ERROR tests/unit/test_runtime_config.py::test_loader_requires_top_level_runtime_state_section
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_non_mapping_document[]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_non_mapping_document[[]\n]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_non_mapping_document[runtime_state\n]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_non_mapping_runtime_state_section[None]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_non_mapping_runtime_state_section[section1]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_non_mapping_runtime_state_section[state]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_non_mapping_runtime_state_section[1]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_non_mapping_runtime_state_section[True]
+ERROR tests/unit/test_runtime_config.py::test_loader_requires_every_yaml_field[environment_id]
+ERROR tests/unit/test_runtime_config.py::test_loader_requires_every_yaml_field[directory]
+ERROR tests/unit/test_runtime_config.py::test_loader_requires_every_yaml_field[diagnostic_limit]
+ERROR tests/unit/test_runtime_config.py::test_loader_requires_every_yaml_field[max_record_bytes]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_extra_yaml_field
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_yaml_coercions[environment_id-True]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_yaml_coercions[environment_id-7]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_yaml_coercions[directory-True]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_yaml_coercions[directory-7]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_yaml_coercions[diagnostic_limit-True]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_yaml_coercions[diagnostic_limit-8]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_yaml_coercions[max_record_bytes-False]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_yaml_coercions[max_record_bytes-65536]
+ERROR tests/unit/test_runtime_config.py::test_relative_directory_is_resolved_from_explicit_config_file
+ERROR tests/unit/test_runtime_config.py::test_loader_returns_canonical_absolute_directory
+ERROR tests/unit/test_runtime_config.py::test_loading_nonexistent_directory_does_not_create_it
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_blank_directory[]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_blank_directory[ ]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_blank_directory[\t]
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_directory_that_is_an_existing_file
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_directory_that_is_a_symlink
+ERROR tests/unit/test_runtime_config.py::test_loader_rejects_symlinked_directory_ancestor
+ERROR tests/unit/test_runtime_config.py::test_symlink_component_is_rejected_before_dotdot_resolution
+========================= 1 failed, 60 errors in 0.24s =========================

@@ -1,0 +1,965 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 152 items
+
+tests/unit/routers/test_health.py ..                                     [  1%]
+tests/unit/test_browser_prerequisites.py ..                              [  2%]
+tests/unit/test_config.py ..                                             [  3%]
+tests/unit/test_e2e_server_readiness.py ....                             [  6%]
+tests/unit/test_exposure_posture.py .                                    [  7%]
+tests/unit/test_lifespan_logging.py .                                    [  7%]
+tests/unit/test_mp00_config_fixture_guards.py .                          [  8%]
+tests/unit/test_mp02_browser_policy.py ................................. [ 30%]
+.                                                                        [ 30%]
+tests/unit/test_mp02_frontend_containment.py ........                    [ 36%]
+tests/unit/test_mp03_e2e_fixture_credentials.py ...                      [ 38%]
+tests/unit/test_mp03_operator_credentials.py .........                   [ 44%]
+tests/unit/test_mp06_maintenance_lock.py ....                            [ 46%]
+tests/unit/test_mp07_native_proxy.py .................................   [ 68%]
+tests/unit/test_mp07_native_proxy_browser.py EEEEEEEEEEEEEEEEEEEEEE      [ 82%]
+tests/unit/test_mp07_proxy_transport_status.py ...........               [ 90%]
+tests/unit/test_no_base_agent_imports.py .                               [ 90%]
+tests/unit/test_t072_config_missing_required_fields_gap.py ........      [ 96%]
+tests/unit/test_treasury_funding.py ...                                  [ 98%]
+tests/unit/test_trend_visual_js.py FFF                                   [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_create_form_requires_poster_selected_acceptance_window _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_create_rejects_non_integral_or_nonpositive_acceptance_window[45.5] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_create_rejects_non_integral_or_nonpositive_acceptance_window[0] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_create_rejects_non_integral_or_nonpositive_acceptance_window[-1] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_every_action_freezes_identity_version_and_business_terms_before_transport[accept_bid] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_every_action_freezes_identity_version_and_business_terms_before_transport[approve_task] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_every_action_freezes_identity_version_and_business_terms_before_transport[dispute_task] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+__ ERROR at setup of test_pending_approval_reuses_frozen_intent_after_reload ___
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_invalid_completion_ack_retains_intent_without_success[foreign] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_invalid_completion_ack_retains_intent_without_success[malformed] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_invalid_completion_ack_retains_intent_without_success[wrong_task] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_invalid_completion_ack_retains_intent_without_success[wrong_command] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_invalid_completion_ack_retains_intent_without_success[claimed_on_200] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_proxy_error_retains_intent_without_refresh_or_success[409-error_body0] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_proxy_error_retains_intent_without_refresh_or_success[502-error_body1] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_proxy_error_retains_intent_without_refresh_or_success[409-error_body2] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_only_matching_verified_completion_clears_intent_and_refreshes _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_recovery_surface_replays_frozen_intent_after_task_advances[accept_bid] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_recovery_surface_replays_frozen_intent_after_task_advances[approve_task] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_recovery_surface_replays_frozen_intent_after_task_advances[dispute_task] _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_recovery_intent_cannot_be_resigned_by_changed_operator _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+_ ERROR at setup of test_operator_can_acknowledge_definite_rejection_then_start_fresh_intent _
+tests/unit/test_mp07_native_proxy_browser.py:45: in native_browser
+    browser = playwright.chromium.launch(headless=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57443
+E   [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-z8xCtS --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57443
+E     - [pid=57443][err] [1018/072326.480668:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57443][err] [1018/072326.497460:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57443][err] [1018/072326.499755:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57443][err] [1018/072326.506609:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57443: Permission denied (1100)
+E     - [pid=57443] <gracefully close start>
+E     - [pid=57443] <kill>
+E     - [pid=57443] <will force kill>
+E     - [pid=57443] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57443] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57443] starting temporary directories cleanup
+E     - [pid=57443] finished temporary directories cleanup
+E     - [pid=57443] <gracefully close end>
+=================================== FAILURES ===================================
+________________ test_trend_visual_matches_increasing_api_value ________________
+tests/unit/test_trend_visual_js.py:43: in test_trend_visual_matches_increasing_api_value
+    result = _trend_visual("increasing")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_trend_visual_js.py:31: in _trend_visual
+    browser = p.chromium.launch()
+              ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-8XJGF9 --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57450
+E   [pid=57450][err] [1018/072327.988361:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57450][err] [1018/072327.989823:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57450][err] [1018/072327.990162:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57450][err] [1018/072327.990291:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57450: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-8XJGF9 --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57450
+E     - [pid=57450][err] [1018/072327.988361:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57450][err] [1018/072327.989823:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57450][err] [1018/072327.990162:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57450][err] [1018/072327.990291:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57450: Permission denied (1100)
+E     - [pid=57450] <gracefully close start>
+E     - [pid=57450] <kill>
+E     - [pid=57450] <will force kill>
+E     - [pid=57450] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57450] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57450] starting temporary directories cleanup
+E     - [pid=57450] finished temporary directories cleanup
+E     - [pid=57450] <gracefully close end>
+________________ test_trend_visual_matches_decreasing_api_value ________________
+tests/unit/test_trend_visual_js.py:50: in test_trend_visual_matches_decreasing_api_value
+    result = _trend_visual("decreasing")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_trend_visual_js.py:31: in _trend_visual
+    browser = p.chromium.launch()
+              ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-9Y75pr --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57455
+E   [pid=57455][err] [1018/072328.276023:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57455][err] [1018/072328.277416:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57455][err] [1018/072328.277775:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E   [pid=57455][err] [1018/072328.277778:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57455: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-9Y75pr --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57455
+E     - [pid=57455][err] [1018/072328.276023:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57455][err] [1018/072328.277416:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57455][err] [1018/072328.277775:WARNING:net/dns/dns_config_service_posix.cc:197] Failed to read DnsConfig.
+E     - [pid=57455][err] [1018/072328.277778:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57455: Permission denied (1100)
+E     - [pid=57455] <gracefully close start>
+E     - [pid=57455] <kill>
+E     - [pid=57455] <will force kill>
+E     - [pid=57455] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57455] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57455] starting temporary directories cleanup
+E     - [pid=57455] finished temporary directories cleanup
+E     - [pid=57455] <gracefully close end>
+_____________________ test_trend_visual_stable_is_neutral ______________________
+tests/unit/test_trend_visual_js.py:57: in test_trend_visual_stable_is_neutral
+    result = _trend_visual("stable")
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_trend_visual_js.py:31: in _trend_visual
+    browser = p.chromium.launch()
+              ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/playwright/sync_api/_generated.py:14566: in launch
+    self._sync(
+.venv/lib/python3.13/site-packages/playwright/_impl/_browser_type.py:97: in launch
+    await self._channel.send(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+.venv/lib/python3.13/site-packages/playwright/_impl/_connection.py:559: in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E   playwright._impl._errors.TargetClosedError: BrowserType.launch: Target page, context or browser has been closed
+E   Browser logs:
+E   
+E   <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-4xc9FP --remote-debugging-pipe --no-startup-window
+E   <launched> pid=57458
+E   [pid=57458][err] [1018/072328.541347:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E   [pid=57458][err] [1018/072328.542387:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E   [pid=57458][err] [1018/072328.542794:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57458: Permission denied (1100)
+E   Call log:
+E     - <launching> /Users/flo/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/playwright_chromiumdev_profile-4xc9FP --remote-debugging-pipe --no-startup-window
+E     - <launched> pid=57458
+E     - [pid=57458][err] [1018/072328.541347:ERROR:base/power_monitor/thermal_state_observer_mac.mm:140] ThermalStateObserverMac unable to register to power notifications. Result: 9
+E     - [pid=57458][err] [1018/072328.542387:ERROR:net/dns/dns_config_service_posix.cc:138] DNS config watch failed to start.
+E     - [pid=57458][err] [1018/072328.542794:FATAL:base/apple/mach_port_rendezvous_mac.cc:155] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.57458: Permission denied (1100)
+E     - [pid=57458] <gracefully close start>
+E     - [pid=57458] <kill>
+E     - [pid=57458] <will force kill>
+E     - [pid=57458] exception while trying to kill process: Error: kill EPERM
+E     - [pid=57458] <process did exit: exitCode=null, signal=SIGTRAP>
+E     - [pid=57458] starting temporary directories cleanup
+E     - [pid=57458] finished temporary directories cleanup
+E     - [pid=57458] <gracefully close end>
+=========================== short test summary info ============================
+FAILED tests/unit/test_trend_visual_js.py::test_trend_visual_matches_increasing_api_value
+FAILED tests/unit/test_trend_visual_js.py::test_trend_visual_matches_decreasing_api_value
+FAILED tests/unit/test_trend_visual_js.py::test_trend_visual_stable_is_neutral
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_create_form_requires_poster_selected_acceptance_window
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_create_rejects_non_integral_or_nonpositive_acceptance_window[45.5]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_create_rejects_non_integral_or_nonpositive_acceptance_window[0]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_create_rejects_non_integral_or_nonpositive_acceptance_window[-1]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_every_action_freezes_identity_version_and_business_terms_before_transport[accept_bid]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_every_action_freezes_identity_version_and_business_terms_before_transport[approve_task]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_every_action_freezes_identity_version_and_business_terms_before_transport[dispute_task]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_pending_approval_reuses_frozen_intent_after_reload
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_invalid_completion_ack_retains_intent_without_success[foreign]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_invalid_completion_ack_retains_intent_without_success[malformed]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_invalid_completion_ack_retains_intent_without_success[wrong_task]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_invalid_completion_ack_retains_intent_without_success[wrong_command]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_invalid_completion_ack_retains_intent_without_success[claimed_on_200]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_proxy_error_retains_intent_without_refresh_or_success[409-error_body0]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_proxy_error_retains_intent_without_refresh_or_success[502-error_body1]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_proxy_error_retains_intent_without_refresh_or_success[409-error_body2]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_only_matching_verified_completion_clears_intent_and_refreshes
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_recovery_surface_replays_frozen_intent_after_task_advances[accept_bid]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_recovery_surface_replays_frozen_intent_after_task_advances[approve_task]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_recovery_surface_replays_frozen_intent_after_task_advances[dispute_task]
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_recovery_intent_cannot_be_resigned_by_changed_operator
+ERROR tests/unit/test_mp07_native_proxy_browser.py::test_operator_can_acknowledge_definite_rejection_then_start_fresh_intent
+=================== 3 failed, 127 passed, 22 errors in 3.99s ===================

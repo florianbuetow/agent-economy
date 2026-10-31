@@ -1,0 +1,320 @@
+{
+  "status": "Independent review APPROVE. Final parent Gateway CI exit0 and service-commons CI exit0 (177 tests).181source and202ordinarylog hashes unchanged. Earlier23 runtime controls predate only the final owner diagnostic; raw source versions remain explicit.",
+  "boundary": "Component checkpoint, not full goal, package, autonomous workflow or root CI completion. Raw initial missing-module failures do not prove unexecuted downstream behavior.",
+  "sources": [
+    {
+      "path": "agents/config.yaml",
+      "sha256": "ff2a266159ca26b004e03b533f85e42834403c8165168aa1c0c342cfaf7340d6"
+    },
+    {
+      "path": "scripts/isolated_test_runtime.py",
+      "sha256": "3dcfe07d51efd3ef8c16a1481d7577f55696e020337bcef5b9525924797799bb"
+    },
+    {
+      "path": "scripts/recovery_fields.py",
+      "sha256": "bf80daaf40e50f6799815ce70c4a93aabac04522871a9086cab73a701ba1ff87"
+    },
+    {
+      "path": "scripts/recovery_inventory.py",
+      "sha256": "fdfdfe1cf8ff07949ff437c2b0934100993b5962580beeb39cbb43f3bc9b5daf"
+    },
+    {
+      "path": "libs/service-commons/src/service_commons/recovery_contract.py",
+      "sha256": "1b8c979643efbbda4d1eef27014205478a3918a93649f41afd00881f17f6e130"
+    },
+    {
+      "path": "services/db-gateway/src/db_gateway_service/recovery.py",
+      "sha256": "1a0d5d05d1c0c218d004f7c1697ff24834d1c9469c4474bf340db22be97f9578"
+    },
+    {
+      "path": "tests/runtime/test_mp07_agent_state_isolation.py",
+      "sha256": "4c3bcc5d9d072836b74cab68bddb0b72519136977d5e0c30e904d78307495afa"
+    },
+    {
+      "path": "tests/runtime/test_mp07_agent_journal_inventory.py",
+      "sha256": "3f1de9cda78eb9681fb15e36cd6132a810a408afa8abb850121cfe7633980cc1"
+    },
+    {
+      "path": "services/db-gateway/tests/unit/test_mp07_agent_journal_backup.py",
+      "sha256": "5ea9462eead4432886ecdb0ecd70a7debf04234b16bcac05e961d6bb76dcf52e"
+    },
+    {
+      "path": "libs/service-commons/tests/unit/test_recovery_contract.py",
+      "sha256": "28e677fb8afed0a3bdd7ec216fb4c6a4452a52ad75f392e486e071434ac3fdd4"
+    },
+    {
+      "path": "tests/runtime/test_recovery_fields.py",
+      "sha256": "6d58743f911bba54fd51901762b3a9c05a2564e18a177a2bb5167ff5a2ee8f0e"
+    },
+    {
+      "path": "tests/runtime/test_recovery_inventory.py",
+      "sha256": "52b31c6a0c7630355841c4050525aed8f0973b34208ae86cb8daaaa6246d8747"
+    },
+    {
+      "path": "tests/runtime/test_recovery_live_inventory.py",
+      "sha256": "2734f841662b8d06ca05df646c01afe6d9bcd3b0a11c894c991c9dca9b141ea8"
+    },
+    {
+      "path": "docs/plans/2026-10-18-mp07-agent-journal-backup-tests.md",
+      "sha256": "ccf2f9e77daf0acc5315c636290b7b3760301a30324a53a0e322c119b4a7ee46"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "agent-economy-mp07-agent-journal-backup-8case-source.py",
+      "sha256": "f70c20ba12066e390a5e2773a6d24c4290458c793e7675e346849035e6d330f5"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-backup-8case-source.sha256",
+      "sha256": "5ae82d96490ce70f847f1e4641589b98e5003e3e020aeb5cbcd82abfba621ab7"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-backup-green.log",
+      "sha256": "4956baebc95cba52eb8e1344b4597d8e0de90ba0c540b6c89260d6e64a3dd416"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-backup-red-final.log",
+      "sha256": "772ee42ae991a8a9499c0a49d5ea58bd622bab3dbb586e369dae6afb79c4068c"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-backup-red-owner-final.log",
+      "sha256": "643583a345675bddd6a23a1fa3eeaef014bf3d52a3eeea8c5851014b7d6085e4"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-backup-red.log",
+      "sha256": "e61303a184a3494e105978bee6dc25082d06e5802b0cd7577bf9a6afef623e41"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-backup-source-baseline.sha256",
+      "sha256": "6235ec6cd1e2cffea31c768c9c22aafaffcdeefd8cbaac2c7a718345185d9c9b"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-backup-tests-sha256-final.log",
+      "sha256": "98804e4b789fb15e337dc9fa1514679b81c295e8566c1ceac2f6e943bfe67e03"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-codespell.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-contract-controls-source-final.log",
+      "sha256": "0fa25cc805afd4a10911188268865c2e1bf019c5463c8e13f9f0fa87d2cd7097"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-contract-controls.log",
+      "sha256": "cac4bbaa681e843f6fd1c805a050baab3ada16eeadcd3704a554143de43e4052"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-contract-mypy.log",
+      "sha256": "93a7fd6abeca703d70106842bab2b39b944c90a884d31e126adb461595f7e429"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-contract-pyright.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-final-after.json",
+      "sha256": "4d908971ad83430282a7d28ae0f79745188c7d1505e3e6ef712cd4aee5deeb55"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-final-before.json",
+      "sha256": "4d908971ad83430282a7d28ae0f79745188c7d1505e3e6ef712cd4aee5deeb55"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-final-commons-ci.log",
+      "sha256": "97b5016ea8ff0b6ebc3815d6c932c6b98b783a31144cb4ea92f520dedcf210fe"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-final-gateway-ci.log",
+      "sha256": "7292462d160c9b628366654574915ea4ce336d941670b11acc54977d7c43e5a2"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-final-semgrep-settings.yml",
+      "sha256": "df6d291b64e4ead4c8f3b84eafd37c59884ed5851c730ec2011a3186ec509bc0"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-final-semgrep-version",
+      "sha256": "12e54d2d7ebe38071477601429f80b57e8d07069d12b8b55bb595047f4d3ccb7"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-final-semgrep.log",
+      "sha256": "e0344e65d7ed35aaf9438a17bcac4e3d908e4e032b15b84cd949dcb97d752b75"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-gateway-green.log",
+      "sha256": "c73c0e57b358af0d9aa98cd2f850104692a5738eb52b097f7f7e107ecdf5d7b1"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-gateway-mypy.log",
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-gateway-pyright.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-gateway-semgrep-settings.yml",
+      "sha256": "1c4352c621a6d493fd8717c5b4886809f5625af5a7674ad1300f22dc581efdbb"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-gateway-semgrep.log",
+      "sha256": "412d5f18857524aa856d1aa267a6605969abb1fb1637ca168742a03db69cc011"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-inventory-green.log",
+      "sha256": "28f94f35a697eb110a559cd36372f2edb63dbb960fb282482e1dcc485cb9a73e"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-inventory-red-final.log",
+      "sha256": "2b9d7ad41f9d5a3f7ea24a7d2dfe8ebc1ecf8de3e6597fafee77ec50ad7fef0f"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-inventory-red.log",
+      "sha256": "94d8ee4efb2fc0326c2dc949140500d60efb694146e7db5e8e4cd9eccd8b769e"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-missing-owner-red.log",
+      "sha256": "1a91e10f74ada6c87d88e0d3c0b96ae4977d7347e1ae9e51a4e554a6572337e1"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-missing-owner-source.sha256",
+      "sha256": "6ccad722a0a4cc08d9d7a8615e9886636e19839cd92e4ca9cc35a56c9dced626"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-missing-owner-tests.sha256",
+      "sha256": "eb5a3667001ecffede71ec85c98925e4a300122425d8684a4201f5199a7bf050"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ownerfix-codespell.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ownerfix-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ownerfix-gateway-green.log",
+      "sha256": "04c051f750b91dbca4d5e89306bc9427be6d9aabbb0197135db7d637f97d17b5"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ownerfix-mypy.log",
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ownerfix-pyright.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ownerfix-ruff-check.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ownerfix-ruff-format.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ownerfix-semgrep-internal.log",
+      "sha256": "f75f1e39ab2d77876ef9ff8873d244e00da8096fd132d1200a6520745f8b1557"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ownerfix-semgrep-settings.yml",
+      "sha256": "63c4e2d5b723462d561a6036293b09a326462be26ea4f0be0955a7ed137db145"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ownerfix-semgrep.log",
+      "sha256": "50afd1b88bb21dd6fef480a115bb84990789faea6307343a450495a769193f4c"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ownerfix-source-final.sha256",
+      "sha256": "be0edd7638bc8ee0c77e068f7512aa9b64dd6d77c53533f763cae44c187509c6"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-parent-after.json",
+      "sha256": "52bcc3fd62e0d0fa2ad2013012493de39a6334e58dd9eb938ae26acf6365c7eb"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-parent-before.json",
+      "sha256": "52bcc3fd62e0d0fa2ad2013012493de39a6334e58dd9eb938ae26acf6365c7eb"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-parent-gateway.log",
+      "sha256": "fb4159c08a6be81a1a8f49ff3b1663debd8ad997a0477085a391863c75effa18"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-parent-runtime.log",
+      "sha256": "dc64bcf553bf1d58fc720b5da0b623f4fa84f3a133f0a9f622b057318513e011"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ruff-check.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-ruff-format.log",
+      "sha256": "177f260a5645724013185e4b140c7045cc39e56c0c97b120f5cb23599f85f0de"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-scripts-semgrep-settings.yml",
+      "sha256": "b2512ee63ffe63f33f22ca3710a43d55ccfe1a64fc2c44f377cef903e0336fe1"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-scripts-semgrep.log",
+      "sha256": "f03e7c07c757f078c95f8d7bd7ce89d4a0e20d4d90ace4b2fba9d0fdbccaa260"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-semgrep-final.log",
+      "sha256": "33d3369c4790ce43e3329c880a059249866d752f108a684e083c17d826a1fbae"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-semgrep-internal.log",
+      "sha256": "d64119fab49ba510a50681b9c31db19362c1e5a1a7f3f7719eb4d5e18c17cf37"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-semgrep-settings.yml",
+      "sha256": "49bd29b5304e9e2a83b3d8e207da59ce8aaefb8f813e78a9ce880a343d890c3e"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-semgrep.log",
+      "sha256": "b3bfde18167f94f894015317013a2970101dd2eeadb1f8961f856d8ce4d36ab2"
+    },
+    {
+      "path": "agent-economy-mp07-agent-journal-source-final.sha256",
+      "sha256": "df1e75fba715036d5b10039a3e90bc42e96f24147735bd5ca57058a095ba8aa6"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-shipped-config-green.log",
+      "sha256": "075b95fdca8dd4b1621dde72936a7a8fe96a2eeeaee7f91076b1aa2bfda2a578"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-shipped-config-red.log",
+      "sha256": "a7d702ed6f418a69975e87131683e42679897766b5ef7d64c568af7aadaab0f1"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-state-agents-before.yaml",
+      "sha256": "bf102b0e198b5a0c400eacdeddc679a4fceceefb58106446d6df2969816d2e1d"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-state-controls-final.log",
+      "sha256": "b51743e160b9f22955c186bf0bd4652cc6c9aa619f8f5fb06fae20a8db91e5b0"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-state-controls.log",
+      "sha256": "6cfb81cd439929e4e749485a362722144a59599ffda343ffee29b7b0f55e2467"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-state-isolation-before.py",
+      "sha256": "835e61f25b60aacdf1142bae2db2602ec0f30c2d5060119d4e975667f36723e3"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-state-isolation-green.log",
+      "sha256": "4e8b6c5a89da44bf05d17100903172be04033067c113a6831bdfafbd42b7da52"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-state-isolation-red.log",
+      "sha256": "503ba32b02248a861099589bb35f6c7e8974403b44fa74c431243a60624f6bab"
+    }
+  ]
+}

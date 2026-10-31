@@ -4,6 +4,8 @@ import os
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from service_auth.jws import TokenPolicy
+from service_auth.signing import generate_keypair
 
 from identity_service.app import create_app
 from identity_service.config import clear_settings_cache, get_settings
@@ -17,6 +19,8 @@ from tests.fakes.in_memory_agent_store import InMemoryAgentStore
 async def app(tmp_path):
     """Create a test app with a temporary database."""
     db_path = tmp_path / "test.db"
+    generate_keypair("gateway-identity", tmp_path)
+    generate_keypair("platform", tmp_path)
     config_content = f"""
 service:
   name: "identity"
@@ -25,21 +29,34 @@ server:
   host: "127.0.0.1"
   port: 8001
   log_level: "info"
+telemetry:
+  enabled: false
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"
 logging:
   level: "WARNING"
-  directory: "data/logs"
-database:
-  path: "{db_path}"
+  directory: "{tmp_path / "logs" / "identity"}"
 crypto:
-  algorithm: "ed25519"
   public_key_prefix: "ed25519:"
   public_key_bytes: 32
   signature_bytes: 64
 request:
   max_body_size: 1572864
+token_validation:
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 0
+registration:
+  reserved_names: ["platform", "operator", "ui operator"]
+  trusted_key_files: ["platform.pub"]
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-identity"
+    private_key_path: "gateway-identity.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -55,10 +72,19 @@ db_gateway:
         fake_store = InMemoryAgentStore(db_path=str(db_path))
         state.registry = AgentRegistry(
             store=fake_store,
-            algorithm=settings.crypto.algorithm,
             public_key_prefix=settings.crypto.public_key_prefix,
             public_key_bytes=settings.crypto.public_key_bytes,
             signature_bytes=settings.crypto.signature_bytes,
+            token_policy=TokenPolicy(
+                max_lifetime_seconds=settings.token_validation.max_lifetime_seconds,
+                clock_skew_seconds=settings.token_validation.clock_skew_seconds,
+            ),
+            reserved_names=frozenset(
+                n.strip().casefold() for n in settings.registration.reserved_names
+            ),
+            trusted_key_files=tuple(
+                tmp_path / key_file for key_file in settings.registration.trusted_key_files
+            ),
         )
         yield test_app
 

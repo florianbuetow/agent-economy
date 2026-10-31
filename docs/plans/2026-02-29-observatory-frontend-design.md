@@ -1,3 +1,8 @@
+> **SUPERSEDED (2026-06-13, T-026):** This document targets a React/TypeScript/Vite frontend
+> that was never built. Decision: the UI stays vanilla JS — see
+> [2026-06-13-frontend-stack-decision.md](2026-06-13-frontend-stack-decision.md). The
+> observatory dashboard exists today as the vanilla-JS `services/ui`.
+
 # Observatory Frontend Dashboard — Design
 
 ## Scope

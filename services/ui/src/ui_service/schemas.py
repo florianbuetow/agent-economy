@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -189,7 +189,6 @@ class AgentStats(BaseModel):
     total_spent: int
     spec_quality: SpecQualityStats
     delivery_quality: DeliveryQualityStats
-    current_streak: int
 
 
 class AgentListItem(BaseModel):
@@ -228,6 +227,7 @@ class FeedbackItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
     feedback_id: str
     task_id: str
+    from_agent_id: str
     from_agent_name: str
     category: str
     rating: str
@@ -290,6 +290,90 @@ class AgentEarningsResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Tasks
 # ---------------------------------------------------------------------------
+class FinancialEffect(BaseModel):
+    """Strict public settlement evidence received from Task Board."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    schema_version: Literal[1]
+    settlement_state: Literal[
+        "locked", "pending", "attention_required", "conflict", "complete", "historical"
+    ]
+    receipt_state: Literal["absent", "confirmed", "historical"]
+    outcome: Literal["worker_paid", "poster_refunded", "split"] | None
+    operation_id: str | None = Field(
+        pattern=r"^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    )
+    receipt_reference: str | None = Field(
+        pattern=r"^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    )
+    business_projection_pending: bool
+    pending_target_status: Literal["approved", "cancelled", "expired", "ruled"] | None
+
+    @model_validator(mode="after")
+    def validate_evidence_shape(self) -> Self:
+        """Reject contradictory public claims without re-auditing receipts."""
+        if self.business_projection_pending != (self.pending_target_status is not None):
+            raise ValueError("pending projection requires its target")
+        self._validate_receipt_state()
+        self._validate_settlement_state()
+        self._validate_pending_target()
+        return self
+
+    def _validate_receipt_state(self) -> None:
+        if self.receipt_state == "absent":
+            if self.outcome is not None or self.receipt_reference is not None:
+                raise ValueError("absent receipt cannot claim an outcome")
+            if self.settlement_state not in {
+                "locked",
+                "pending",
+                "attention_required",
+                "conflict",
+            }:
+                raise ValueError("absent receipt cannot establish settlement")
+        elif self.receipt_state == "confirmed":
+            if (
+                self.operation_id is None
+                or self.receipt_reference != self.operation_id
+                or self.outcome is None
+                or self.settlement_state not in {"pending", "complete", "conflict"}
+            ):
+                raise ValueError("confirmed outcome requires its operation receipt")
+        elif (
+            self.settlement_state != "historical"
+            or self.outcome != "worker_paid"
+            or self.operation_id is not None
+            or self.receipt_reference is not None
+            or self.business_projection_pending
+        ):
+            raise ValueError("historical payment cannot claim a modern receipt")
+
+    def _validate_settlement_state(self) -> None:
+        if self.settlement_state == "locked" and (
+            self.operation_id is not None or self.business_projection_pending
+        ):
+            raise ValueError("locked escrow cannot have an active effect")
+        if self.settlement_state == "pending" and self.operation_id is None:
+            raise ValueError("pending settlement requires an operation")
+        if self.receipt_state == "confirmed" and (
+            self.business_projection_pending != (self.settlement_state == "pending")
+        ):
+            raise ValueError("confirmed pending settlement must await its projection")
+        if self.business_projection_pending and self.operation_id is None:
+            raise ValueError("pending business projection requires an operation")
+        if self.settlement_state == "conflict" and self.business_projection_pending:
+            raise ValueError("conflicting evidence cannot promise a business update")
+
+    def _validate_pending_target(self) -> None:
+        if self.receipt_state == "confirmed" and self.business_projection_pending:
+            targets = {
+                "worker_paid": {"approved", "ruled"},
+                "poster_refunded": {"cancelled", "expired", "ruled"},
+                "split": {"ruled"},
+            }
+            if self.pending_target_status not in targets[str(self.outcome)]:
+                raise ValueError("receipt outcome contradicts the pending target")
+
+
 class BidderInfo(BaseModel):
     model_config = ConfigDict(extra="forbid")
     agent_id: str
@@ -301,24 +385,34 @@ class BidItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
     bid_id: str
     bidder: BidderInfo
-    proposal: str
+    amount: int
     submitted_at: str
     accepted: bool
+
+
+class OperatorBidListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    task_id: str
+    bids: list[BidItem]
 
 
 class AssetItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
     asset_id: str
+    uploader_id: str
     filename: str
     content_type: str
     size_bytes: int
+    content_hash: str | None
     uploaded_at: str
 
 
 class FeedbackDetail(BaseModel):
     model_config = ConfigDict(extra="forbid")
     feedback_id: str
+    from_agent_id: str
     from_agent_name: str
+    to_agent_id: str
     to_agent_name: str
     category: str
     rating: str
@@ -352,6 +446,7 @@ class DisputeInfo(BaseModel):
 class TaskDeadlines(BaseModel):
     model_config = ConfigDict(extra="forbid")
     bidding_deadline: str
+    acceptance_deadline: str
     execution_deadline: str | None
     review_deadline: str | None
 
@@ -367,18 +462,24 @@ class TaskTimestamps(BaseModel):
 class TaskDrilldownResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     task_id: str
+    lifecycle_version: Annotated[int, Field(strict=True, ge=0, le=(1 << 63) - 1)]
     poster: AgentRef
     worker: AgentRef | None
     title: str
     spec: str
     reward: int
     status: str
+    bid_count: int
+    accepted_price: int | None
+    worker_payment: int | None
+    poster_refund: int | None
     deadlines: TaskDeadlines
     timestamps: TaskTimestamps
     bids: list[BidItem]
     assets: list[AssetItem]
     feedback: list[FeedbackDetail]
     dispute: DisputeInfo | None
+    financial_effect: FinancialEffect
 
 
 class CompetitiveTaskItem(BaseModel):
@@ -423,6 +524,7 @@ class TaskListItem(BaseModel):
     poster_id: str
     created_at: str
     bid_count: int
+    financial_effect: FinancialEffect
 
 
 class TaskListResponse(BaseModel):
@@ -540,23 +642,121 @@ class QuarterlyReportResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Proxy (UserAgent task lifecycle)
 # ---------------------------------------------------------------------------
-class CreateTaskRequest(BaseModel):
-    """Request to create a new task via UserAgent."""
+SQLITE_MAX_INTEGER = (1 << 63) - 1
+MAX_ACCEPTANCE_WINDOW_SECONDS = SQLITE_MAX_INTEGER // 1_000_000
+MAX_SAFE_INTEGER = (1 << 53) - 1
+OperationId = Annotated[
+    str,
+    Field(
+        strict=True,
+        pattern=r"^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    ),
+]
+LifecycleVersion = Annotated[int, Field(strict=True, ge=0, le=SQLITE_MAX_INTEGER)]
 
-    model_config = ConfigDict(extra="forbid")
+
+class TaskPostingPrepareRequest(BaseModel):
+    """Exact user-selected terms for a new durable task posting."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
     title: str = Field(min_length=1, max_length=200)
     spec: str = Field(min_length=1, max_length=10000)
-    reward: int = Field(gt=0)
-    bidding_deadline_seconds: int = Field(gt=0)
-    execution_deadline_seconds: int = Field(gt=0)
-    review_deadline_seconds: int = Field(gt=0)
+    reward: int = Field(gt=0, le=MAX_SAFE_INTEGER)
+    bidding_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    acceptance_window_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    execution_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    review_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+
+
+class TaskPostingServiceUrls(BaseModel):
+    """Exact service URL binding for a browser-owned posting record."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    identity_url: str
+    bank_url: str
+    task_board_url: str
+    reputation_url: str
+    court_url: str
+
+
+class TaskPostingScope(BaseModel):
+    """Operator and platform binding for a browser-owned posting record."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    schema_version: Literal[1]
+    operator_agent_id: str = Field(min_length=1)
+    operator_public_fingerprint_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    service_urls: TaskPostingServiceUrls
+
+
+class TaskPostingIntentPayload(BaseModel):
+    """Strict JSON projection of service-auth's immutable posting intent."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    protocol_version: Literal[1]
+    operation_id: OperationId
+    task_id: str
+    actor_kind: Literal["agent"]
+    actor_id: str = Field(min_length=1)
+    lock_operation_id: OperationId
+    title: str = Field(min_length=1, max_length=200)
+    spec: str = Field(min_length=1, max_length=10000)
+    reward: int = Field(gt=0, le=MAX_SAFE_INTEGER)
+    bidding_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    acceptance_window_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    execution_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    review_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+
+
+class TaskPostingRecord(BaseModel):
+    """Complete immutable record persisted by the browser before transport."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    record_version: Literal[1]
+    scope: TaskPostingScope
+    intent: TaskPostingIntentPayload
+    request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class NativeMutationRequest(BaseModel):
+    """Caller-owned identity for one native Task Board command."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    operation_id: OperationId
+    expected_lifecycle_version: LifecycleVersion
 
 
 class FileDisputeRequest(BaseModel):
     """Request to file a dispute on a task."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", strict=True)
     reason: str = Field(min_length=1, max_length=5000)
+    operation_id: OperationId
+    expected_lifecycle_version: LifecycleVersion
+
+
+class SubmitBidRequest(BaseModel):
+    """Operator bid on another poster's open task."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    amount: int = Field(gt=0, le=MAX_SAFE_INTEGER)
+    operation_id: OperationId
+    expected_lifecycle_version: LifecycleVersion
+
+
+class RebuttalRequest(BaseModel):
+    """Worker rebuttal text; Task Board enforces its length bound."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    rebuttal: str = Field(min_length=1)
+
+
+class FeedbackRequest(BaseModel):
+    """Operator feedback; the counterpart and category follow from the operator's role."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    rating: Literal["dissatisfied", "satisfied", "extremely_satisfied"]
+    comment: str | None
 
 
 class ProxyIdentityResponse(BaseModel):
@@ -566,9 +766,42 @@ class ProxyIdentityResponse(BaseModel):
     agent_id: str
 
 
-class ProxyTaskResponse(BaseModel):
-    """Generic proxy response wrapping task-board response data."""
+MAX_INPUT_FILES = 1000
 
-    model_config = ConfigDict(extra="forbid")
+
+class TaskInputPostingPrepareRequest(TaskPostingPrepareRequest):
+    """Posting terms plus the number of input files the browser will attach."""
+
+    expected_input_count: int = Field(ge=1, le=MAX_INPUT_FILES)
+
+
+class TaskInputPostingIntentPayload(BaseModel):
+    """Exact protocol-2 Gateway admission request owned by the browser record."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    protocol_version: Literal[2]
+    publication_operation_id: OperationId
     task_id: str
-    status: str
+    actor_kind: Literal["agent"]
+    actor_id: str = Field(min_length=1)
+    action: Literal["task_publication_admit"]
+    resource: Literal["POST /task-publications"]
+    lock_operation_id: OperationId
+    title: str = Field(min_length=1, max_length=200)
+    spec: str = Field(min_length=1, max_length=10000)
+    reward: int = Field(gt=0, le=MAX_SAFE_INTEGER)
+    bidding_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    acceptance_window_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    execution_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    review_deadline_seconds: int = Field(gt=0, le=MAX_ACCEPTANCE_WINDOW_SECONDS)
+    expected_input_count: int = Field(ge=1, le=MAX_INPUT_FILES)
+
+
+class TaskInputPostingRecord(BaseModel):
+    """Complete immutable protocol-2 record persisted by the browser before transport."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    record_version: Literal[2]
+    scope: TaskPostingScope
+    intent: TaskInputPostingIntentPayload
+    request_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")

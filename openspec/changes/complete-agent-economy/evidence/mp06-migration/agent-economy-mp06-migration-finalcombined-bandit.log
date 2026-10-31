@@ -1,0 +1,14 @@
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:519
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:519
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:551
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:551
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:556
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:556
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:560
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:560
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:560
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:640
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:640
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:647
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:647
+[tester]	WARNING	nosec encountered (B608), but no failed test on file ./src/db_gateway_service/migration.py:662

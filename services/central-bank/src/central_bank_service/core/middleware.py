@@ -15,11 +15,37 @@ _JSON_POST_ENDPOINTS: set[tuple[str, str]] = {
     ("POST", "/escrow/lock"),
 }
 
-# POST endpoints with path parameters (matched by prefix)
+# POST endpoints with path parameters, matched by prefix alone. Safe only when
+# every path under the prefix is exclusively POST-able — /escrow/ has no
+# GET-only sibling route, so a prefix match can never shadow a real 405.
 _JSON_POST_PREFIXES: list[tuple[str, str]] = [
-    ("POST", "/accounts/"),
     ("POST", "/escrow/"),
 ]
+
+# POST endpoints with path parameters where the prefix ALSO covers GET-only
+# sibling routes (/accounts/{id}, /accounts/{id}/transactions) — matched by
+# prefix + suffix so those siblings fall through to FastAPI's own 405
+# handling instead of being intercepted here as a JSON POST endpoint (T-072
+# HTTP-01 finding: the bare-prefix match previously returned 415 for a
+# non-JSON POST to those GET-only paths, preempting the router's 405).
+_JSON_POST_PREFIX_SUFFIXES: list[tuple[str, str, str]] = [
+    ("POST", "/accounts/", "/credit"),
+]
+
+
+def _requires_json_validation(method: str, path: str) -> bool:
+    """True if this (method, path) is a known JSON-body POST endpoint."""
+    if (method, path) in _JSON_POST_ENDPOINTS:
+        return True
+    if any(
+        method == prefix_method and path.startswith(prefix_path)
+        for prefix_method, prefix_path in _JSON_POST_PREFIXES
+    ):
+        return True
+    return any(
+        method == prefix_method and path.startswith(prefix_path) and path.endswith(suffix_path)
+        for prefix_method, prefix_path, suffix_path in _JSON_POST_PREFIX_SUFFIXES
+    )
 
 
 class RequestValidationMiddleware:
@@ -47,15 +73,7 @@ class RequestValidationMiddleware:
 
         path = cast("str", scope.get("path", ""))
 
-        # Check if this endpoint requires JSON validation
-        is_json_endpoint = (method, path) in _JSON_POST_ENDPOINTS
-        if not is_json_endpoint:
-            for prefix_method, prefix_path in _JSON_POST_PREFIXES:
-                if method == prefix_method and path.startswith(prefix_path):
-                    is_json_endpoint = True
-                    break
-
-        if not is_json_endpoint:
+        if not _requires_json_validation(method, path):
             await self.app(scope, receive, send)
             return
 
@@ -69,6 +87,7 @@ class RequestValidationMiddleware:
                 error="unsupported_media_type",
                 message="Content-Type must be application/json",
                 status_code=415,
+                details={},
             )
             await response(scope, receive, send)
             return
@@ -88,6 +107,7 @@ class RequestValidationMiddleware:
                     error="payload_too_large",
                     message="Request body exceeds maximum allowed size",
                     status_code=413,
+                    details={},
                 )
                 await response(scope, receive, send)
                 return

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from service_auth.financial_identity import operation_id_for
 
 from base_agent.agent import BaseAgent
 
@@ -20,7 +21,11 @@ async def test_create_account_and_check_balance(
         await agent.register()
         assert agent.agent_id is not None
 
-        await platform_agent.create_account(agent_id=agent.agent_id, initial_balance=100)
+        await platform_agent.create_account(
+            agent_id=agent.agent_id,
+            initial_balance=100,
+            operation_id=operation_id_for("e2e-account-issuance", (agent.agent_id,)),
+        )
         balance = await agent.get_balance()
 
         assert balance["balance"] == 100
@@ -37,11 +42,16 @@ async def test_credit_account_and_view_transactions(
         await agent.register()
         assert agent.agent_id is not None
 
-        await platform_agent.create_account(agent_id=agent.agent_id, initial_balance=0)
+        await platform_agent.create_account(
+            agent_id=agent.agent_id,
+            initial_balance=0,
+            operation_id=None,
+        )
         await platform_agent.credit_account(
             account_id=agent.agent_id,
             amount=500,
             reference="salary",
+            operation_id=operation_id_for("e2e-credit", (agent.agent_id, "salary")),
         )
 
         balance = await agent.get_balance()
@@ -62,15 +72,22 @@ async def test_escrow_lock_insufficient_funds(
         await agent.register()
         assert agent.agent_id is not None
 
-        await platform_agent.create_account(agent_id=agent.agent_id, initial_balance=50)
+        await platform_agent.create_account(
+            agent_id=agent.agent_id,
+            initial_balance=50,
+            operation_id=operation_id_for("e2e-account-issuance", (agent.agent_id,)),
+        )
 
         token = agent._sign_jws(
             {
                 "action": "escrow_lock",
+                "operation_id": operation_id_for("task-lock", ("t-insufficient", agent.agent_id)),
                 "agent_id": agent.agent_id,
                 "amount": 100,
                 "task_id": "t-insufficient",
-            }
+            },
+            audience="central-bank",
+            resource="POST /escrow/lock",
         )
         response = await agent._request_raw(
             "POST",

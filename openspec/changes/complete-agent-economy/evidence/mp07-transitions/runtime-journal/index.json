@@ -1,0 +1,188 @@
+{
+  "status": "Independent ACK/model and filesystem/store reviews APPROVE/CLEAR; parent final307 combined tests pass. Caller integration and root gate pending.",
+  "boundary": "Component checkpoint, not full goal, package, autonomous workflow or root CI completion. Raw initial missing-module failures do not prove unexecuted downstream behavior.",
+  "sources": [
+    {
+      "path": "agents/src/base_agent/runtime_intents.py",
+      "sha256": "ed0ac464c7bdd2d3120053777052574a44cd755d5bf7c42716669f7d87d1d79c"
+    },
+    {
+      "path": "agents/src/base_agent/runtime_intent_models.py",
+      "sha256": "6b4cf3c70da0b6ad0272fa557bda3c8ec40481e384b4dd0e3c9035c2d3cc1376"
+    },
+    {
+      "path": "agents/src/base_agent/runtime_intent_files.py",
+      "sha256": "b38eb31f24e4c49dbc692ae3f8a88e73e38d78f88e7aaae73bde0e54eb0be0dc"
+    },
+    {
+      "path": "agents/src/base_agent/runtime_intent_ack.py",
+      "sha256": "891b0a870a813c106d406e92b602efc254148dc369bdbe742980df0c747bc6e9"
+    },
+    {
+      "path": "agents/tests/unit/test_runtime_intents.py",
+      "sha256": "6e21324ab3b6916ca5bb524e8bdb7896ff9c4c37512e7befc6ab21790bb2a65d"
+    },
+    {
+      "path": "agents/tests/unit/test_runtime_intent_durability.py",
+      "sha256": "5dc6b0fd73d7551c5bed8fa0fed344c1ffffc494076a218b27a46b6a2b29c188"
+    },
+    {
+      "path": "agents/tests/unit/test_runtime_intent_ack_regressions.py",
+      "sha256": "907307ca26b5f41a49de86a5b695f90731a0beb532b8b84a83ac139fdb023a73"
+    },
+    {
+      "path": "agents/tests/unit/test_runtime_intent_reopen.py",
+      "sha256": "2ca33808171f67d4f3f5a982c0a2ba5e5c823f3ca20dc8d54f40b8e445873b88"
+    },
+    {
+      "path": "docs/plans/2026-10-18-mp07-runtime-intent-contract.md",
+      "sha256": "4ccb038afb85d1c05b15c1e04cca5bece3a4a888d8581ed28583ecbf7b27d18c"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "agent-economy-mp07-runtime-durability-before-sha.log",
+      "sha256": "64a3352c15d45729f9d3d740142f92c8ae27c1cc62a869e1498b942671e96b15"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-durability-parent-green.log",
+      "sha256": "e6e42016ef13309082d1db6a7141281ab348ab65c6f9cbe11246c658b603e50f"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-durability-parent-red.log",
+      "sha256": "fef9218f4a5847038b6591e0e5a74c9e73722bede177c7bd7a3c58c7b3da3159"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-final-after.sha256",
+      "sha256": "3ef8861ec174cd9cc7540dbb557c0ae843bfe272d0ea29b52abc0c32f83604d7"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-final-before.sha256",
+      "sha256": "3ef8861ec174cd9cc7540dbb557c0ae843bfe272d0ea29b52abc0c32f83604d7"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-final-parent.log",
+      "sha256": "b3f258362092737fa482cf2d935a4c533229b694680a4e986dc1dd4f087e340f"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-codespell-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-combined-red.log",
+      "sha256": "6b729632099e926e206e22cb985d104773a5f4fddf2dda123e8049f50f80f92c"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-format-final.log",
+      "sha256": "3bc53bf3e981a98a34a852e175bf9b77af841edea74fca595d9aedcbaf9a4938"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-pre-sha.log",
+      "sha256": "dab796a922f61d8ed938e9f9d5a5524e75712686483ed6499ac03e3c6b7ed429"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-pre.log",
+      "sha256": "9c09bfee4843437d2649b6333dbdfd9023386abb1930750d4f95ad447d8e392e"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-pre.py",
+      "sha256": "f4d57d411564420d0752e254b994d886bec25d0f5aa376f57326c8de0a8c0eb5"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-pyright-final.log",
+      "sha256": "6d88a1b220adb7a3d62092b6e38431f0b3fe8babe9864fab90e5849766260332"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-red-final.log",
+      "sha256": "57a5f61c0d6faff24af7591bf4e9c7cb8c6aa2b29183f8e8c166f73be4637073"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-red.log",
+      "sha256": "f8d9b3df4809e3ac854e084526b06ef3eebd0c15f1b20ca561768d316eccd8e6"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-ruff-attempt.log",
+      "sha256": "a5e28e9f0dd52e9bd1971f239654ac2ae16c50ee3d65e8afd1957c81ab4bcd7b"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-ruff-final.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-sha-final.log",
+      "sha256": "b4bfc6c7dfc9e72002469b410a4e41381f417ad8cf715a69399a8d03f13dcb78"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-intents-ackreview-suppressions-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-journal-parent-green.log",
+      "sha256": "380a5f1ffba1218b5f3a335eed347b55623a77d9413dc68c4f552adf51b2ae42"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-journal-parent-sha.log",
+      "sha256": "2e3b545530d2341ea97816789cc638fb7586ec020fedec602c7cd1fcc916f294"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-codespell-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-format-final.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-mypy-final.log",
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-product-sha256.log",
+      "sha256": "0fc35338663c50ddebcb4a5c437446d4a1edba3bd7c41a7ca2f5d484829a90ab"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-red-final.log",
+      "sha256": "f32242fd1200baaf92c64f325599760f13de3506adddc2ef890e9aa000ee99e5"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-ruff-final.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-second-codespell-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-second-format-final.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-second-mypy-final.log",
+      "sha256": "5d4b6d285b77932e3d08212c3b4974d0a803f98ec60408ac6ccf6a063fa6c19e"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-second-product-sha256.log",
+      "sha256": "0ed3254b33fa2a255eef6bac8fd8c447301fbb93eea236f2b6c7099aafd9bb3e"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-second-red-final.log",
+      "sha256": "ff1f4732579133ffb0fe41e1b8ea8acd40c7d73a5810da599eb37c354a31500f"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-second-ruff-final.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-second-sha256-final.log",
+      "sha256": "ebea84784520361f6997589be525c4da2ee7c64ad68a6b54b9db2ca3a60e1385"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-reopen-sha256-final.log",
+      "sha256": "60a6946629e3f4509db61efb3ba561666365de7a7c8932afc6c7dac7046f17c7"
+    },
+    {
+      "path": "agent-economy-mp07-runtime-review2-parent-red.log",
+      "sha256": "b3a3852fc64f023b7a6039638a43dc0de05c5139e181660a7b5537498d607da6"
+    }
+  ]
+}

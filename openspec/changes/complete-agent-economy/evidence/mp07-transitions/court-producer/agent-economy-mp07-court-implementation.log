@@ -1,0 +1,560 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 34 items
+
+tests/unit/test_mp07_operation_regressions.py FFFFFFFFFFFFFF...FFF.      [ 61%]
+tests/unit/test_mp07_receipt_current_view.py FFFF                        [ 73%]
+tests/unit/routers/test_mp07_task_operation_boundary.py .F               [ 79%]
+tests/unit/test_mp07_court_operation_contract.py ......F                 [100%]
+
+=================================== FAILURES ===================================
+___________ test_valid_receipt_finalizes_from_frozen_native_evidence ___________
+tests/unit/test_mp07_operation_regressions.py:505: in test_valid_receipt_finalizes_from_frozen_native_evidence
+    pending = _claim_approval(v3_writer, graph, operation_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_ test_finalizer_rederives_intent_from_command_and_frozen_contract[wrong_recipient] _
+tests/unit/test_mp07_operation_regressions.py:527: in test_finalizer_rederives_intent_from_command_and_frozen_contract
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_ test_finalizer_rederives_intent_from_command_and_frozen_contract[wrong_amount] _
+tests/unit/test_mp07_operation_regressions.py:527: in test_finalizer_rederives_intent_from_command_and_frozen_contract
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+______ test_completed_result_uses_accepted_reward_not_mutable_task_reward ______
+tests/unit/test_mp07_operation_regressions.py:556: in test_completed_result_uses_accepted_reward_not_mutable_task_reward
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_source] _
+tests/unit/test_mp07_operation_regressions.py:647: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_type] _
+tests/unit/test_mp07_operation_regressions.py:647: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_task] _
+tests/unit/test_mp07_operation_regressions.py:647: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_account] _
+tests/unit/test_mp07_operation_regressions.py:647: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_type] _
+tests/unit/test_mp07_operation_regressions.py:647: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_amount] _
+tests/unit/test_mp07_operation_regressions.py:647: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_reference] _
+tests/unit/test_mp07_operation_regressions.py:647: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_event] _
+tests/unit/test_mp07_operation_regressions.py:647: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_ test_finalizer_rejects_semantically_inconsistent_receipt_provenance[leg_balance] _
+tests/unit/test_mp07_operation_regressions.py:647: in test_finalizer_rejects_semantically_inconsistent_receipt_provenance
+    _claim_approval(v3_writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_____ test_foreign_settlement_conflict_persists_true_winner_across_replays _____
+tests/unit/test_mp07_operation_regressions.py:664: in test_foreign_settlement_conflict_persists_true_winner_across_replays
+    _native(v3_writer).claim_operation(request, _BOARD_KID)
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+__________ test_canonical_source_reference_is_a_valid_pending_control __________
+tests/unit/test_mp07_operation_regressions.py:765: in test_canonical_source_reference_is_a_valid_pending_control
+    pending = _native(v3_writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_______ test_caller_cannot_choose_financial_source_reference[wrong_task] _______
+tests/unit/test_mp07_operation_regressions.py:798: in test_caller_cannot_choose_financial_source_reference
+    assert {
+E   assert {'counters_un...t': True, ...} == {'counters_un...t': True, ...}
+E     
+E     Omitting 6 identical items, use -vv to show
+E     Differing items:
+E     {'outcome': {'kind': 'exception', 'message': "'ruling_id'", 'type': 'KeyError'}} != {'outcome': {'details': {}, 'error': 'payload_mismatch', 'kind': 'service_error', 'status': 409}}
+E     Use -v to get more diff
+______ test_caller_cannot_choose_financial_source_reference[wrong_action] ______
+tests/unit/test_mp07_operation_regressions.py:798: in test_caller_cannot_choose_financial_source_reference
+    assert {
+E   assert {'counters_un...t': True, ...} == {'counters_un...t': True, ...}
+E     
+E     Omitting 6 identical items, use -vv to show
+E     Differing items:
+E     {'outcome': {'kind': 'exception', 'message': "'ruling_id'", 'type': 'KeyError'}} != {'outcome': {'details': {}, 'error': 'payload_mismatch', 'kind': 'service_error', 'status': 409}}
+E     Use -v to get more diff
+___ test_finalization_accepts_receipt_after_later_authorized_balance_change ____
+tests/unit/test_mp07_receipt_current_view.py:33: in test_finalization_accepts_receipt_after_later_authorized_balance_change
+    setup._claim_approval(writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+____ test_finalizer_rejects_disagreement_in_settlement_timestamps[receipt] _____
+tests/unit/test_mp07_receipt_current_view.py:93: in test_finalizer_rejects_disagreement_in_settlement_timestamps
+    setup._claim_approval(writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+__ test_finalizer_rejects_disagreement_in_settlement_timestamps[transaction] ___
+tests/unit/test_mp07_receipt_current_view.py:93: in test_finalizer_rejects_disagreement_in_settlement_timestamps
+    setup._claim_approval(writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+_____ test_finalizer_rejects_disagreement_in_settlement_timestamps[escrow] _____
+tests/unit/test_mp07_receipt_current_view.py:93: in test_finalizer_rejects_disagreement_in_settlement_timestamps
+    setup._claim_approval(writer, graph, operation_id)
+tests/unit/test_mp07_operation_regressions.py:287: in _claim_approval
+    return _native(writer).claim_operation(
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+______ test_native_task_operation_claim_replay_and_finalization_boundary _______
+tests/unit/routers/test_mp07_task_operation_boundary.py:612: in test_native_task_operation_claim_replay_and_finalization_boundary
+    _assert_approve_claim_and_evidence_finalization(
+tests/unit/routers/test_mp07_task_operation_boundary.py:449: in _assert_approve_claim_and_evidence_finalization
+    approve = client.post(_CLAIM_PATH, json=command)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/starlette/testclient.py:555: in post
+    return super().post(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1144: in post
+    return self.request(
+.venv/lib/python3.13/site-packages/starlette/testclient.py:454: in request
+    return super().request(
+.venv/lib/python3.13/site-packages/httpx/_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.13/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.13/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/starlette/testclient.py:356: in handle_request
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/testclient.py:353: in handle_request
+    portal.call(self.app, scope, receive, send)
+.venv/lib/python3.13/site-packages/anyio/from_thread.py:338: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/concurrent/futures/_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+.venv/lib/python3.13/site-packages/anyio/from_thread.py:263: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/fastapi/applications.py:1160: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/applications.py:90: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+src/db_gateway_service/core/middleware.py:137: in __call__
+    await self._handle_http(scope, receive, send)
+src/db_gateway_service/core/middleware.py:172: in _handle_http
+    await self.app(scope, buffered_receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:660: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:680: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:276: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:130: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:116: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/fastapi/routing.py:670: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.13/site-packages/fastapi/routing.py:324: in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/routers/board.py:46: in claim_task_operation
+    result = writer.claim_task_operation(command, caller_kid, authority)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/db_writer.py:415: in claim_task_operation
+    return writer.claim_operation(command, caller_kid)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:137: in claim_operation
+    envelope = self._claim_bank_effect(
+src/db_gateway_service/services/task_operation_writer.py:663: in _claim_bank_effect
+    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:727: in _build_financial_effect
+    expected_source_reference = self._financial_source_reference(request)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/services/task_operation_writer.py:823: in _financial_source_reference
+    "record_ruling": f"ruling:{request.argument('ruling_id')}",
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/db_gateway_service/task_operation_requests.py:163: in argument
+    return self.arguments[name]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'ruling_id'
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 21:53:46", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "operation_caller_mismatch", "status_code": 403, "path": "/board/task-operations"}}
+{"timestamp": "2026-10-17 21:53:46", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "operation_caller_mismatch", "status_code": 403, "path": "/board/task-operations"}}
+{"timestamp": "2026-10-17 21:53:46", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "operation_id_conflict", "status_code": 409, "path": "/board/task-operations"}}
+{"timestamp": "2026-10-17 21:53:46", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "operation_id_conflict", "status_code": 409, "path": "/board/task-operations"}}
+{"timestamp": "2026-10-17 21:53:46", "level": "WARNING", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/board/task-operations"}}
+{"timestamp": "2026-10-17 21:53:46", "level": "ERROR", "logger": "db-gateway-test.db_gateway_service.core.exceptions", "message": "Unhandled exception", "exception": "Traceback (most recent call last):\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/starlette/middleware/errors.py\", line 164, in __call__\n    await self.app(scope, receive, _send)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/src/db_gateway_service/core/middleware.py\", line 137, in __call__\n    await self._handle_http(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/src/db_gateway_service/core/middleware.py\", line 172, in _handle_http\n    await self.app(scope, buffered_receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py\", line 63, in __call__\n    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 53, in wrapped_app\n    raise exc\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py\", line 18, in __call__\n    await self.app(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 660, in __call__\n    await self.middleware_stack(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 680, in app\n    await route.handle(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/starlette/routing.py\", line 276, in handle\n    await self.app(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 130, in app\n    await wrap_app_handling_exceptions(app, request)(scope, receive, send)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 53, in wrapped_app\n    raise exc\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 116, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 670, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 324, in run_endpoint_function\n    return await dependant.call(**values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/src/db_gateway_service/routers/board.py\", line 46, in claim_task_operation\n    result = writer.claim_task_operation(command, caller_kid, authority)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/src/db_gateway_service/services/db_writer.py\", line 415, in claim_task_operation\n    return writer.claim_operation(command, caller_kid)\n           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/src/db_gateway_service/services/task_operation_writer.py\", line 137, in claim_operation\n    envelope = self._claim_bank_effect(\n        cursor, request, caller_kid, claimed_at_us, task, contract\n    )\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/src/db_gateway_service/services/task_operation_writer.py\", line 663, in _claim_bank_effect\n    effect_kind, intent = self._build_financial_effect(cursor, request, task, contract)\n                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/src/db_gateway_service/services/task_operation_writer.py\", line 727, in _build_financial_effect\n    expected_source_reference = self._financial_source_reference(request)\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/src/db_gateway_service/services/task_operation_writer.py\", line 823, in _financial_source_reference\n    \"record_ruling\": f\"ruling:{request.argument('ruling_id')}\",\n                               ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^\n  File \"/Users/flo/Developer/github/agent-economy/services/db-gateway/src/db_gateway_service/task_operation_requests.py\", line 163, in argument\n    return self.arguments[name]\n           ~~~~~~~~~~~~~~^^^^^^\nKeyError: 'ruling_id'", "extra": {"path": "/board/task-operations"}}
+____ test_native_court_operation_claim_finalization_and_authority_contract _____
+tests/unit/test_mp07_court_operation_contract.py:740: in test_native_court_operation_claim_finalization_and_authority_contract
+    _assert_platform_authority_and_ruling_flows(v3_writer, platform_authority)
+tests/unit/test_mp07_court_operation_contract.py:625: in _assert_platform_authority_and_ruling_flows
+    assert missing == {
+E   AssertionError: assert {'details': {...'status': 409} == {'details': {...'status': 503}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'error': 'payload_mismatch'} != {'error': 'platform_identity_not_ready'}
+E     {'status': 409} != {'status': 503}
+E     Use -v to get more diff
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_operation_regressions.py::test_valid_receipt_finalizes_from_frozen_native_evidence
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rederives_intent_from_command_and_frozen_contract[wrong_recipient]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rederives_intent_from_command_and_frozen_contract[wrong_amount]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_completed_result_uses_accepted_reward_not_mutable_task_reward
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_source]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_type]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[event_task]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_account]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_type]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_amount]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_reference]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[transaction_event]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_finalizer_rejects_semantically_inconsistent_receipt_provenance[leg_balance]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_foreign_settlement_conflict_persists_true_winner_across_replays
+FAILED tests/unit/test_mp07_operation_regressions.py::test_canonical_source_reference_is_a_valid_pending_control
+FAILED tests/unit/test_mp07_operation_regressions.py::test_caller_cannot_choose_financial_source_reference[wrong_task]
+FAILED tests/unit/test_mp07_operation_regressions.py::test_caller_cannot_choose_financial_source_reference[wrong_action]
+FAILED tests/unit/test_mp07_receipt_current_view.py::test_finalization_accepts_receipt_after_later_authorized_balance_change
+FAILED tests/unit/test_mp07_receipt_current_view.py::test_finalizer_rejects_disagreement_in_settlement_timestamps[receipt]
+FAILED tests/unit/test_mp07_receipt_current_view.py::test_finalizer_rejects_disagreement_in_settlement_timestamps[transaction]
+FAILED tests/unit/test_mp07_receipt_current_view.py::test_finalizer_rejects_disagreement_in_settlement_timestamps[escrow]
+FAILED tests/unit/routers/test_mp07_task_operation_boundary.py::test_native_task_operation_claim_replay_and_finalization_boundary
+FAILED tests/unit/test_mp07_court_operation_contract.py::test_native_court_operation_claim_finalization_and_authority_contract
+================== 23 failed, 11 passed, 1 warning in 10.60s ===================

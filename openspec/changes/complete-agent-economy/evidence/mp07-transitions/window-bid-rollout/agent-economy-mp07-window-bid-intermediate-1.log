@@ -1,0 +1,78 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 17 items
+
+tests/integration/test_mp07_acceptance_window.py .........F..F           [ 76%]
+tests/integration/test_mp07_bid_admission_races.py FF.                   [ 94%]
+tests/integration/test_mp07_accept_expiry_race.py F                      [100%]
+
+=================================== FAILURES ===================================
+______________ test_zero_bid_task_expires_at_exact_bidding_cutoff ______________
+tests/integration/test_mp07_acceptance_window.py:455: in test_zero_bid_task_expires_at_exact_bidding_cutoff
+    assert result.json()["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:11:37", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-1388ebb4-c0d0-476c-9f37-21b113336e2d"}}
+______ test_task_with_bid_expires_at_selected_acceptance_cutoff_equality _______
+tests/integration/test_mp07_acceptance_window.py:623: in test_task_with_bid_expires_at_selected_acceptance_cutoff_equality
+    assert len(rows) == 1 and rows[0]["status"] == "expired", diagnostics
+E   AssertionError: {'bank_release_calls': 1, 'expiry_events': [], 'response': {'acceptance_cutoff_us': 1792238430000000, 'acceptance_deadline': '2026-10-17T12:00:30Z', 'acceptance_window_seconds': 20, 'accepted_at': None, ...}, 'response_status': 200, ...}
+E   assert (1 == 1 and 'open' == 'expired'
+E    +  where 1 = len([{'expired_at': None, 'status': 'open'}])
+E     
+E     - expired
+E     + open)
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:11:41", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-56db1c66-0564-4a70-bd80-af770eb33328"}}
+_______ test_bid_validated_before_acceptance_cannot_mutate_accepted_task _______
+tests/integration/test_mp07_bid_admission_races.py:563: in test_bid_validated_before_acceptance_cannot_mutate_accepted_task
+    await asyncio.to_thread(gate.wait_until_ready)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/threads.py:25: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_bid_admission_races.py:119: in wait_until_ready
+    raise AssertionError("MP-07 bid mutation READY gate timed out")
+E   AssertionError: MP-07 bid mutation READY gate timed out
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:11:42", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-d65574e8-682f-494d-abd9-03324d10193c"}}
+__________ test_bid_validated_before_cutoff_cannot_commit_at_equality __________
+tests/integration/test_mp07_bid_admission_races.py:673: in test_bid_validated_before_cutoff_cannot_commit_at_equality
+    await asyncio.to_thread(bid_gate.wait_until_ready)
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/asyncio/threads.py:25: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_bid_admission_races.py:119: in wait_until_ready
+    raise AssertionError("MP-07 bid mutation READY gate timed out")
+E   AssertionError: MP-07 bid mutation READY gate timed out
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:11:53", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-c50e7822-e5ed-4105-844a-ac6a9d4df8df"}}
+________ test_stale_validated_accept_cannot_overwrite_acceptance_expiry ________
+tests/integration/test_mp07_accept_expiry_race.py:454: in test_stale_validated_accept_cannot_overwrite_acceptance_expiry
+    contender = _make_runtime(
+tests/integration/test_mp07_accept_expiry_race.py:389: in _make_runtime
+    deadline = _GatedDeadlineEvaluator(
+tests/integration/test_mp07_accept_expiry_race.py:141: in __init__
+    super().__init__(store, escrow_coordinator, platform_agent)
+E   TypeError: DeadlineEvaluator.__init__() takes 3 positional arguments but 4 were given
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:12:06", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-cb39feb4-5e07-4dfe-86a4-38a41e65ecec"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_acceptance_window.py::test_zero_bid_task_expires_at_exact_bidding_cutoff
+FAILED tests/integration/test_mp07_acceptance_window.py::test_task_with_bid_expires_at_selected_acceptance_cutoff_equality
+FAILED tests/integration/test_mp07_bid_admission_races.py::test_bid_validated_before_acceptance_cannot_mutate_accepted_task
+FAILED tests/integration/test_mp07_bid_admission_races.py::test_bid_validated_before_cutoff_cannot_commit_at_equality
+FAILED tests/integration/test_mp07_accept_expiry_race.py::test_stale_validated_accept_cannot_overwrite_acceptance_expiry
+======================== 5 failed, 12 passed in 41.03s =========================

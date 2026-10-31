@@ -5,6 +5,9 @@ agents:
   platform:
     name: "Platform"
     type: "platform"
+  operator:
+    name: "UI Operator"
+    type: "operator"
   alice:
     name: "Alice"
     type: "worker"
@@ -19,6 +22,12 @@ agents:
     type: "worker"
   mathbot_mistral:
     name: "Math Worker Bot (Mistral)"
+    type: "worker"
+  classbot_llm:
+    name: "Classifier Bot (LLM)"
+    type: "worker"
+  classbot_keyword:
+    name: "Classifier Bot (Keywords)"
     type: "worker"
   feeder:
     name: "Task Feeder"

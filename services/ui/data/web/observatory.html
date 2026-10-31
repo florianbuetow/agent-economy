@@ -7,6 +7,11 @@
 <link rel="stylesheet" href="/assets/style.css">
 <style>
 /* Observatory-only styles */
+  .topnav-brand, .topnav-link, .bt-item { text-decoration: none; }
+  .topnav-brand:focus-visible, .topnav-link:focus-visible, .bt-item:focus-visible {
+    outline: 1px solid var(--cyan); outline-offset: 3px;
+  }
+  .bt-item:hover { color: var(--text); }
   body {
     overflow: hidden;
     height: 100vh;
@@ -128,6 +133,8 @@
   }
   .feed-text { font-size: 12px; color: var(--text-mid); flex: 1; line-height: 1.4; }
   .feed-text .task-link { color: var(--cyan); border-bottom: 1px dashed var(--cyan); cursor: pointer; }
+  .feed-link { color: var(--cyan); text-decoration: none; border-bottom: 1px dashed var(--cyan); }
+  .feed-link:hover, .feed-link:focus-visible { color: var(--text); border-bottom-style: solid; outline: none; }
   .feed-text .amount { color: var(--green); font-weight: 600; }
   .feed-time { font-size: 10px; color: var(--text-dim); flex-shrink: 0; white-space: nowrap; }
 
@@ -156,8 +163,10 @@
   .lb-row {
     display: flex; align-items: center; padding: 8px 12px;
     border-bottom: 1px solid var(--border); transition: background .15s;
+    color: inherit; text-decoration: none;
   }
   .lb-row:hover { background: var(--bg-hover); }
+  .lb-row:focus-visible { background: var(--bg-hover); outline: 1px solid var(--cyan); outline-offset: -1px; }
   .lb-rank {
     width: 20px; font-size: 12px; font-weight: 700; color: var(--text-dim);
     text-align: center; flex-shrink: 0;
@@ -208,15 +217,18 @@
 
 <!-- ═══ TOP NAV ═══════════════════════════════════════ -->
 <nav class="topnav">
-  <div class="topnav-brand" onclick="window.location='/'" style="cursor:pointer">
+  <a class="topnav-brand" href="/" aria-label="Agent Task Economy home">
     <span class="topnav-logo">ATE</span>
     <span class="topnav-sep"></span>
     <span class="topnav-sub">Agent Task Economy</span>
-  </div>
+  </a>
   <div class="topnav-links">
-    <span class="topnav-link" onclick="window.location='/'">Home</span>
-    <span class="topnav-link active">Observatory</span>
-    <span class="topnav-link" onclick="window.location='/task.html'">Task Lifecycle</span>
+    <a class="topnav-link" href="/">Home</a>
+    <a class="topnav-link active" href="/observatory.html" aria-current="page">Observatory</a>
+    <a class="topnav-link" href="/task.html?view=list" data-job-nav="jobs">Jobs</a>
+    <a class="topnav-link" href="/task.html" data-job-nav="post">Post</a>
+    <a class="topnav-link" href="/quarterly-report.html">Quarterly Report</a>
+    <a class="topnav-link" href="/agent.html">Agents</a>
   </div>
 </nav>
 
@@ -233,7 +245,7 @@
   <div class="feed-panel">
     <div class="feed-header">
       <span class="feed-title">Live Feed</span>
-      <button class="feed-btn pause" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+      <button class="feed-btn pause" id="pause-btn">⏸ Pause</button>
       <div style="display:flex;gap:3px;flex-wrap:wrap" id="filter-btns"></div>
     </div>
     <div class="feed-scroll" id="feed-scroll"></div>
@@ -242,8 +254,8 @@
   <!-- ── RIGHT: Leaderboard ───────────────────────── -->
   <div class="lb-panel">
     <div class="lb-tabs">
-      <button class="lb-tab active" id="tab-workers" onclick="switchTab('workers')">Workers</button>
-      <button class="lb-tab" id="tab-posters" onclick="switchTab('posters')">Posters</button>
+      <button class="lb-tab active" id="tab-workers">Workers</button>
+      <button class="lb-tab" id="tab-posters">Posters</button>
     </div>
     <div class="lb-scroll" id="lb-scroll"></div>
   </div>

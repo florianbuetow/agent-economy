@@ -3,22 +3,60 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING, NoReturn
 
+from cryptography.exceptions import InvalidSignature
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from service_auth.jws import JwsAdmissionError, parse_jws, require_context
+from starlette.concurrency import run_in_threadpool
 
 from reputation_service.core.exceptions import ServiceError
 from reputation_service.core.state import get_app_state
 from reputation_service.services.feedback import (
+    SOURCE_COURT,
+    SOURCE_PEER,
+    FeedbackReplay,
     ValidationError,
+    authorize_peer_feedback,
     get_feedback_by_id,
     get_feedback_for_agent,
     get_feedback_for_task,
     submit_feedback,
+    validate_feedback,
 )
 from reputation_service.types import FeedbackRecord
 
+if TYPE_CHECKING:
+    from reputation_service.core.state import AppState
+    from reputation_service.services.protocol import JwsVerifier
+
 router = APIRouter()
+
+
+def _token_kid(token: str) -> str:
+    """Strictly parse the protected header used only to select the verifier."""
+    try:
+        return parse_jws(token).header.kid
+    except JwsAdmissionError as exc:
+        raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
+
+
+def _select_verifier(state: AppState, token: str) -> JwsVerifier | None:
+    """Route platform-signed tokens to local verification, agent tokens to Identity.
+
+    The signer is read from the (unverified) ``kid`` only to pick the verifier; the
+    chosen verifier then authenticates the token.
+    """
+    token_kid = _token_kid(token)
+    platform_agent = state.platform_agent
+    if (
+        platform_agent is not None
+        and state.platform_verifier is not None
+        and token_kid == platform_agent.agent_id
+    ):
+        return state.platform_verifier
+    return state.identity_client
 
 
 def _extract_jws_token(data: dict[str, object]) -> str:
@@ -75,7 +113,38 @@ def _record_to_dict(record: object) -> dict[str, object]:
         "comment": record.comment,
         "submitted_at": record.submitted_at,
         "visible": record.visible,
+        "source": record.source,
     }
+
+
+def _raise_validation_error(result: ValidationError) -> NoReturn:
+    raise ServiceError(
+        error=result.error,
+        message=result.message,
+        status_code=result.status_code,
+        details=result.details,
+    )
+
+
+async def _authorize_against_task(state: AppState, body: dict[str, object]) -> None:
+    """Reject peer feedback that the referenced task does not authorize.
+
+    Field validation runs first so malformed input never costs a Task Board call.
+    """
+    validation_error = validate_feedback(body, state.feedback_max_comment_length)
+    if validation_error is not None:
+        _raise_validation_error(validation_error)
+    if state.task_board_client is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="Task Board client not initialized",
+            status_code=503,
+            details={},
+        )
+    task = await state.task_board_client.get_task(str(body["task_id"]))
+    authorization_error = authorize_peer_feedback(task, body)
+    if authorization_error is not None:
+        _raise_validation_error(authorization_error)
 
 
 @router.post("/feedback")
@@ -106,15 +175,8 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
     # --- JWS Token Extraction ---
     token = _extract_jws_token(data)
 
-    # --- JWS verification via Identity service ---
+    # --- JWS verification (two-tier: platform ops local, agent ops via Identity) ---
     state = get_app_state()
-    if state.identity_client is None:
-        raise ServiceError(
-            error="service_not_ready",
-            message="Identity client not initialized",
-            status_code=503,
-            details={},
-        )
     if state.feedback_store is None:
         raise ServiceError(
             error="service_not_ready",
@@ -123,44 +185,36 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
             details={},
         )
 
-    verify_result = await state.identity_client.verify_jws(token)
-
-    if not verify_result.get("valid"):
+    verifier = _select_verifier(state, token)
+    if verifier is None:
         raise ServiceError(
-            error="forbidden",
-            message="JWS signature verification failed",
-            status_code=403,
+            error="service_not_ready",
+            message="Identity client not initialized",
+            status_code=503,
             details={},
         )
 
-    payload_from_identity = verify_result.get("payload")
-    if not isinstance(payload_from_identity, dict):
+    try:
+        verified = await verifier.verify_jws(token)
+    except InvalidSignature as exc:
         raise ServiceError(
-            error="invalid_payload",
-            message="JWS payload must be a JSON object",
-            status_code=400,
-            details={},
+            "forbidden",
+            "JWS signature verification failed",
+            403,
+            {},
+        ) from exc
+    try:
+        require_context(
+            verified,
+            audience="reputation",
+            resource="POST /feedback",
+            allowed_action="submit_feedback",
         )
+    except JwsAdmissionError as exc:
+        raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
 
-    payload: dict[str, object] = payload_from_identity
-    signer_agent_id: str = verify_result.get("agent_id", "")
-    if not signer_agent_id:
-        raise ServiceError(
-            error="invalid_jws",
-            message="Token header is missing kid",
-            status_code=400,
-            details={},
-        )
-
-    # --- Payload Validation ---
-    action = payload.get("action")
-    if action != "submit_feedback":
-        raise ServiceError(
-            error="invalid_payload",
-            message='JWS payload action must be "submit_feedback"',
-            status_code=400,
-            details={},
-        )
+    payload = verified.payload
+    signer_agent_id = verified.header.kid
 
     from_agent_id_in_payload = payload.get("from_agent_id")
     if not from_agent_id_in_payload or not isinstance(from_agent_id_in_payload, str):
@@ -188,20 +242,23 @@ async def submit_feedback_endpoint(request: Request) -> JSONResponse:
         state.platform_agent is not None and signer_agent_id == state.platform_agent.agent_id
     )
 
-    result = submit_feedback(
+    if not is_platform:
+        await _authorize_against_task(state, feedback_body)
+
+    result = await run_in_threadpool(
+        submit_feedback,
         store=state.feedback_store,
         body=feedback_body,
         max_comment_length=state.feedback_max_comment_length,
         force_visible=is_platform,
+        source=SOURCE_COURT if is_platform else SOURCE_PEER,
     )
 
     if isinstance(result, ValidationError):
-        raise ServiceError(
-            error=result.error,
-            message=result.message,
-            status_code=result.status_code,
-            details=result.details,
-        )
+        _raise_validation_error(result)
+
+    if isinstance(result, FeedbackReplay):
+        return JSONResponse(status_code=200, content=_record_to_dict(result.record))
 
     return JSONResponse(
         status_code=201,
@@ -221,10 +278,10 @@ async def get_task_feedback(task_id: str) -> JSONResponse:
             details={},
         )
 
-    records = get_feedback_for_task(
+    records = await run_in_threadpool(
+        get_feedback_for_task,
         store=state.feedback_store,
         task_id=task_id,
-        reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,
     )
     return JSONResponse(
         status_code=200,
@@ -247,10 +304,10 @@ async def get_agent_feedback(agent_id: str) -> JSONResponse:
             details={},
         )
 
-    records = get_feedback_for_agent(
+    records = await run_in_threadpool(
+        get_feedback_for_agent,
         store=state.feedback_store,
         agent_id=agent_id,
-        reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,
     )
     return JSONResponse(
         status_code=200,
@@ -273,10 +330,10 @@ async def get_feedback(feedback_id: str) -> JSONResponse:
             details={},
         )
 
-    record = get_feedback_by_id(
+    record = await run_in_threadpool(
+        get_feedback_by_id,
         store=state.feedback_store,
         feedback_id=feedback_id,
-        reveal_timeout_seconds=state.feedback_reveal_timeout_seconds,
     )
     if record is None:
         raise ServiceError(

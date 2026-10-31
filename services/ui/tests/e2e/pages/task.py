@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -62,8 +63,42 @@ class TaskPage:
     # --- Phase Navigation ---
 
     def click_phase(self, phase: int) -> None:
-        """Click on a specific phase step (0-6)."""
+        """Click on a specific phase step (0-6), then wait for SSE catch-up.
+
+        task.js's ``connectTaskSSE`` opens its EventSource with
+        ``last_event_id=0`` on every page load (data/web/assets/task.js), so
+        it always replays the *entire* event history for the current task,
+        not just new events. Each replayed event unconditionally overwrites
+        ``state.currentPhase`` back to the task's live phase. If that replay
+        is still draining when a caller clicks a phase step, a delayed
+        replayed event can silently undo the click a moment later — a race,
+        not a fixed-count issue, so we wait it out here rather than betting
+        on a fixed sleep long enough to always win.
+        """
         self._page.locator(f".phase-step[data-phase='{phase}']").click()
+        self.wait_for_feed_to_settle()
+
+    def wait_for_feed_to_settle(self, timeout_ms: int = 5_000) -> None:
+        """Wait until the event feed panel stops growing.
+
+        Used as a settle signal for the SSE catch-up replay described in
+        ``click_phase`` above: poll the feed item count until it holds
+        steady for a short debounce window instead of guessing a fixed
+        sleep duration.
+        """
+        deadline = time.monotonic() + (timeout_ms / 1000)
+        feed_items = self._page.locator("#feed-scroll .feed-item")
+        last_count = feed_items.count()
+        stable_since = time.monotonic()
+        while time.monotonic() < deadline:
+            self._page.wait_for_timeout(100)
+            count = feed_items.count()
+            if count == last_count:
+                if time.monotonic() - stable_since >= 0.3:
+                    return
+            else:
+                last_count = count
+                stable_since = time.monotonic()
 
     def click_next(self) -> None:
         """Click the next phase button."""
@@ -200,7 +235,7 @@ class TaskPage:
 
     @property
     def escrow_status(self) -> Locator:
-        """The escrow status text (LOCKED/RELEASED/etc)."""
+        """The evidence-based settlement status text."""
         return self._page.locator(".escrow-status")
 
     # --- Dispute / Ruling Display ---
@@ -217,8 +252,8 @@ class TaskPage:
 
     @property
     def ruling_card(self) -> Locator:
-        """The court ruling card."""
-        return self._page.locator(".ruling-card")
+        """The court ruling card (the settlement card shares its styling)."""
+        return self._page.locator(".ruling-card:not(.settlement-card)")
 
     def get_ruling_details(self) -> dict[str, str]:
         """Return ruling details as {worker_pct, summary}."""

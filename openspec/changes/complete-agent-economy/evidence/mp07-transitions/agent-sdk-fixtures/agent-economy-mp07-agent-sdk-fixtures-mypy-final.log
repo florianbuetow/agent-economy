@@ -1,0 +1,8 @@
+tests/unit/test_mp03_outbound_tokens.py:10: error: Skipping analyzing "base_agent.agent": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+tests/unit/test_mp03_outbound_tokens.py:11: error: Skipping analyzing "base_agent.signing": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+tests/unit/test_mp03_outbound_tokens.py:15: error: Function is missing a type annotation for one or more arguments  [no-untyped-def]
+tests/unit/test_task_board_mixin.py:11: error: Skipping analyzing "base_agent.agent": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+tests/unit/test_task_board_mixin.py:11: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+tests/unit/test_task_board_mixin.py:16: error: Skipping analyzing "base_agent.config": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+tests/unit/test_task_board_mixin.py:112: error: Need type annotation for "tasks_response"  [var-annotated]
+Found 6 errors in 2 files (checked 2 source files)

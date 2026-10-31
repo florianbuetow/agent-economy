@@ -1,0 +1,111 @@
+{
+  "scope": "sdk-producer",
+  "artifacts": [
+    {
+      "file": "agent-economy-mp07-sdk-diff.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-final-bandit.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-final-codespell.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-final-diff.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-final-format.log",
+      "sha256": "eee76f865de5a9f2456950f710ae5d5f9b5bd0ea02aa54f614c5eed6642a0bfd"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-final-mypy.log",
+      "sha256": "8ab70417f20124d5a265431015b98a2d944585f9ada4e3a68ff348a9c875d9bb"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-final-ruff.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-final-tests.log",
+      "sha256": "5a9259ce9261989e470aede18997a842973fa1cafbea2ec2fbecdf542cfe0085"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-format-apply.log",
+      "sha256": "878d50bf4ab752ab41ae942ac518b87e744d994b21bb15dca142ed7a470b3b3a"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-format.log",
+      "sha256": "1f1c59001bec1add4ccfa02eec8e7bb1f6b669117d039ec989efefd6ec9b4673"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-green-initial.log",
+      "sha256": "e0f296ff27a3783d57002e661c07cbf3c5ed3804c65305f2bcc567b74634144c"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-mypy.log",
+      "sha256": "8ab70417f20124d5a265431015b98a2d944585f9ada4e3a68ff348a9c875d9bb"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-parent-client-cleanup.log",
+      "sha256": "0f9bde83cf691d6bda3c635560b7da7ad52f8f636a54a82efba29eeb571047c0"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-parent-client-cleanup2.log",
+      "sha256": "c9507f2503e2345c323037df1fd99140a6ff35c8ddaace9709eb6edcd62aab06"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-parent-format.log",
+      "sha256": "fd2299c9f1c6dc869070883e281051bfe93aacf66c1a3b0069f45b4aa410ca50"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-parent-ruff.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-parent-unit.log",
+      "sha256": "3584ffa5db2fbfd1876fb6d0fc2f7c5811665d7044a2997754ae643698cf3cfb"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-pyright.log",
+      "sha256": "f16114ebc0e690ee37e818248a6f6bd807ace2a319bf510259f55dfceaa36e64"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-red.log",
+      "sha256": "8c53cfb3001db75c91d9341ec9dcffba07e9ba1132de63cdcbac2cdc145697f6"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-ruff.log",
+      "sha256": "46f91cbb12821dc9459c3ee5b6e9ca0951f39dc3981d0decc64ea4745bf73efe"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-source-sha256.log",
+      "sha256": "86c208f76946a916796c3d66178b45ed243f742fc0800e75d913bbe979229be4"
+    },
+    {
+      "file": "agent-economy-mp07-sdk-unit-full.log",
+      "sha256": "83e5e3714b8fda3b119776589e034532c18f2ce38d2d8a4466c9230ded0afbec"
+    },
+    {
+      "file": "review-verdict.md",
+      "sha256": "7968cb6b7aed976d0810cc68ad67bc25797cb0aa4645cb70f5c341681124d5bd"
+    }
+  ],
+  "sources": {
+    "libs/service-auth/src/service_auth/mixins/task_board.py": "c216a6206ee1a7c49695b9572d5e18b92f38d369d93c187355c33358b10066a4",
+    "libs/service-auth/tests/unit/test_mp07_task_board_producer.py": "f53829c013fc75eccf9490fc89024511699b8fc996d20389749ed97f98b34fee",
+    "libs/service-auth/tests/unit/test_mp03_producers.py": "2cf87ca928336764f7d8cb8c4ef63b07260682ab29dada1a3aab56c89f319db4",
+    "docs/plans/2026-10-18-mp07-sdk-contract-rollout.md": "31ee59fdf8b6f7d53454a52e152ccf4ed30b48e04d3b5a297f53e188096de130"
+  },
+  "notes": [
+    "Red: 33 failed, 6 passed. Independent classification:26 stopped at old signatures;7 exercised missing-required-field enforcement. Not33 independently executed downstream bugs.",
+    "Agent full343 and independent parent full343 passed. After low-severity fixture resource cleanup, parent focused39 passed; source production code unchanged.",
+    "Reviewer found original AsyncClient replaced without close; helper now closes it before installing MockTransport and all7 callers await it. Final review APPROVE.",
+    "Earlier agent hashes are historical. Current new test differs only by reviewed async client cleanup. Current manifest identifies final sources.",
+    "Service-auth source Mypy/Ruff/format/Bandit/codespell passed; no library Pyright gate claimed. No root CI or downstream-producer completion claim.",
+    "One redundant parent-client-cleanup log ran before an edit command blocked at uv cache access; cleanup2 is the actual final focused run."
+  ]
+}

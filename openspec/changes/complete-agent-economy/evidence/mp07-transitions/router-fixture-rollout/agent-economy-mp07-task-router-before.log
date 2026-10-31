@@ -1,0 +1,294 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 76 items
+
+tests/unit/routers/test_tasks.py ....................FFFFFFFFFFFFFFFFFFF [ 51%]
+F......F....F........F......FFFFF.F.F                                    [100%]
+
+=================================== FAILURES ===================================
+__________ TestTaskCreation.test_tc10_signer_does_not_match_poster_id __________
+tests/unit/routers/test_tasks.py:325: in test_tc10_signer_does_not_match_poster_id
+    assert resp.status_code == 403
+E   assert 400 == 403
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:12", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+__________ TestTaskCreation.test_tc11_task_id_mismatch_between_tokens __________
+tests/unit/routers/test_tasks.py:366: in test_tc11_task_id_mismatch_between_tokens
+    assert resp.json()["error"] == "token_mismatch"
+E   AssertionError: assert 'invalid_payload' == 'token_mismatch'
+E     
+E     - token_mismatch
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:12", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+_______ TestTaskCreation.test_tc12_reward_amount_mismatch_between_tokens _______
+tests/unit/routers/test_tasks.py:405: in test_tc12_reward_amount_mismatch_between_tokens
+    assert resp.json()["error"] == "token_mismatch"
+E   AssertionError: assert 'invalid_payload' == 'token_mismatch'
+E     
+E     - token_mismatch
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:13", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+____________ TestTaskCreation.test_tc13_invalid_reward_values[zero] ____________
+tests/unit/routers/test_tasks.py:450: in test_tc13_invalid_reward_values
+    assert resp.json()["error"] == "invalid_reward"
+E   AssertionError: assert 'invalid_payload' == 'invalid_reward'
+E     
+E     - invalid_reward
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:14", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+__________ TestTaskCreation.test_tc13_invalid_reward_values[negative] __________
+tests/unit/routers/test_tasks.py:450: in test_tc13_invalid_reward_values
+    assert resp.json()["error"] == "invalid_reward"
+E   AssertionError: assert 'invalid_payload' == 'invalid_reward'
+E     
+E     - invalid_reward
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:15", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+___________ TestTaskCreation.test_tc13_invalid_reward_values[float] ____________
+tests/unit/routers/test_tasks.py:450: in test_tc13_invalid_reward_values
+    assert resp.json()["error"] == "invalid_reward"
+E   AssertionError: assert 'invalid_payload' == 'invalid_reward'
+E     
+E     - invalid_reward
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:16", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+___________ TestTaskCreation.test_tc13_invalid_reward_values[string] ___________
+tests/unit/routers/test_tasks.py:450: in test_tc13_invalid_reward_values
+    assert resp.json()["error"] == "invalid_reward"
+E   AssertionError: assert 'invalid_payload' == 'invalid_reward'
+E     
+E     - invalid_reward
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:16", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+____________ TestTaskCreation.test_tc13_invalid_reward_values[null] ____________
+tests/unit/routers/test_tasks.py:450: in test_tc13_invalid_reward_values
+    assert resp.json()["error"] == "invalid_reward"
+E   AssertionError: assert 'invalid_payload' == 'invalid_reward'
+E     
+E     - invalid_reward
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:17", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+__________ TestTaskCreation.test_tc14a_invalid_bidding_deadline[zero] __________
+tests/unit/routers/test_tasks.py:495: in test_tc14a_invalid_bidding_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:18", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+________ TestTaskCreation.test_tc14a_invalid_bidding_deadline[negative] ________
+tests/unit/routers/test_tasks.py:495: in test_tc14a_invalid_bidding_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:19", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+_________ TestTaskCreation.test_tc14a_invalid_bidding_deadline[float] __________
+tests/unit/routers/test_tasks.py:495: in test_tc14a_invalid_bidding_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:20", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+_________ TestTaskCreation.test_tc14a_invalid_bidding_deadline[string] _________
+tests/unit/routers/test_tasks.py:495: in test_tc14a_invalid_bidding_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:20", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+_________ TestTaskCreation.test_tc14b_invalid_execution_deadline[zero] _________
+tests/unit/routers/test_tasks.py:540: in test_tc14b_invalid_execution_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:21", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+_______ TestTaskCreation.test_tc14b_invalid_execution_deadline[negative] _______
+tests/unit/routers/test_tasks.py:540: in test_tc14b_invalid_execution_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:22", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+________ TestTaskCreation.test_tc14b_invalid_execution_deadline[float] _________
+tests/unit/routers/test_tasks.py:540: in test_tc14b_invalid_execution_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:22", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+________ TestTaskCreation.test_tc14b_invalid_execution_deadline[string] ________
+tests/unit/routers/test_tasks.py:540: in test_tc14b_invalid_execution_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:23", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+__________ TestTaskCreation.test_tc14c_invalid_review_deadline[zero] ___________
+tests/unit/routers/test_tasks.py:585: in test_tc14c_invalid_review_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:24", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+________ TestTaskCreation.test_tc14c_invalid_review_deadline[negative] _________
+tests/unit/routers/test_tasks.py:585: in test_tc14c_invalid_review_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:24", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+__________ TestTaskCreation.test_tc14c_invalid_review_deadline[float] __________
+tests/unit/routers/test_tasks.py:585: in test_tc14c_invalid_review_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:25", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+_________ TestTaskCreation.test_tc14c_invalid_review_deadline[string] __________
+tests/unit/routers/test_tasks.py:585: in test_tc14c_invalid_review_deadline
+    assert resp.json()["error"] == "invalid_deadline"
+E   AssertionError: assert 'invalid_payload' == 'invalid_deadline'
+E     
+E     - invalid_deadline
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:25", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+______ TestTaskCreation.test_tc21_escrow_signer_differs_from_task_signer _______
+tests/unit/routers/test_tasks.py:738: in test_tc21_escrow_signer_differs_from_task_signer
+    assert resp.json()["error"] == "token_mismatch"
+E   AssertionError: assert 'invalid_payload' == 'token_mismatch'
+E     
+E     - token_mismatch
+E     + invalid_payload
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:30", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+__________ TestTaskCreation.test_tc26_extra_fields_in_payload_ignored __________
+tests/unit/routers/test_tasks.py:832: in test_tc26_extra_fields_in_payload_ignored
+    assert resp.status_code == 201
+E   assert 400 == 201
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:33", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks"}}
+__________________ TestTaskQueries.test_tq07_filter_by_status __________________
+tests/unit/routers/test_tasks.py:979: in test_tq07_filter_by_status
+    assert cancel_resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:40", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-48c8e3bf-9863-46a2-befb-e2476978f487/cancel"}}
+___________ TestTaskCancellation.test_can01_poster_cancels_open_task ___________
+tests/unit/routers/test_tasks.py:1117: in test_can01_poster_cancels_open_task
+    assert resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:44", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-79600762-b824-4784-9a5e-42ac52a28614/cancel"}}
+____________ TestTaskCancellation.test_can02_cancel_releases_escrow ____________
+tests/unit/routers/test_tasks.py:1144: in test_can02_cancel_releases_escrow
+    assert resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:45", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-2d8d7120-91f0-42fa-a1ad-b35647d74f99/cancel"}}
+_____________ TestTaskCancellation.test_can03_non_poster_forbidden _____________
+tests/unit/routers/test_tasks.py:1172: in test_can03_non_poster_forbidden
+    assert resp.status_code == 403
+E   assert 400 == 403
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:46", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-e61203cc-db0d-428f-b3ed-4335058b6f21/cancel"}}
+___________ TestTaskCancellation.test_can04_cancel_nonexistent_task ____________
+tests/unit/routers/test_tasks.py:1193: in test_can04_cancel_nonexistent_task
+    assert resp.status_code == 404
+E   assert 400 == 404
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:47", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-00000000-0000-0000-0000-000000000000/cancel"}}
+___________ TestTaskCancellation.test_can05_cancel_already_cancelled ___________
+tests/unit/routers/test_tasks.py:1216: in test_can05_cancel_already_cancelled
+    assert resp1.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:47", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-ce6b65df-35ab-42ed-9be9-08c566c6062d/cancel"}}
+_________ TestTaskCancellation.test_can07_cancel_wrong_status_accepted _________
+tests/unit/routers/test_tasks.py:1269: in test_can07_cancel_wrong_status_accepted
+    assert resp.status_code == 409
+E   assert 400 == 409
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:49", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-da523217-7b7d-4834-a421-045c0f53907e/cancel"}}
+_____ TestTaskCancellation.test_can09_cancel_with_expired_bidding_deadline _____
+tests/unit/routers/test_tasks.py:1315: in test_can09_cancel_with_expired_bidding_deadline
+    assert resp.status_code == 200
+E   assert 400 == 200
+E    +  where 400 = <Response [400 Bad Request]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-18 01:32:50", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "invalid_payload", "status_code": 400, "path": "/tasks/t-f33889b9-bc34-4a1e-9500-e6592b78b686/cancel"}}
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc10_signer_does_not_match_poster_id
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc11_task_id_mismatch_between_tokens
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc12_reward_amount_mismatch_between_tokens
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[zero]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[negative]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[float]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[string]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc13_invalid_reward_values[null]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[zero]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[negative]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[float]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14a_invalid_bidding_deadline[string]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[zero]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[negative]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[float]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14b_invalid_execution_deadline[string]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[zero]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[negative]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[float]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc14c_invalid_review_deadline[string]
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc21_escrow_signer_differs_from_task_signer
+FAILED tests/unit/routers/test_tasks.py::TestTaskCreation::test_tc26_extra_fields_in_payload_ignored
+FAILED tests/unit/routers/test_tasks.py::TestTaskQueries::test_tq07_filter_by_status
+FAILED tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can01_poster_cancels_open_task
+FAILED tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can02_cancel_releases_escrow
+FAILED tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can03_non_poster_forbidden
+FAILED tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can04_cancel_nonexistent_task
+FAILED tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can05_cancel_already_cancelled
+FAILED tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can07_cancel_wrong_status_accepted
+FAILED tests/unit/routers/test_tasks.py::TestTaskCancellation::test_can09_cancel_with_expired_bidding_deadline
+======================== 30 failed, 46 passed in 56.77s ========================

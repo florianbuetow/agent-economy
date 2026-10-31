@@ -3,13 +3,22 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
-import httpx
 import pytest
 import pytest_asyncio
 
 from tests.integration.conftest import read_db, read_one
 from tests.integration.gateway_helpers import create_gateway_client
+from tests.integration.native_task_fixtures import (
+    advance_task_to_submitted,
+    approve_with_bank_receipt,
+    freeze_task_clock,
+    publish_open_task,
+)
+
+if TYPE_CHECKING:
+    import httpx
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
@@ -34,13 +43,20 @@ def _identity_payload(agent_id: str, name: str) -> dict[str, object]:
 
 
 async def _setup_prerequisite_data(client: httpx.AsyncClient) -> str:
-    for agent_id, name in [("a-poster", "Poster"), ("a-worker", "Worker")]:
-        identity_response = await client.post("/identity/agents", json=_identity_payload(agent_id, name))
+    accounts = [
+        ("a-poster", "Poster", "op-00000000-0000-4000-8000-000000000301"),
+        ("a-worker", "Worker", "op-00000000-0000-4000-8000-000000000302"),
+    ]
+    for agent_id, name, operation_id in accounts:
+        identity_response = await client.post(
+            "/identity/agents", json=_identity_payload(agent_id, name)
+        )
         assert identity_response.status_code == 201
 
         account_response = await client.post(
             "/bank/accounts",
             json={
+                "operation_id": operation_id,
                 "account_id": agent_id,
                 "balance": 5000,
                 "created_at": "2026-03-02T05:30:01Z",
@@ -61,65 +77,58 @@ async def _setup_prerequisite_data(client: httpx.AsyncClient) -> str:
             },
         )
         assert account_response.status_code == 201
+        account_envelope = account_response.json()
+        assert account_envelope["outcome"] == "native_receipt"
+        assert account_envelope["receipt"]["operation_id"] == operation_id
+        assert account_envelope["receipt"]["result"]["balance_after"] == 5000
+        assert account_envelope["current_escrow"] is None
 
-    task_id = "t-rep-001"
+    task_id = "t-00000000-0000-4000-8000-000000000501"
 
-    lock_response = await client.post(
-        "/bank/escrow/lock",
-        json={
-            "escrow_id": f"esc-{task_id}",
-            "payer_account_id": "a-poster",
-            "amount": 200,
-            "task_id": task_id,
-            "created_at": "2026-03-02T05:31:00Z",
-            "tx_id": f"tx-esc-{task_id}",
-            "event": {
-                "event_source": "bank",
-                "event_type": "escrow.locked",
-                "timestamp": "2026-03-02T05:31:00Z",
-                "agent_id": "a-poster",
-                "task_id": task_id,
-                "summary": "Escrow locked",
-                "payload": "{}",
-            },
-        },
-    )
-    assert lock_response.status_code == 201
-
-    task_response = await client.post(
-        "/board/tasks",
-        json={
-            "task_id": task_id,
-            "poster_id": "a-poster",
-            "title": "Task for feedback",
-            "spec": "Do something",
-            "reward": 200,
-            "status": "approved",
-            "bidding_deadline_seconds": 3600,
-            "deadline_seconds": 7200,
-            "review_deadline_seconds": 3600,
-            "bidding_deadline": "2026-03-02T06:30:00Z",
-            "bid_count": 0,
-            "escrow_pending": 0,
-            "escrow_id": f"esc-{task_id}",
-            "created_at": "2026-03-02T05:31:00Z",
-            "event": {
-                "event_source": "board",
-                "event_type": "task.created",
-                "timestamp": "2026-03-02T05:31:00Z",
-                "agent_id": "a-poster",
-                "task_id": task_id,
-                "summary": "Task created",
-                "payload": "{}",
-            },
-        },
+    task_response = await publish_open_task(
+        client,
+        task_id=task_id,
+        poster_id="a-poster",
+        title="Task for feedback",
+        spec="Do something",
+        reward=200,
+        escrow_id=f"esc-{task_id}",
+        bidding_deadline_seconds=3600,
+        acceptance_window_seconds=1800,
+        execution_deadline_seconds=7200,
+        review_deadline_seconds=3600,
     )
     assert task_response.status_code == 201
+    await advance_task_to_submitted(
+        client,
+        task_id=task_id,
+        poster_id="a-poster",
+        worker_id="a-worker",
+        escrow_id=f"esc-{task_id}",
+        reward=200,
+        operation_suffix="0000000303",
+        timestamp="2026-03-02T05:40:00Z",
+    )
+    approval_claim, release_receipt, approval = await approve_with_bank_receipt(
+        client,
+        task_id=task_id,
+        poster_id="a-poster",
+        worker_id="a-worker",
+        escrow_id=f"esc-{task_id}",
+        reward=200,
+        operation_id="op-00000000-0000-4000-8000-000000030304",
+        timestamp="2026-03-02T05:40:00Z",
+    )
+    assert approval_claim.status_code == 202, approval_claim.text
+    assert release_receipt.status_code == 200, release_receipt.text
+    assert approval.status_code == 200, approval.text
+    assert approval.json()["result"]["status"] == "approved"
     return task_id
 
 
 @pytest_asyncio.fixture
-async def gw_client(initialized_db: str):
+async def gw_client(initialized_db: str, monkeypatch: pytest.MonkeyPatch):
+    freeze_task_clock(monkeypatch, "2026-03-02T05:40:00Z")
     client = create_gateway_client(initialized_db)
     async with client:
         yield client
@@ -141,6 +150,7 @@ class TestReputationGatewayWrites:
                 "from_agent_id": "a-poster",
                 "to_agent_id": "a-worker",
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": "Good work",
@@ -186,6 +196,7 @@ class TestReputationGatewayWrites:
                 "from_agent_id": "a-poster",
                 "to_agent_id": "a-worker",
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": "Solid output",
@@ -211,6 +222,7 @@ class TestReputationGatewayWrites:
                 "from_agent_id": "a-worker",
                 "to_agent_id": "a-poster",
                 "role": "worker",
+                "source": "peer",
                 "category": "spec_quality",
                 "rating": "satisfied",
                 "comment": "Clear specification",

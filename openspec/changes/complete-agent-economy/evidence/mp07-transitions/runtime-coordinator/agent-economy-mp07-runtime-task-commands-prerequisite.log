@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "<string>", line 10, in <module>
+    store.create(intent)
+    ~~~~~~~~~~~~^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_intents.py", line 308, in create
+    validate_owner_intent(self.owner, intent)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_intent_ack.py", line 139, in validate_owner_intent
+    _validate_mutation_facts(intent, actor_id, public, frozen, result)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/flo/Developer/github/agent-economy/agents/src/base_agent/runtime_intent_ack.py", line 220, in _validate_mutation_facts
+    raise RuntimeIntentError("invalid_input", "dispute result facts are invalid")
+base_agent.runtime_intent_models.RuntimeIntentError: dispute result facts are invalid

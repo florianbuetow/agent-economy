@@ -1,232 +1,250 @@
-"""Unit tests for DeadlineEvaluator."""
+"""Deadline transitions against real Gateway-owned task and settlement facts."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from unittest.mock import AsyncMock
+from typing import TYPE_CHECKING
 
 import pytest
-from freezegun import freeze_time
+from service_auth.financial_identity import operation_id_for
+from service_commons.exceptions import ServiceError
 
 from task_board_service.services.deadline_evaluator import DeadlineEvaluator
-from task_board_service.services.task_store import TaskStore
+from tests.fakes.native_task_fixture import START_US, TaskTerms, native_task_context
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+    from tests.fakes.native_task_fixture import NativeTaskFixture
+
+pytestmark = pytest.mark.unit
+_TERMS = TaskTerms(100, 3600, 600, 3600, 3600)
+_TASK_1 = "t-00000000-0000-4000-8000-000000000301"
+_TASK_2 = "t-00000000-0000-4000-8000-000000000302"
 
 
-def _task_data(
-    task_id: str,
-    status: str,
-    created_at: str,
-    accepted_at: str | None,
-    submitted_at: str | None,
-    bid_count: int,
-    escrow_pending: int,
-) -> dict[str, object]:
-    return {
-        "task_id": task_id,
-        "poster_id": "a-poster",
-        "title": "Task",
-        "spec": "Spec",
-        "reward": 100,
-        "bidding_deadline_seconds": 3600,
-        "deadline_seconds": 3600,
-        "review_deadline_seconds": 3600,
-        "status": status,
-        "escrow_id": "esc-1",
-        "bid_count": bid_count,
-        "worker_id": "a-worker",
-        "accepted_bid_id": "bid-1",
-        "created_at": created_at,
-        "accepted_at": accepted_at,
-        "submitted_at": submitted_at,
-        "approved_at": None,
-        "cancelled_at": None,
-        "disputed_at": None,
-        "dispute_reason": None,
-        "ruling_id": None,
-        "ruled_at": None,
-        "worker_pct": None,
-        "ruling_summary": None,
-        "expired_at": None,
-        "escrow_pending": escrow_pending,
-    }
+@pytest.fixture(name="native_tasks")
+def native_tasks_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[NativeTaskFixture]:
+    with native_task_context(tmp_path, monkeypatch) as scenario:
+        yield scenario
 
 
-def _timestamp(value: str) -> str:
-    return datetime.fromisoformat(value).replace(tzinfo=UTC).isoformat().replace("+00:00", "Z")
-
-
-def _mock_escrow_coordinator() -> AsyncMock:
-    mock_coordinator = AsyncMock()
-    mock_coordinator.retry_pending_escrow = AsyncMock(side_effect=lambda task: task)
-    mock_coordinator.try_release_escrow = AsyncMock()
-    return mock_coordinator
-
-
-@pytest.mark.unit
 def test_compute_deadline_valid() -> None:
-    """compute_deadline adds seconds to base timestamp."""
-    result = DeadlineEvaluator.compute_deadline("2025-01-01T00:00:00Z", 60)
-    assert result == "2025-01-01T00:01:00Z"
+    assert DeadlineEvaluator.compute_deadline("2025-01-01T00:00:00Z", 60) == "2025-01-01T00:01:00Z"
 
 
-@pytest.mark.unit
 def test_compute_deadline_none_base() -> None:
-    """compute_deadline returns None with missing base timestamp."""
     assert DeadlineEvaluator.compute_deadline(None, 60) is None
 
 
-@pytest.mark.unit
-async def test_evaluate_deadline_terminal_status_skipped(tmp_path) -> None:
-    """Terminal status bypasses deadline logic."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    now = _timestamp("2025-01-01T00:00:00")
-    store.insert_task(_task_data("t-1", "approved", now, now, now, 0, 0))
-    mock_coordinator = _mock_escrow_coordinator()
-    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
-    task = store.get_task("t-1")
-    assert task is not None
+async def test_evaluate_deadline_terminal_status_skipped(native_tasks: NativeTaskFixture) -> None:
+    native_tasks.open_task(_TASK_1, _TERMS)
+    native_tasks.bid(_TASK_1, 100)
+    native_tasks.accept(_TASK_1, 100)
+    native_tasks.submit(_TASK_1)
+    await native_tasks.approve(_TASK_1)
+    task = native_tasks.task(_TASK_1)
+    before_events = native_tasks.store.writer.get_total_events()
+    native_tasks.bank.escrow_release.reset_mock()
+    native_tasks.clock.at_seconds(7200)
 
-    result = await evaluator.evaluate_deadline(task)
+    result = await native_tasks.evaluator(None).evaluate_deadline(task)
 
+    assert result == task
     assert result["status"] == "approved"
-    mock_coordinator.retry_pending_escrow.assert_not_awaited()
-    store.close()
+    assert native_tasks.store.writer.get_total_events() == before_events
+    native_tasks.bank.escrow_release.assert_not_awaited()
 
 
-@pytest.mark.unit
-async def test_evaluate_deadline_open_no_bids_expired(tmp_path) -> None:
-    """Open task with no bids expires after bidding deadline."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    created = _timestamp("2025-01-01T00:00:00")
-    store.insert_task(_task_data("t-1", "open", created, None, None, 0, 0))
-    mock_coordinator = _mock_escrow_coordinator()
-    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
-    task = store.get_task("t-1")
-    assert task is not None
-
-    with freeze_time("2025-01-01 01:00:00"):
-        result = await evaluator.evaluate_deadline(task)
-
+async def test_evaluate_deadline_open_no_bids_expired(native_tasks: NativeTaskFixture) -> None:
+    native_tasks.open_task(_TASK_1, _TERMS)
+    native_tasks.clock.at_seconds(3600)
+    result = await native_tasks.evaluator(None).evaluate_deadline(native_tasks.task(_TASK_1))
     assert result["status"] == "expired"
-    mock_coordinator.try_release_escrow.assert_awaited_once_with("t-1", "esc-1", "a-poster")
-    store.close()
+    operation_id = native_tasks.assert_settlement(
+        _TASK_1,
+        command="expire_bidding",
+        status="expired",
+        recipient=native_tasks.poster_id,
+        event_type="task.expired",
+    )
+    native_tasks.bank.escrow_release.assert_awaited_once_with(
+        escrow_id=f"esc-{_TASK_1}",
+        recipient_account_id=native_tasks.poster_id,
+        operation_id=operation_id,
+        source_reference=f"task:{_TASK_1}:expired",
+    )
 
 
-@pytest.mark.unit
-async def test_evaluate_deadline_open_with_bids_not_expired(tmp_path) -> None:
-    """Open task with bids stays open even past bidding deadline."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    created = _timestamp("2025-01-01T00:00:00")
-    store.insert_task(_task_data("t-1", "open", created, None, None, 1, 0))
-    mock_coordinator = _mock_escrow_coordinator()
-    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
-    task = store.get_task("t-1")
-    assert task is not None
-
-    with freeze_time("2025-01-01 01:10:00"):
-        result = await evaluator.evaluate_deadline(task)
-
-    assert result["status"] == "open"
-    mock_coordinator.try_release_escrow.assert_not_awaited()
-    store.close()
-
-
-@pytest.mark.unit
-async def test_evaluate_deadline_accepted_past_execution(tmp_path) -> None:
-    """Accepted task expires after execution deadline."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    created = _timestamp("2025-01-01T00:00:00")
-    accepted = _timestamp("2025-01-01T00:00:00")
-    store.insert_task(_task_data("t-1", "accepted", created, accepted, None, 0, 0))
-    mock_coordinator = _mock_escrow_coordinator()
-    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
-    task = store.get_task("t-1")
-    assert task is not None
-
-    with freeze_time("2025-01-01 01:00:00"):
-        result = await evaluator.evaluate_deadline(task)
-
+async def test_evaluate_deadline_open_with_bids_expires(native_tasks: NativeTaskFixture) -> None:
+    """Native bids retain the poster's acceptance window, then refund at its cutoff."""
+    native_tasks.open_task(_TASK_1, _TERMS)
+    native_tasks.bid(_TASK_1, 100)
+    evaluator = native_tasks.evaluator(None)
+    native_tasks.clock.at_seconds(3600)
+    during_window = await evaluator.evaluate_deadline(native_tasks.task(_TASK_1))
+    assert during_window["status"] == "open"
+    assert during_window["bid_count"] == 1
+    native_tasks.bank.escrow_release.assert_not_awaited()
+    native_tasks.clock.at_seconds(4200)
+    result = await evaluator.evaluate_deadline(during_window)
     assert result["status"] == "expired"
-    mock_coordinator.try_release_escrow.assert_awaited_once_with("t-1", "esc-1", "a-poster")
-    store.close()
+    native_tasks.assert_settlement(
+        _TASK_1,
+        command="expire_acceptance",
+        status="expired",
+        recipient=native_tasks.poster_id,
+        event_type="task.expired",
+    )
+    native_tasks.bank.escrow_release.assert_awaited_once()
 
 
-@pytest.mark.unit
-async def test_evaluate_deadline_submitted_past_review(tmp_path) -> None:
-    """Submitted task auto-approves after review deadline."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    created = _timestamp("2025-01-01T00:00:00")
-    submitted = _timestamp("2025-01-01T00:00:00")
-    store.insert_task(_task_data("t-1", "submitted", created, created, submitted, 0, 0))
-    mock_coordinator = _mock_escrow_coordinator()
-    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
-    task = store.get_task("t-1")
-    assert task is not None
+async def test_legacy_timing_contract_keeps_original_acceptance_cutoff(
+    native_tasks: NativeTaskFixture,
+) -> None:
+    """A labeled historical sidecar fixture has no newly invented acceptance window."""
+    native_tasks.open_task(_TASK_1, _TERMS)
+    native_tasks.seed_legacy_timing_contract(_TASK_1)
+    native_tasks.bid(_TASK_1, 100)
+    native_tasks.clock.at_seconds(3600)
+    result = await native_tasks.evaluator(None).evaluate_deadline(native_tasks.task(_TASK_1))
+    assert result["status"] == "expired"
+    assert result["acceptance_window_seconds"] is None
+    native_tasks.assert_settlement(
+        _TASK_1,
+        command="expire_acceptance",
+        status="expired",
+        recipient=native_tasks.poster_id,
+        event_type="task.expired",
+    )
 
-    with freeze_time("2025-01-01 01:00:00"):
-        result = await evaluator.evaluate_deadline(task)
 
+async def test_evaluate_deadline_accepted_past_execution(native_tasks: NativeTaskFixture) -> None:
+    native_tasks.open_task(_TASK_1, _TERMS)
+    native_tasks.bid(_TASK_1, 100)
+    native_tasks.accept(_TASK_1, 100)
+    native_tasks.clock.at_seconds(3600)
+    result = await native_tasks.evaluator(None).evaluate_deadline(native_tasks.task(_TASK_1))
+    assert result["status"] == "expired"
+    operation_id = native_tasks.assert_settlement(
+        _TASK_1,
+        command="expire_execution",
+        status="expired",
+        recipient=native_tasks.poster_id,
+        event_type="task.expired",
+    )
+    native_tasks.bank.escrow_release.assert_awaited_once_with(
+        escrow_id=f"esc-{_TASK_1}",
+        recipient_account_id=native_tasks.poster_id,
+        operation_id=operation_id,
+        source_reference=f"task:{_TASK_1}:expired",
+    )
+
+
+async def test_evaluate_deadline_submitted_past_review(native_tasks: NativeTaskFixture) -> None:
+    native_tasks.open_task(_TASK_1, _TERMS)
+    native_tasks.bid(_TASK_1, 100)
+    native_tasks.accept(_TASK_1, 100)
+    native_tasks.submit(_TASK_1)
+    native_tasks.clock.at_seconds(3600)
+    result = await native_tasks.evaluator(None).evaluate_deadline(native_tasks.task(_TASK_1))
     assert result["status"] == "approved"
-    mock_coordinator.try_release_escrow.assert_awaited_once_with("t-1", "esc-1", "a-worker")
-    store.close()
+    operation_id = native_tasks.assert_settlement(
+        _TASK_1,
+        command="auto_approve",
+        status="approved",
+        recipient=native_tasks.worker_id,
+        event_type="task.auto_approved",
+    )
+    native_tasks.bank.escrow_release.assert_awaited_once_with(
+        escrow_id=f"esc-{_TASK_1}",
+        recipient_account_id=native_tasks.worker_id,
+        operation_id=operation_id,
+        source_reference=f"task:{_TASK_1}:approved",
+    )
 
 
-@pytest.mark.unit
-async def test_evaluate_deadline_not_past_deadline(tmp_path) -> None:
-    """No transition occurs before deadline."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    created = _timestamp("2025-01-01T00:00:00")
-    store.insert_task(_task_data("t-1", "open", created, None, None, 0, 0))
-    mock_coordinator = _mock_escrow_coordinator()
-    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
-    task = store.get_task("t-1")
-    assert task is not None
-
-    with freeze_time("2025-01-01 00:30:00"):
-        result = await evaluator.evaluate_deadline(task)
-
+async def test_evaluate_deadline_not_past_deadline(native_tasks: NativeTaskFixture) -> None:
+    native_tasks.open_task(_TASK_1, _TERMS)
+    task = native_tasks.task(_TASK_1)
+    before_events = native_tasks.store.writer.get_total_events()
+    native_tasks.clock.at_seconds(1800)
+    result = await native_tasks.evaluator(None).evaluate_deadline(task)
+    assert result == task
     assert result["status"] == "open"
-    mock_coordinator.try_release_escrow.assert_not_awaited()
-    store.close()
+    assert native_tasks.store.writer.get_total_events() == before_events
+    native_tasks.bank.escrow_release.assert_not_awaited()
 
 
-@pytest.mark.unit
-async def test_evaluate_deadline_retries_pending_escrow(tmp_path) -> None:
-    """Pending escrow triggers retry before normal deadline checks."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    created = _timestamp("2025-01-01T00:00:00")
-    store.insert_task(_task_data("t-1", "open", created, None, None, 0, 1))
-    mock_coordinator = _mock_escrow_coordinator()
-    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
-    task = store.get_task("t-1")
-    assert task is not None
+async def test_evaluate_deadline_retries_pending_escrow(native_tasks: NativeTaskFixture) -> None:
+    """A failed automatic delivery retries the exact stored owner, not a bare flag."""
+    native_tasks.open_task(_TASK_1, _TERMS)
+    native_tasks.clock.at_seconds(3600)
+    native_tasks.bank.escrow_release.side_effect = ServiceError(
+        "bank_unavailable", "injected", 502, {}
+    )
+    evaluator = native_tasks.evaluator(None)
+    pending = await evaluator.evaluate_deadline(native_tasks.task(_TASK_1))
+    assert pending["status"] == "open"
+    operation_id = operation_id_for(
+        "task-deadline", (_TASK_1, "expire_bidding", "0", str(START_US + 3_600_000_000))
+    )
+    assert pending["pending_transition"]["operation_id"] == operation_id
+    native_tasks.bank.escrow_release.side_effect = native_tasks.persist_release
+    native_tasks.clock.at_seconds(3601)
+    result = await evaluator.evaluate_deadline(pending)
+    assert result["status"] == "expired"
+    assert (
+        native_tasks.assert_settlement(
+            _TASK_1,
+            command="expire_bidding",
+            status="expired",
+            recipient=native_tasks.poster_id,
+            event_type="task.expired",
+        )
+        == operation_id
+    )
+    assert native_tasks.bank.escrow_release.await_count == 2
+    assert all(
+        call.kwargs["operation_id"] == operation_id
+        for call in native_tasks.bank.escrow_release.await_args_list
+    )
 
-    with freeze_time("2025-01-01 00:30:00"):
-        _result = await evaluator.evaluate_deadline(task)
 
-    mock_coordinator.retry_pending_escrow.assert_awaited_once()
-    store.close()
+async def test_bare_pending_flag_cannot_authorize_early_release(
+    native_tasks: NativeTaskFixture,
+) -> None:
+    native_tasks.open_task(_TASK_1, _TERMS)
+    actual = native_tasks.task(_TASK_1)
+    # Deliberately inconsistent read fixture: a flag is not a persisted native owner.
+    flagged = dict(actual)
+    flagged["escrow_pending"] = 1
+    native_tasks.clock.at_seconds(1800)
+    result = await native_tasks.evaluator(None).evaluate_deadline(flagged)
+    assert result["status"] == "open"
+    assert native_tasks.task(_TASK_1) == actual
+    native_tasks.bank.escrow_release.assert_not_awaited()
 
 
-@pytest.mark.unit
-async def test_evaluate_deadlines_batch_processes_all(tmp_path) -> None:
-    """Batch evaluator processes every provided task."""
-    store = TaskStore(db_path=str(tmp_path / "task-board.db"))
-    created = _timestamp("2025-01-01T00:00:00")
-    accepted = _timestamp("2025-01-01T00:00:00")
-    store.insert_task(_task_data("t-1", "open", created, None, None, 0, 0))
-    store.insert_task(_task_data("t-2", "accepted", created, accepted, None, 0, 0))
-    mock_coordinator = _mock_escrow_coordinator()
-    evaluator = DeadlineEvaluator(store=store, escrow_coordinator=mock_coordinator)
-    task_one = store.get_task("t-1")
-    task_two = store.get_task("t-2")
-    assert task_one is not None
-    assert task_two is not None
-
-    with freeze_time("2025-01-01 01:00:00"):
-        result = await evaluator.evaluate_deadlines_batch([task_one, task_two])
-
+async def test_evaluate_deadlines_batch_processes_all(native_tasks: NativeTaskFixture) -> None:
+    native_tasks.open_task(_TASK_1, _TERMS)
+    native_tasks.open_task(_TASK_2, _TERMS)
+    native_tasks.bid(_TASK_2, 100)
+    native_tasks.accept(_TASK_2, 100)
+    native_tasks.clock.at_seconds(3600)
+    result = await native_tasks.evaluator(None).evaluate_deadlines_batch(
+        [native_tasks.task(_TASK_1), native_tasks.task(_TASK_2)]
+    )
     assert len(result) == 2
     assert result[0]["status"] == "expired"
     assert result[1]["status"] == "expired"
-    store.close()
+    for task_id, command in ((_TASK_1, "expire_bidding"), (_TASK_2, "expire_execution")):
+        native_tasks.assert_settlement(
+            task_id,
+            command=command,
+            status="expired",
+            recipient=native_tasks.poster_id,
+            event_type="task.expired",
+        )

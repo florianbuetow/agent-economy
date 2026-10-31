@@ -1,0 +1,188 @@
+FFF.FFFF                                                                 [100%]
+=================================== FAILURES ===================================
+_ test_demo_platform_rejects_damaged_pair_without_replacement[missing_public] __
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-244/test_demo_platform_rejects_dam0')
+damage = 'missing_public'
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("damage", ["missing_public", "mismatched_public", "unsafe_mode"])
+    def test_demo_platform_rejects_damaged_pair_without_replacement(
+        tmp_path: Path, damage: str
+    ) -> None:
+        keys = tmp_path / "keys"
+        generate_keypair("platform", keys)
+        private_path = keys / "platform.key"
+        public_path = keys / "platform.pub"
+        if damage == "missing_public":
+            public_path.unlink()
+        elif damage == "mismatched_public":
+            other = tmp_path / "other"
+            generate_keypair("different", other)
+            public_path.write_bytes((other / "different.pub").read_bytes())
+        else:
+            private_path.chmod(0o644)
+        original = {path.name: path.read_bytes() for path in keys.glob("platform.*")}
+    
+>       with pytest.raises(KeyMaterialError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'service_auth.signing.KeyMaterialError'>
+
+tests/unit/demo_replay/test_mp03_key_loading.py:38: Failed
+_ test_demo_platform_rejects_damaged_pair_without_replacement[mismatched_public] _
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-244/test_demo_platform_rejects_dam1')
+damage = 'mismatched_public'
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("damage", ["missing_public", "mismatched_public", "unsafe_mode"])
+    def test_demo_platform_rejects_damaged_pair_without_replacement(
+        tmp_path: Path, damage: str
+    ) -> None:
+        keys = tmp_path / "keys"
+        generate_keypair("platform", keys)
+        private_path = keys / "platform.key"
+        public_path = keys / "platform.pub"
+        if damage == "missing_public":
+            public_path.unlink()
+        elif damage == "mismatched_public":
+            other = tmp_path / "other"
+            generate_keypair("different", other)
+            public_path.write_bytes((other / "different.pub").read_bytes())
+        else:
+            private_path.chmod(0o644)
+        original = {path.name: path.read_bytes() for path in keys.glob("platform.*")}
+    
+>       with pytest.raises(KeyMaterialError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'service_auth.signing.KeyMaterialError'>
+
+tests/unit/demo_replay/test_mp03_key_loading.py:38: Failed
+___ test_demo_platform_rejects_damaged_pair_without_replacement[unsafe_mode] ___
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-244/test_demo_platform_rejects_dam2')
+damage = 'unsafe_mode'
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("damage", ["missing_public", "mismatched_public", "unsafe_mode"])
+    def test_demo_platform_rejects_damaged_pair_without_replacement(
+        tmp_path: Path, damage: str
+    ) -> None:
+        keys = tmp_path / "keys"
+        generate_keypair("platform", keys)
+        private_path = keys / "platform.key"
+        public_path = keys / "platform.pub"
+        if damage == "missing_public":
+            public_path.unlink()
+        elif damage == "mismatched_public":
+            other = tmp_path / "other"
+            generate_keypair("different", other)
+            public_path.write_bytes((other / "different.pub").read_bytes())
+        else:
+            private_path.chmod(0o644)
+        original = {path.name: path.read_bytes() for path in keys.glob("platform.*")}
+    
+>       with pytest.raises(KeyMaterialError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'service_auth.signing.KeyMaterialError'>
+
+tests/unit/demo_replay/test_mp03_key_loading.py:38: Failed
+_____________ test_demo_platform_rejects_a_path_for_another_handle _____________
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-244/test_demo_platform_rejects_a_p0')
+
+    @pytest.mark.unit
+    def test_demo_platform_rejects_a_path_for_another_handle(tmp_path: Path) -> None:
+        generate_keypair("other", tmp_path)
+    
+>       with pytest.raises(KeyMaterialError, match="platform.key"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'service_auth.signing.KeyMaterialError'>
+
+tests/unit/demo_replay/test_mp03_key_loading.py:58: Failed
+_________________ test_platform_key_configuration_is_required __________________
+
+    @pytest.mark.unit
+    def test_platform_key_configuration_is_required() -> None:
+        settings = _settings(Path("keys/platform.key"))
+        settings.pop("platform_key_path")
+    
+>       with pytest.raises(ValidationError, match="platform_key_path"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'pydantic_core._pydantic_core.ValidationError'>
+
+tests/unit/demo_replay/test_mp03_key_loading.py:78: Failed
+________ test_config_resolves_explicit_platform_key_relative_to_config _________
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-244/test_config_resolves_explicit_0')
+
+    @pytest.mark.unit
+    def test_config_resolves_explicit_platform_key_relative_to_config(tmp_path: Path) -> None:
+        config_path = tmp_path / "tools.yaml"
+        config_path.write_text(yaml.safe_dump({"platform": _settings(Path("keys/platform.key"))}))
+    
+>       settings = load_platform_settings(config_path)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/demo_replay/test_mp03_key_loading.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+config_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-244/test_config_resolves_explicit_0/tools.yaml')
+
+    def load_platform_settings(config_path: Path | None = None) -> PlatformConfig:
+        """Load platform service URLs from config.yaml.
+    
+        Args:
+            config_path: Explicit path to config.yaml. Falls back to the
+                         TOOLS_CONFIG_PATH env var, then to ``config.yaml``
+                         in the current working directory.
+    
+        Returns:
+            PlatformConfig instance.
+        """
+        if config_path is None:
+            config_path = resolve_config_path(
+                env_var_name="TOOLS_CONFIG_PATH",
+                default_filename="config.yaml",
+            )
+    
+        raw = yaml.safe_load(config_path.read_text())
+        if not isinstance(raw, dict):
+            msg = f"Invalid config file: {config_path}"
+            raise ValueError(msg)
+    
+>       settings = _FileSettings(**raw)
+                   ^^^^^^^^^^^^^^^^^^^^
+E       pydantic_core._pydantic_core.ValidationError: 1 validation error for _FileSettings
+E       platform.platform_key_path
+E         Extra inputs are not permitted [type=extra_forbidden, input_value='keys/platform.key', input_type=str]
+E           For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+
+src/demo_replay/config.py:62: ValidationError
+______________ test_replay_uses_only_the_configured_platform_pair ______________
+
+tmp_path = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-244/test_replay_uses_only_the_conf0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107cb7820>
+
+    @pytest.mark.unit
+    async def test_replay_uses_only_the_configured_platform_pair(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _, public = generate_keypair("platform", tmp_path)
+>       config = PlatformConfig(**_settings(tmp_path / "platform.key"))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       pydantic_core._pydantic_core.ValidationError: 1 validation error for PlatformConfig
+E       platform_key_path
+E         Extra inputs are not permitted [type=extra_forbidden, input_value='/private/var/folders/d5/..._the_conf0/platform.key', input_type=str]
+E           For further information visit https://errors.pydantic.dev/2.12/v/extra_forbidden
+
+tests/unit/demo_replay/test_mp03_key_loading.py:97: ValidationError
+=========================== short test summary info ============================
+FAILED tests/unit/demo_replay/test_mp03_key_loading.py::test_demo_platform_rejects_damaged_pair_without_replacement[missing_public]
+FAILED tests/unit/demo_replay/test_mp03_key_loading.py::test_demo_platform_rejects_damaged_pair_without_replacement[mismatched_public]
+FAILED tests/unit/demo_replay/test_mp03_key_loading.py::test_demo_platform_rejects_damaged_pair_without_replacement[unsafe_mode]
+FAILED tests/unit/demo_replay/test_mp03_key_loading.py::test_demo_platform_rejects_a_path_for_another_handle
+FAILED tests/unit/demo_replay/test_mp03_key_loading.py::test_platform_key_configuration_is_required
+FAILED tests/unit/demo_replay/test_mp03_key_loading.py::test_config_resolves_explicit_platform_key_relative_to_config
+FAILED tests/unit/demo_replay/test_mp03_key_loading.py::test_replay_uses_only_the_configured_platform_pair
+7 failed, 1 passed in 0.11s

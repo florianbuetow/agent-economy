@@ -5,13 +5,20 @@ Concurrency, HTTP Misuse, Security).
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from service_auth.signing import public_key_to_b64
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service.services import court_writer
+from db_gateway_service.services.task_operation_writer import TaskOperationWriter
+from db_gateway_service.task_operation_requests import parse_task_operation_request
+from db_gateway_service.task_time import epoch_us_to_utc_text, parse_utc_text_to_epoch_us
 from tests.conftest import make_event
+from tests.fakes.native_board_history import publish_task
 
 if TYPE_CHECKING:
     import sqlite3
@@ -49,13 +56,14 @@ def _create_funded_account(
     tx_id = f"tx-{uuid4()}"
     db_writer.create_account(
         {
+            "operation_id": f"op-{uuid4()}",
             "account_id": agent_id,
             "balance": balance,
             "created_at": "2026-02-28T10:00:00Z",
             "initial_credit": {
                 "tx_id": tx_id,
                 "amount": balance,
-                "reference": "initial",
+                "reference": "initial_balance",
                 "timestamp": "2026-02-28T10:00:00Z",
             },
             "event": make_event(source="bank", event_type="account.created"),
@@ -86,6 +94,7 @@ def _lock_escrow(
     tid = task_id if task_id is not None else f"t-{uuid4()}"
     db_writer.escrow_lock(
         {
+            "operation_id": f"op-{uuid4()}",
             "escrow_id": esc_id,
             "payer_account_id": payer_id,
             "amount": amount,
@@ -99,35 +108,28 @@ def _lock_escrow(
 
 
 def _create_task_for_agent(
-    db_writer: DbWriter,
+    client: TestClient,
     poster_id: str,
+    task_id: str,
     escrow_id: str,
 ) -> str:
-    """Create a task and return task_id."""
-    tid = f"t-{uuid4()}"
-    db_writer.create_task(
-        {
-            "task_id": tid,
-            "poster_id": poster_id,
-            "title": "Test task",
-            "spec": "Do something",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 3600,
-            "deadline_seconds": 86400,
-            "review_deadline_seconds": 3600,
-            "bidding_deadline": "2026-03-01T10:00:00Z",
-            "escrow_id": escrow_id,
-            "created_at": "2026-02-28T10:00:00Z",
-            "event": make_event(
-                source="board",
-                event_type="task.created",
-                task_id=tid,
-                agent_id=poster_id,
-            ),
-        }
+    """Create a task through native publication and return task_id."""
+    response = publish_task(
+        client,
+        task_id=task_id,
+        poster_id=poster_id,
+        escrow_id=escrow_id,
+        title="Test task",
+        spec="Do something",
+        reward=100,
+        bidding_deadline_seconds=3600,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=86400,
+        review_deadline_seconds=3600,
+        lock_timestamp=epoch_us_to_utc_text(parse_utc_text_to_epoch_us("2026-02-28T10:00:00Z")),
     )
-    return tid
+    assert response.status_code == 201, response.text
+    return task_id
 
 
 def _file_claim(
@@ -148,6 +150,7 @@ def _file_claim(
             "reason": "Test dispute reason",
             "status": status,
             "filed_at": "2026-02-28T12:00:00Z",
+            "rebuttal_deadline": "2026-02-28T14:00:00Z",
             "event": make_event(
                 source="court",
                 event_type="claim.filed",
@@ -157,6 +160,103 @@ def _file_claim(
         }
     )
     return cid
+
+
+def _prepare_disputed_claim(
+    writer: DbWriter, task_id: str, poster_id: str, worker_id: str, escrow_id: str
+) -> str:
+    """Persist an admitted dispute before injecting the original rollback failure."""
+    clock = {"now": parse_utc_text_to_epoch_us("2026-02-28T10:30:00Z")}
+    key = Ed25519PrivateKey.generate().public_key()
+    operations = TaskOperationWriter(
+        writer.connection,
+        lambda: clock["now"],
+        "system-atomicity-test",
+        f"ed25519:{public_key_to_b64(key)}",
+        current_task_board_caller_kid="gateway-task-board",
+    )
+
+    def claim(
+        command: str, status: str, version: int, actor_id: str, arguments: dict[str, object]
+    ) -> dict[str, Any]:
+        return operations.claim_operation(
+            parse_task_operation_request(
+                {
+                    "protocol_version": 1,
+                    "operation_id": f"op-{uuid4()}",
+                    "task_id": task_id,
+                    "command": command,
+                    "expected_status": status,
+                    "expected_lifecycle_version": version,
+                    "actor_kind": "agent",
+                    "actor_id": actor_id,
+                    "arguments": arguments,
+                }
+            ),
+            "gateway-task-board",
+        )
+
+    bid_id = f"bid-{uuid4()}"
+    bid = claim(
+        "submit_bid", "open", 0, worker_id, {"bid_id": bid_id, "bidder_id": worker_id, "amount": 50}
+    )
+    assert bid["operation_state"] == "completed"
+    accepted = claim(
+        "accept_bid",
+        "open",
+        0,
+        poster_id,
+        {
+            "bid_id": bid_id,
+            "worker_id": worker_id,
+            "escrow_id": escrow_id,
+            "reward": 100,
+            "bid_amount": 50,
+        },
+    )
+    assert accepted["operation_state"] == "completed"
+    writer.record_asset(
+        {
+            "admission": {
+                "expected_status": "accepted",
+                "expected_lifecycle_version": 1,
+                "max_files_per_task": 10,
+            },
+            "asset_id": f"asset-{uuid4()}",
+            "task_id": task_id,
+            "uploader_id": worker_id,
+            "filename": "answer.txt",
+            "content_type": "text/plain",
+            "size_bytes": 1,
+            "storage_path": f"{task_id}/answer.txt",
+            "uploaded_at": "2026-02-28T11:00:00Z",
+            "event": make_event(source="board", event_type="asset.uploaded", task_id=task_id),
+        },
+        None,
+    )
+    clock["now"] = parse_utc_text_to_epoch_us("2026-02-28T11:30:00Z")
+    submitted = claim("submit_deliverable", "accepted", 1, worker_id, {"worker_id": worker_id})
+    assert submitted["operation_state"] == "completed"
+    clock["now"] = parse_utc_text_to_epoch_us("2026-02-28T12:00:00Z")
+    disputed = claim(
+        "dispute_task",
+        "submitted",
+        2,
+        poster_id,
+        {
+            "poster_id": poster_id,
+            "worker_id": worker_id,
+            "escrow_id": escrow_id,
+            "reward": 100,
+            "reason": "Test dispute reason",
+        },
+    )
+    assert disputed["operation_state"] == "claimed"
+    claim_id = _file_claim(writer, task_id, poster_id, worker_id, status="filed")
+    finalized = operations.finalize_operation(disputed["operation_id"], "gateway-task-board")
+    assert finalized["operation_state"] == "completed"
+    assert finalized["result"]["dispute_id"] == claim_id
+    return claim_id
 
 
 def _count_rows(db: sqlite3.Connection, table: str) -> int:
@@ -227,6 +327,7 @@ class TestEventIntegrity:
         resp2 = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": aid,
                 "amount": 500,
@@ -236,7 +337,7 @@ class TestEventIntegrity:
             },
         )
         assert resp2.status_code == 200
-        eid2 = resp2.json()["event_id"]
+        eid2 = resp2.json()["receipt"]["event_id"]
 
         # Query events table directly
         row1 = db_writer._db.execute(
@@ -256,7 +357,10 @@ class TestEventIntegrity:
         assert row2[1] == "salary.paid"
 
     def test_event_task_id_and_agent_id_match_request(
-        self, app_with_writer: TestClient, db_writer: DbWriter
+        self,
+        app_with_writer: TestClient,
+        db_writer: DbWriter,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """EVT-03: Event task_id and agent_id match request."""
         # Setup: register agent, create account, fund, lock escrow, create task
@@ -274,57 +378,41 @@ class TestEventIntegrity:
         app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": poster_id,
                 "balance": 500,
                 "created_at": "2026-02-28T10:00:00Z",
                 "initial_credit": {
                     "tx_id": f"tx-{uuid4()}",
                     "amount": 500,
-                    "reference": "initial",
+                    "reference": "initial_balance",
                     "timestamp": "2026-02-28T10:00:00Z",
                 },
                 "event": make_event(source="bank", event_type="account.created"),
             },
         )
-        esc_id = f"esc-{uuid4()}"
-        app_with_writer.post(
-            "/bank/escrow/lock",
-            json={
-                "escrow_id": esc_id,
-                "payer_account_id": poster_id,
-                "amount": 100,
-                "task_id": f"t-{uuid4()}",
-                "created_at": "2026-02-28T10:01:00Z",
-                "tx_id": f"tx-{uuid4()}",
-                "event": make_event(source="bank", event_type="escrow.locked"),
-            },
-        )
         task_id = f"t-{uuid4()}"
-        resp = app_with_writer.post(
-            "/board/tasks",
-            json={
-                "task_id": task_id,
-                "poster_id": poster_id,
-                "title": "Test task",
-                "spec": "Do something",
-                "reward": 100,
-                "status": "open",
-                "bidding_deadline_seconds": 3600,
-                "deadline_seconds": 86400,
-                "review_deadline_seconds": 3600,
-                "bidding_deadline": "2026-03-01T10:00:00Z",
-                "escrow_id": esc_id,
-                "created_at": "2026-02-28T10:00:00Z",
-                "event": make_event(
-                    source="board",
-                    event_type="task.created",
-                    task_id=task_id,
-                    agent_id=poster_id,
-                ),
-            },
+        monkeypatch.setattr(
+            "db_gateway_service.task_time.utc_now_us",
+            lambda: parse_utc_text_to_epoch_us("2026-02-28T10:00:00Z"),
+        )
+        esc_id = f"esc-{uuid4()}"
+        resp = publish_task(
+            app_with_writer,
+            task_id=task_id,
+            poster_id=poster_id,
+            escrow_id=esc_id,
+            title="Test task",
+            spec="Do something",
+            reward=100,
+            bidding_deadline_seconds=3600,
+            acceptance_window_seconds=3600,
+            execution_deadline_seconds=86400,
+            review_deadline_seconds=3600,
+            lock_timestamp="2026-02-28T10:00:00Z",
         )
         assert resp.status_code == 201
-        eid = resp.json()["event_id"]
+        eid = resp.json()["result"]["event_id"]
 
         row = db_writer._db.execute(
             "SELECT task_id, agent_id FROM events WHERE event_id = ?",
@@ -433,6 +521,7 @@ class TestAtomicity:
         with pytest.raises(ServiceError) as exc_info:
             db_writer.escrow_lock(
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "escrow_id": f"esc-{uuid4()}",
                     "payer_account_id": aid,
                     "amount": 50,
@@ -462,13 +551,14 @@ class TestAtomicity:
         with pytest.raises(ServiceError) as exc_info:
             db_writer.escrow_release(
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "escrow_id": esc_id,
                     "recipient_account_id": f"a-{uuid4()}",
+                    "source_reference": f"release-{task_id}",
                     "tx_id": f"tx-{uuid4()}",
                     "resolved_at": "2026-02-28T12:00:00Z",
                     "event": make_event(source="bank", event_type="escrow.released"),
-                },
-                None,
+                }
             )
         assert exc_info.value.error == "account_not_found"
 
@@ -497,23 +587,23 @@ class TestAtomicity:
         tx_before = _count_rows(db_writer._db, "bank_transactions")
         events_before = _count_rows(db_writer._db, "events")
 
-        # Attempt split with amounts that don't sum to escrow (100)
+        # Attempt split with an invalid percentage.
         with pytest.raises(ServiceError) as exc_info:
             db_writer.escrow_split(
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "escrow_id": esc_id,
                     "worker_account_id": worker_id,
                     "poster_account_id": aid,
-                    "worker_amount": 60,
-                    "poster_amount": 60,
+                    "worker_pct": 101,
+                    "source_reference": f"split-{task_id}",
                     "worker_tx_id": f"tx-{uuid4()}",
                     "poster_tx_id": f"tx-{uuid4()}",
                     "resolved_at": "2026-02-28T12:00:00Z",
                     "event": make_event(source="bank", event_type="escrow.split"),
-                },
-                None,
+                }
             )
-        assert exc_info.value.error == "amount_mismatch"
+        assert exc_info.value.error == "invalid_financial_request"
 
         # Escrow still locked
         row = db_writer._db.execute(
@@ -526,25 +616,57 @@ class TestAtomicity:
         assert _count_rows(db_writer._db, "bank_transactions") == tx_before
         assert _count_rows(db_writer._db, "events") == events_before
 
-    def test_rebuttal_with_fk_violation_is_atomic(self, db_writer: DbWriter) -> None:
-        """ATOM-05: Rebuttal with claim_status_update is atomic on FK failure."""
+    def test_rebuttal_with_fk_violation_is_atomic(
+        self,
+        db_writer: DbWriter,
+        app_with_writer: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """ATOM-05: A real event FK failure rolls back all preceding rebuttal writes."""
         alice = _register_agent(db_writer, name="Alice")
         bob = _register_agent(db_writer, name="Bob")
         _create_funded_account(db_writer, alice, balance=500)
-        esc_id = _lock_escrow(db_writer, alice, amount=100)
-        task_id = _create_task_for_agent(db_writer, alice, esc_id)
-        claim_id = _file_claim(db_writer, task_id, alice, bob, status="filed")
+        task_id = f"t-{uuid4()}"
+        esc_id = f"esc-{uuid4()}"
+        monkeypatch.setattr(
+            "db_gateway_service.task_time.utc_now_us",
+            lambda: parse_utc_text_to_epoch_us("2026-02-28T10:00:00Z"),
+        )
+        task_id = _create_task_for_agent(app_with_writer, alice, task_id, esc_id)
+        claim_id = _prepare_disputed_claim(db_writer, task_id, alice, bob, esc_id)
 
         rebuttals_before = _count_rows(db_writer._db, "court_rebuttals")
         events_before = _count_rows(db_writer._db, "events")
 
-        # Attempt rebuttal with non-existent agent_id (FK violation)
+        before = tuple(db_writer.connection.iterdump())
+        real_insert_event = court_writer.insert_event
+        reached_event: list[bool] = []
+
+        def fail_event(cursor: sqlite3.Cursor, event: dict[str, Any]) -> int:
+            assert cursor.execute("SELECT COUNT(*) FROM court_rebuttals").fetchone()[0] == 1
+            assert (
+                cursor.execute(
+                    "SELECT status FROM court_claims WHERE claim_id=?", (claim_id,)
+                ).fetchone()[0]
+                == "rebuttal"
+            )
+            assert (
+                cursor.execute(
+                    "SELECT rebuttal_submitted_at FROM board_tasks WHERE task_id=?", (task_id,)
+                ).fetchone()[0]
+                == "2026-02-28T13:00:00Z"
+            )
+            reached_event.append(True)
+            return real_insert_event(cursor, {**event, "agent_id": f"a-missing-{uuid4()}"})
+
+        monkeypatch.setattr(court_writer, "insert_event", fail_event)
+        # A valid worker reaches the write path; the real event INSERT raises the FK failure.
         with pytest.raises(ServiceError) as exc_info:
             db_writer.submit_rebuttal(
                 {
                     "rebuttal_id": f"reb-{uuid4()}",
                     "claim_id": claim_id,
-                    "agent_id": f"a-{uuid4()}",
+                    "agent_id": bob,
                     "content": "My rebuttal",
                     "submitted_at": "2026-02-28T13:00:00Z",
                     "claim_status_update": "rebuttal",
@@ -553,6 +675,8 @@ class TestAtomicity:
                 None,
             )
         assert exc_info.value.error == "foreign_key_violation"
+        assert reached_event == [True]
+        assert tuple(db_writer.connection.iterdump()) == before
 
         # Claim status unchanged
         row = db_writer._db.execute(
@@ -592,13 +716,14 @@ class TestConcurrency:
         app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": aid,
                 "balance": 100,
                 "created_at": "2026-02-28T10:00:00Z",
                 "initial_credit": {
                     "tx_id": f"tx-{uuid4()}",
                     "amount": 100,
-                    "reference": "initial",
+                    "reference": "initial_balance",
                     "timestamp": "2026-02-28T10:00:00Z",
                 },
                 "event": make_event(source="bank", event_type="account.created"),
@@ -609,6 +734,7 @@ class TestConcurrency:
             resp = app_with_writer.post(
                 "/bank/escrow/lock",
                 json={
+                    "operation_id": f"op-{uuid4()}",
                     "escrow_id": f"esc-{uuid4()}",
                     "payer_account_id": aid,
                     "amount": 60,
@@ -682,6 +808,7 @@ class TestConcurrency:
         tx_id = f"tx-{uuid4()}"
         ref = f"salary_{uuid4()}"
         body = {
+            "operation_id": f"op-{uuid4()}",
             "tx_id": tx_id,
             "account_id": aid,
             "amount": 500,
@@ -702,9 +829,10 @@ class TestConcurrency:
         for status_code, _ in results:
             assert status_code == 200
 
-        # Both should return the same tx_id and balance_after
+        # Both return the exact immutable receipt.
         bodies = [r[1] for r in results]
-        assert bodies[0]["balance_after"] == bodies[1]["balance_after"]
+        assert bodies[0]["receipt"] == bodies[1]["receipt"]
+        assert bodies[0]["receipt"]["result"]["balance_after"] == 500
 
 
 # ===================================================================
@@ -718,18 +846,23 @@ class TestHTTPMisuse:
 
     def test_wrong_method_on_defined_routes(self, app_with_writer: TestClient) -> None:
         """HTTP-01: Wrong method on defined routes returns 405."""
+        # GET /board/tasks, GET /reputation/feedback, and GET /court/claims are
+        # real list-read endpoints (Category 22) and are deliberately excluded
+        # here, same as GET /identity/agents above them in the spec — sending
+        # GET to those exact paths hits the real reader route, not a 405
+        # wrong-method rejection (WP-13 item 8: they used to incorrectly
+        # return 405 for an unrelated reason — an uninitialized reader — which
+        # this list conflated with genuine method misuse; see
+        # test_reader_not_ready_503.py for that scenario).
         post_only_routes = [
             "/bank/accounts",
             "/bank/credit",
             "/bank/escrow/lock",
             "/bank/escrow/release",
             "/bank/escrow/split",
-            "/board/tasks",
             "/board/bids",
             "/board/tasks/t-fake/status",
             "/board/assets",
-            "/reputation/feedback",
-            "/court/claims",
             "/court/rebuttals",
             "/court/rulings",
         ]
@@ -843,6 +976,7 @@ class TestSecurity:
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": f"a-{uuid4()}",
                 "amount": 100,
@@ -913,6 +1047,7 @@ class TestSecurity:
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": f"a-{uuid4()}",
                 "amount": 100,
@@ -954,13 +1089,14 @@ class TestSecurity:
         app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": aid,
                 "balance": 10,
                 "created_at": "2026-02-28T10:00:00Z",
                 "initial_credit": {
                     "tx_id": f"tx-{uuid4()}",
                     "amount": 10,
-                    "reference": "initial",
+                    "reference": "initial_balance",
                     "timestamp": "2026-02-28T10:00:00Z",
                 },
                 "event": make_event(source="bank", event_type="account.created"),
@@ -969,6 +1105,7 @@ class TestSecurity:
         resp = app_with_writer.post(
             "/bank/escrow/lock",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "escrow_id": f"esc-{uuid4()}",
                 "payer_account_id": aid,
                 "amount": 100,
@@ -1006,13 +1143,14 @@ class TestSecurity:
         resp = app_with_writer.post(
             "/bank/accounts",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "account_id": aid,
                 "balance": 500,
                 "created_at": "2026-02-28T10:00:00Z",
                 "initial_credit": {
                     "tx_id": f"tx-{uuid4()}",
                     "amount": 500,
-                    "reference": "initial",
+                    "reference": "initial_balance",
                     "timestamp": "2026-02-28T10:00:00Z",
                 },
                 "event": make_event(source="bank", event_type="account.created"),
@@ -1020,15 +1158,16 @@ class TestSecurity:
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["account_id"] == aid
-        assert isinstance(data["event_id"], int)
-        assert data["event_id"] > 0
+        assert data["receipt"]["result"]["account_id"] == aid
+        assert isinstance(data["receipt"]["event_id"], int)
+        assert data["receipt"]["event_id"] > 0
 
         # Credit
         tx_id = f"tx-{uuid4()}"
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": tx_id,
                 "account_id": aid,
                 "amount": 100,
@@ -1039,10 +1178,10 @@ class TestSecurity:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["tx_id"] == tx_id
-        assert isinstance(data["event_id"], int)
-        assert data["event_id"] > 0
-        assert isinstance(data["balance_after"], int)
+        assert data["receipt"]["legs"][0]["transaction_id"] == tx_id
+        assert isinstance(data["receipt"]["event_id"], int)
+        assert data["receipt"]["event_id"] > 0
+        assert isinstance(data["receipt"]["result"]["balance_after"], int)
 
     def test_sql_injection_strings_in_id_fields(self, app_with_writer: TestClient) -> None:
         """SEC-04: SQL injection strings in ID fields don't cause injection."""
@@ -1067,6 +1206,7 @@ class TestSecurity:
         resp = app_with_writer.post(
             "/bank/credit",
             json={
+                "operation_id": f"op-{uuid4()}",
                 "tx_id": f"tx-{uuid4()}",
                 "account_id": "'; DROP TABLE bank_accounts;--",
                 "amount": 100,
@@ -1116,6 +1256,7 @@ class TestSecurity:
                 "POST",
                 "/bank/credit",
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "tx_id": f"tx-{uuid4()}",
                     "account_id": f"a-{uuid4()}",
                     "amount": 100,
@@ -1149,6 +1290,7 @@ class TestSecurity:
                 "POST",
                 "/bank/credit",
                 {
+                    "operation_id": f"op-{uuid4()}",
                     "tx_id": f"tx-{uuid4()}",
                     "account_id": f"a-{uuid4()}",
                     "amount": -5,

@@ -1,0 +1,24 @@
+{
+  "gate_start": 1792311270.331958,
+  "gate_end": 1792312200.5813987,
+  "records": [
+    {
+      "origin": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l0/runtime-eea7f47ab2034a7b9ca60521df5606a4-vcghmzjk/runtime.json",
+      "copy": "/private/tmp/agent-economy-root-ci-22-runtime-artifacts/pytest-3003-test_process_death_preserves_l0-0.json",
+      "run_id": "eea7f47ab2034a7b9ca60521df5606a4",
+      "process_count": 7
+    },
+    {
+      "origin": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_process_death_preserves_l1/runtime-754a37c9619a41ebbd92b6404a50752c-mwykutn6/runtime.json",
+      "copy": "/private/tmp/agent-economy-root-ci-22-runtime-artifacts/pytest-3003-test_process_death_preserves_l1-1.json",
+      "run_id": "754a37c9619a41ebbd92b6404a50752c",
+      "process_count": 7
+    },
+    {
+      "origin": "/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-3003/test_migration_cli_preserves_l0/runtime-98da9aba8ad64c1e9e572582d0210eae-o0ze08kr/runtime.json",
+      "copy": "/private/tmp/agent-economy-root-ci-22-runtime-artifacts/pytest-3003-test_migration_cli_preserves_l0-2.json",
+      "run_id": "98da9aba8ad64c1e9e572582d0210eae",
+      "process_count": 7
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 28 items
+
+tests/unit/test_runtime_intent_reopen.py F...........FFFF...F...F....    [100%]
+
+=================================== FAILURES ===================================
+______ test_filesystem_root_is_rejected_by_constructor_without_opening_it ______
+tests/unit/test_runtime_intent_reopen.py:145: in test_filesystem_root_is_rejected_by_constructor_without_opening_it
+    with pytest.raises(runtime.RuntimeIntentError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'base_agent.runtime_intent_models.RuntimeIntentError'>
+_ test_reopen_removes_private_owner_staging_file_and_fsyncs_identity_directory _
+tests/unit/test_runtime_intent_reopen.py:328: in test_reopen_removes_private_owner_staging_file_and_fsyncs_identity_directory
+    assert not staging.exists()
+E   AssertionError: assert not True
+E    +  where True = exists()
+E    +    where exists = PosixPath('/private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/pytest-of-flo/pytest-2788/test_reopen_removes_priv.../identities/1111111111111111111111111111111111111111111111111111111111111111/.owner.json.cccccccccccccccccccccccc.tmp').exists
+__ test_reopen_rejects_and_preserves_unsafe_owner_staging_entry[public-mode] ___
+tests/unit/test_runtime_intent_reopen.py:352: in test_reopen_rejects_and_preserves_unsafe_owner_staging_entry
+    with pytest.raises(runtime.RuntimeIntentError) as raised, _store(tmp_path, owner):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'base_agent.runtime_intent_models.RuntimeIntentError'>
+____ test_reopen_rejects_and_preserves_unsafe_owner_staging_entry[symlink] _____
+tests/unit/test_runtime_intent_reopen.py:352: in test_reopen_rejects_and_preserves_unsafe_owner_staging_entry
+    with pytest.raises(runtime.RuntimeIntentError) as raised, _store(tmp_path, owner):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'base_agent.runtime_intent_models.RuntimeIntentError'>
+___________ test_reopen_rejects_and_preserves_unknown_identity_entry ___________
+tests/unit/test_runtime_intent_reopen.py:366: in test_reopen_rejects_and_preserves_unknown_identity_entry
+    with pytest.raises(runtime.RuntimeIntentError) as raised, _store(tmp_path, owner):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'base_agent.runtime_intent_models.RuntimeIntentError'>
+_________ test_open_root_second_fstat_failure_closes_popped_descriptor _________
+tests/unit/test_runtime_intent_reopen.py:452: in test_open_root_second_fstat_failure_closes_popped_descriptor
+    assert closed
+E   assert False
+____ test_intent_directory_public_path_swap_during_record_read_is_rejected _____
+tests/unit/test_runtime_intent_reopen.py:557: in test_intent_directory_public_path_swap_during_record_read_is_rejected
+    with pytest.raises(runtime.RuntimeIntentError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'base_agent.runtime_intent_models.RuntimeIntentError'>
+=========================== short test summary info ============================
+FAILED tests/unit/test_runtime_intent_reopen.py::test_filesystem_root_is_rejected_by_constructor_without_opening_it
+FAILED tests/unit/test_runtime_intent_reopen.py::test_reopen_removes_private_owner_staging_file_and_fsyncs_identity_directory
+FAILED tests/unit/test_runtime_intent_reopen.py::test_reopen_rejects_and_preserves_unsafe_owner_staging_entry[public-mode]
+FAILED tests/unit/test_runtime_intent_reopen.py::test_reopen_rejects_and_preserves_unsafe_owner_staging_entry[symlink]
+FAILED tests/unit/test_runtime_intent_reopen.py::test_reopen_rejects_and_preserves_unknown_identity_entry
+FAILED tests/unit/test_runtime_intent_reopen.py::test_open_root_second_fstat_failure_closes_popped_descriptor
+FAILED tests/unit/test_runtime_intent_reopen.py::test_intent_directory_public_path_swap_during_record_read_is_rejected
+========================= 7 failed, 21 passed in 0.34s =========================

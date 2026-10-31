@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import yaml
+from service_auth.signing import generate_keypair
 
 from base_agent.worker_factory import MathWorkerBundle, WorkerFactory
 
@@ -30,6 +31,10 @@ def _write_config(
     roster_path = tmp_path / "roster.yaml"
     roster_path.write_text(yaml.dump({"agents": roster_agents}))
 
+    keys_dir = tmp_path / "keys"
+    for handle in roster_agents:
+        generate_keypair(handle, keys_dir)
+
     config: dict[str, object] = {
         "platform": {
             "identity_url": "http://localhost:8001",
@@ -39,8 +44,19 @@ def _write_config(
             "court_url": "http://localhost:8005",
         },
         "data": {
-            "keys_dir": str(tmp_path / "keys"),
+            "keys_dir": str(keys_dir),
             "roster_path": str(roster_path),
+        },
+        "signing": {
+            "token_ttl_seconds": 300,
+            "max_lifetime_seconds": 300,
+            "clock_skew_seconds": 30,
+        },
+        "runtime_state": {
+            "environment_id": "factory-tests",
+            "directory": str(tmp_path / "runtime-state"),
+            "diagnostic_limit": 8,
+            "max_record_bytes": 65536,
         },
     }
     if workers is not None:
@@ -115,17 +131,24 @@ class TestWorkerFactory:
         with pytest.raises(KeyError, match="nonexistent"):
             WorkerFactory(config_path=config_path, keys_dir=tmp_path / "keys")
 
-    def test_create_math_worker_returns_bundle(self, tmp_path: Path) -> None:
+    async def test_create_math_worker_returns_bundle(self, tmp_path: Path) -> None:
         config_path = _write_config(
             tmp_path,
             workers={"testbot": _valid_worker_profile()},
         )
         factory = WorkerFactory(config_path=config_path, keys_dir=tmp_path / "keys")
         bundle = factory.create_math_worker("testbot")
-        assert isinstance(bundle, MathWorkerBundle)
-        assert bundle.agent is not None
-        assert bundle.llm is not None
-        assert bundle.loop is not None
+        try:
+            assert isinstance(bundle, MathWorkerBundle)
+            assert bundle.agent is not None
+            assert bundle.llm is not None
+            assert bundle.config.handle == "testbot"
+            assert bundle.profile_name == "testbot"
+            assert bundle.runtime_config.environment_id == "factory-tests"
+            assert bundle.runtime_config.directory == tmp_path / "runtime-state"
+        finally:
+            await bundle.llm.close()
+            await bundle.agent.close()
 
     def test_create_math_worker_unknown_profile_raises(self, tmp_path: Path) -> None:
         config_path = _write_config(
@@ -136,11 +159,15 @@ class TestWorkerFactory:
         with pytest.raises(KeyError, match="unknown"):
             factory.create_math_worker("unknown")
 
-    def test_agent_name_matches_roster(self, tmp_path: Path) -> None:
+    async def test_agent_name_matches_roster(self, tmp_path: Path) -> None:
         config_path = _write_config(
             tmp_path,
             workers={"testbot": _valid_worker_profile()},
         )
         factory = WorkerFactory(config_path=config_path, keys_dir=tmp_path / "keys")
         bundle = factory.create_math_worker("testbot")
-        assert bundle.agent.name == "Test Bot"
+        try:
+            assert bundle.agent.name == "Test Bot"
+        finally:
+            await bundle.llm.close()
+            await bundle.agent.close()

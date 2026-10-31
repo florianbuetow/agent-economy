@@ -1,0 +1,26 @@
+[
+  {
+    "path": "services/court/tests/integration/conftest.py",
+    "before_sha256": "50231f60b5e7001c0ae45964750089f6777e8552b6964584e6c66788766af21e",
+    "after_sha256": "aba656658ee6f6675165546b7404417235d17eedc0a5cfac387e5d5afd0b2187",
+    "reconstruction_matches_exact_before_hash": true,
+    "ast_identical": true,
+    "change": "Ruff normalized quote delimiters in the two new recovery path f-string expressions"
+  },
+  {
+    "path": "services/identity/tests/integration/conftest.py",
+    "before_sha256": "5c6bca77228bb7ece0ee5dac5f9b115f1caadb12930fdada7af3778f4ca6388f",
+    "after_sha256": "6a453bb8930a82cbe720954340cb8d215eb6285ab25308040a75e77dbdd72f22",
+    "reconstruction_matches_exact_before_hash": true,
+    "ast_identical": true,
+    "change": "Ruff normalized quote delimiters in the two new recovery path f-string expressions"
+  },
+  {
+    "path": "services/identity/tests/integration/test_concurrent_registration_live.py",
+    "before_sha256": "8fd2a013777544c45c580c8e61c8649b4b44ef54164d06854995ec5edc447a85",
+    "after_sha256": "89c02f1d5d7d4f068d6d2e819f9b239b08e3df1c61f04407b43ece13dd6a4304",
+    "reconstruction_matches_exact_before_hash": true,
+    "ast_identical": true,
+    "change": "Ruff normalized quote delimiters in the two new recovery path f-string expressions"
+  }
+]

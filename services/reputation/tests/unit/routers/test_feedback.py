@@ -112,11 +112,12 @@ class TestPostFeedback:
         assert data["error"] == "invalid_json"
 
     async def test_submit_duplicate_returns_409(self, client: AsyncClient) -> None:
-        """POST /feedback with a duplicate (task, from, to) returns 409."""
+        """POST /feedback with changed content for an existing triple returns 409."""
         payload = _feedback_payload()
-        _inject_mock(payload)
+        get_app_state().platform_agent = make_mock_platform_agent(verify_payload=None)
         await client.post("/feedback", json=_token_body(payload))
-        response = await client.post("/feedback", json=_token_body(payload))
+        changed = _feedback_payload(rating="dissatisfied")
+        response = await client.post("/feedback", json=_token_body(changed))
         assert response.status_code == 409
         data = response.json()
         assert data["error"] == "feedback_exists"
@@ -146,7 +147,9 @@ class TestGetFeedbackById:
         await client.post("/feedback", json=_token_body(payload_ab, kid=ALICE_ID))
 
         # Submit B->A (mutual reveal)
-        payload_ba = _feedback_payload(from_agent_id=BOB_ID, to_agent_id=ALICE_ID)
+        payload_ba = _feedback_payload(
+            from_agent_id=BOB_ID, to_agent_id=ALICE_ID, category="spec_quality"
+        )
         _inject_mock(payload_ba, agent_id=BOB_ID)
         post_response = await client.post("/feedback", json=_token_body(payload_ba, kid=BOB_ID))
         feedback_id = post_response.json()["feedback_id"]
@@ -192,7 +195,9 @@ class TestGetFeedbackForTask:
         assert data["feedback"] == []
 
         # Submit reverse direction (reveals both)
-        payload_ba = _feedback_payload(from_agent_id=BOB_ID, to_agent_id=ALICE_ID)
+        payload_ba = _feedback_payload(
+            from_agent_id=BOB_ID, to_agent_id=ALICE_ID, category="spec_quality"
+        )
         _inject_mock(payload_ba, agent_id=BOB_ID)
         await client.post("/feedback", json=_token_body(payload_ba, kid=BOB_ID))
 

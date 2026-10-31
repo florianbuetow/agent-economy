@@ -9,22 +9,27 @@ from ui_service.services.database import (
     execute_fetchone,
     execute_scalar,
 )
+from ui_service.services.task_board_reads import (
+    get_authoritative_task,
+    list_authoritative_tasks,
+)
+from ui_service.taxonomy import (
+    COMPETITIVE_OPEN_STATUSES,
+    VALID_TASK_STATUSES,
+    TaskStatus,
+    sql_placeholders,
+)
 
 if TYPE_CHECKING:
     from typing import Any
 
     import aiosqlite
 
-VALID_TASK_STATUSES = {
-    "open",
-    "accepted",
-    "submitted",
-    "approved",
-    "disputed",
-    "ruled",
-    "expired",
-    "cancelled",
-}
+    from ui_service.services.task_board_reads import TaskBoardReader
+
+# Re-exported from ``ui_service.taxonomy`` so existing consumers (the tasks
+# router) keep importing it from this module.
+__all__ = ["VALID_TASK_STATUSES"]
 
 
 async def _delivery_quality(db: aiosqlite.Connection, agent_id: str) -> dict[str, Any]:
@@ -66,61 +71,30 @@ async def _delivery_quality(db: aiosqlite.Connection, agent_id: str) -> dict[str
     }
 
 
-async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str, Any] | None:
-    """Get a full task drilldown with bids, assets, feedback, and dispute."""
-    # 1. Query the task
-    task_row = await execute_fetchone(
-        db,
-        "SELECT bt.task_id, bt.poster_id, bt.worker_id, bt.title, bt.spec, "
-        "bt.reward, bt.status, bt.accepted_bid_id, "
-        "bt.bidding_deadline, bt.execution_deadline, bt.review_deadline, "
-        "bt.created_at, bt.accepted_at, bt.submitted_at, bt.approved_at "
-        "FROM board_tasks bt "
-        "WHERE bt.task_id = ?",
-        (task_id,),
-    )
-    if task_row is None:
-        return None
-
-    (
-        tid,
-        poster_id,
-        worker_id,
-        title,
-        spec,
-        reward,
-        status,
-        accepted_bid_id,
-        bidding_deadline,
-        execution_deadline,
-        review_deadline,
-        created_at,
-        accepted_at,
-        submitted_at,
-        approved_at,
-    ) = task_row
-
-    # 2. Resolve poster name
-    poster_name = await execute_scalar(
+async def _resolve_agent_name(db: aiosqlite.Connection, agent_id: str) -> Any:
+    """Resolve an agent's display name by id."""
+    return await execute_scalar(
         db,
         "SELECT name FROM identity_agents WHERE agent_id = ?",
-        (poster_id,),
+        (agent_id,),
     )
 
-    # 3. Resolve worker name (if any)
-    worker = None
-    if worker_id is not None:
-        worker_name = await execute_scalar(
-            db,
-            "SELECT name FROM identity_agents WHERE agent_id = ?",
-            (worker_id,),
-        )
-        worker = {"agent_id": worker_id, "name": worker_name}
 
-    # 4. Bids
+async def _load_worker(db: aiosqlite.Connection, worker_id: str | None) -> dict[str, Any] | None:
+    """Resolve the worker reference for a task, if one is assigned."""
+    if worker_id is None:
+        return None
+    worker_name = await _resolve_agent_name(db, worker_id)
+    return {"agent_id": worker_id, "name": worker_name}
+
+
+async def _load_bids(
+    db: aiosqlite.Connection, task_id: str, accepted_bid_id: Any
+) -> list[dict[str, Any]]:
+    """Load all bids for a task with bidder delivery-quality counts."""
     bid_rows = await execute_fetchall(
         db,
-        "SELECT bb.bid_id, bb.bidder_id, ia.name, bb.proposal, bb.submitted_at "
+        "SELECT bb.bid_id, bb.bidder_id, ia.name, bb.amount, bb.submitted_at "
         "FROM board_bids bb "
         "JOIN identity_agents ia ON ia.agent_id = bb.bidder_id "
         "WHERE bb.task_id = ? "
@@ -130,7 +104,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
 
     bids = []
     for br in bid_rows:
-        bid_id, bidder_id, bidder_name, proposal, bid_submitted_at = br
+        bid_id, bidder_id, bidder_name, amount, bid_submitted_at = br
         dq = await _delivery_quality(db, bidder_id)
         bids.append(
             {
@@ -140,36 +114,72 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
                     "name": bidder_name,
                     "delivery_quality": dq,
                 },
-                "proposal": proposal,
+                "amount": int(amount),
                 "submitted_at": bid_submitted_at,
                 "accepted": bid_id == accepted_bid_id,
             }
         )
+    return bids
 
-    # 5. Assets
+
+async def enrich_authorized_bids(
+    db: aiosqlite.Connection,
+    bids: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Attach public identity and visible delivery quality to authorized bids."""
+    enriched: list[dict[str, Any]] = []
+    for bid in bids:
+        bidder_id = str(bid["bidder_id"])
+        bidder_name = await _resolve_agent_name(db, bidder_id)
+        if not isinstance(bidder_name, str):
+            raise ValueError(f"Bidder '{bidder_id}' has no public identity projection")
+        enriched.append(
+            {
+                "bid_id": str(bid["bid_id"]),
+                "bidder": {
+                    "agent_id": bidder_id,
+                    "name": bidder_name,
+                    "delivery_quality": await _delivery_quality(db, bidder_id),
+                },
+                "amount": int(bid["amount"]),
+                "submitted_at": str(bid["submitted_at"]),
+                "accepted": False,
+            }
+        )
+    return enriched
+
+
+async def _load_assets(db: aiosqlite.Connection, task_id: str) -> list[dict[str, Any]]:
+    """Load uploaded deliverable assets for a task."""
     asset_rows = await execute_fetchall(
         db,
-        "SELECT asset_id, filename, content_type, size_bytes, uploaded_at "
+        "SELECT asset_id, uploader_id, filename, content_type, size_bytes, "
+        "content_hash, uploaded_at "
         "FROM board_assets WHERE task_id = ? "
         "ORDER BY uploaded_at ASC",
         (task_id,),
     )
-    assets = [
+    return [
         {
             "asset_id": ar[0],
-            "filename": ar[1],
-            "content_type": ar[2],
-            "size_bytes": ar[3],
-            "uploaded_at": ar[4],
+            "uploader_id": ar[1],
+            "filename": ar[2],
+            "content_type": ar[3],
+            "size_bytes": ar[4],
+            "content_hash": ar[5],
+            "uploaded_at": ar[6],
         }
         for ar in asset_rows
     ]
 
-    # 6. Visible feedback
+
+async def _load_feedback(db: aiosqlite.Connection, task_id: str) -> list[dict[str, Any]]:
+    """Load visible mutual feedback for a task."""
     fb_rows = await execute_fetchall(
         db,
         "SELECT rf.feedback_id, ia_from.name, ia_to.name, "
-        "rf.category, rf.rating, rf.comment, rf.visible "
+        "rf.category, rf.rating, rf.comment, rf.visible, "
+        "rf.from_agent_id, rf.to_agent_id "
         "FROM reputation_feedback rf "
         "JOIN identity_agents ia_from ON ia_from.agent_id = rf.from_agent_id "
         "JOIN identity_agents ia_to ON ia_to.agent_id = rf.to_agent_id "
@@ -177,7 +187,7 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
         "ORDER BY rf.submitted_at ASC",
         (task_id,),
     )
-    feedback = [
+    return [
         {
             "feedback_id": fb[0],
             "from_agent_name": fb[1],
@@ -186,79 +196,139 @@ async def get_task_drilldown(db: aiosqlite.Connection, task_id: str) -> dict[str
             "rating": fb[4],
             "comment": fb[5],
             "visible": bool(fb[6]),
+            "from_agent_id": fb[7],
+            "to_agent_id": fb[8],
         }
         for fb in fb_rows
     ]
 
-    # 7. Dispute
-    dispute = None
+
+async def _load_dispute(
+    db: aiosqlite.Connection,
+    task_id: str,
+    *,
+    ruling_id: str | None,
+    worker_pct: int | None,
+    ruling_summary: str | None,
+    ruled_at: str | None,
+) -> dict[str, Any] | None:
+    """Enrich authoritative ruling facts with local claim and rebuttal narrative."""
     claim_row = await execute_fetchone(
         db,
         "SELECT claim_id, reason, filed_at FROM court_claims WHERE task_id = ?",
         (task_id,),
     )
-    if claim_row is not None:
-        claim_id, reason, filed_at = claim_row
+    if claim_row is None:
+        return None
 
-        # Rebuttal
-        rebuttal = None
-        reb_row = await execute_fetchone(
-            db,
-            "SELECT content, submitted_at FROM court_rebuttals WHERE claim_id = ?",
-            (claim_id,),
-        )
-        if reb_row is not None:
-            rebuttal = {
-                "content": reb_row[0],
-                "submitted_at": reb_row[1],
-            }
+    claim_id, reason, filed_at = claim_row
 
-        # Ruling
-        ruling = None
-        rul_row = await execute_fetchone(
-            db,
-            "SELECT ruling_id, worker_pct, summary, ruled_at FROM court_rulings WHERE claim_id = ?",
-            (claim_id,),
-        )
-        if rul_row is not None:
-            ruling = {
-                "ruling_id": rul_row[0],
-                "worker_pct": rul_row[1],
-                "summary": rul_row[2],
-                "ruled_at": rul_row[3],
-            }
+    # Rebuttal
+    rebuttal = None
+    reb_row = await execute_fetchone(
+        db,
+        "SELECT content, submitted_at FROM court_rebuttals WHERE claim_id = ?",
+        (claim_id,),
+    )
+    if reb_row is not None:
+        rebuttal = {
+            "content": reb_row[0],
+            "submitted_at": reb_row[1],
+        }
 
-        dispute = {
-            "claim_id": claim_id,
-            "reason": reason,
-            "filed_at": filed_at,
-            "rebuttal": rebuttal,
-            "ruling": ruling,
+    ruling = None
+    if ruling_id is not None:
+        if worker_pct is None or ruling_summary is None or ruled_at is None:
+            raise ValueError("Authoritative ruling projection is incomplete")
+        ruling = {
+            "ruling_id": ruling_id,
+            "worker_pct": worker_pct,
+            "summary": ruling_summary,
+            "ruled_at": ruled_at,
         }
 
     return {
-        "task_id": tid,
-        "poster": {"agent_id": poster_id, "name": poster_name},
+        "claim_id": claim_id,
+        "reason": reason,
+        "filed_at": filed_at,
+        "rebuttal": rebuttal,
+        "ruling": ruling,
+    }
+
+
+def _accepted_price(extra: dict[str, Any] | None) -> int | None:
+    """Return the frozen accepted bid amount from the Task Board read, if any."""
+    fields = extra or {}
+    for name in ("accepted_price", "accepted_bid_amount"):
+        value = fields.get(name)
+        if type(value) is int and value >= 0:
+            return value
+    return None
+
+
+def _settled_amount(extra: dict[str, Any] | None, name: str) -> int | None:
+    """Return a receipt-based settlement amount from the Task Board read, if settled."""
+    value = (extra or {}).get(name)
+    if type(value) is int and value >= 0:
+        return value
+    return None
+
+
+async def get_task_drilldown(
+    db: aiosqlite.Connection,
+    reader: TaskBoardReader,
+    task_id: str,
+) -> dict[str, Any]:
+    """Enrich one authoritative Task Board snapshot with permitted local data."""
+    task = await get_authoritative_task(reader, task_id=task_id)
+    poster_name = await _resolve_agent_name(db, task.poster_id)
+    worker = await _load_worker(db, task.worker_id)
+    bids = (
+        []
+        if task.status == TaskStatus.OPEN
+        else await _load_bids(db, task_id, task.accepted_bid_id)
+    )
+    assets = await _load_assets(db, task_id)
+    feedback = await _load_feedback(db, task_id)
+    dispute = await _load_dispute(
+        db,
+        task_id,
+        ruling_id=task.ruling_id,
+        worker_pct=task.worker_pct,
+        ruling_summary=task.ruling_summary,
+        ruled_at=task.ruled_at,
+    )
+
+    return {
+        "task_id": task.task_id,
+        "poster": {"agent_id": task.poster_id, "name": poster_name},
         "worker": worker,
-        "title": title,
-        "spec": spec,
-        "reward": reward,
-        "status": status,
+        "title": task.title,
+        "spec": task.spec,
+        "reward": task.reward,
+        "status": task.status,
+        "lifecycle_version": task.lifecycle_version,
+        "bid_count": task.bid_count,
+        "accepted_price": _accepted_price(task.model_extra),
+        "worker_payment": _settled_amount(task.model_extra, "worker_payment"),
+        "poster_refund": _settled_amount(task.model_extra, "poster_refund"),
         "deadlines": {
-            "bidding_deadline": bidding_deadline,
-            "execution_deadline": execution_deadline,
-            "review_deadline": review_deadline,
+            "bidding_deadline": task.bidding_deadline,
+            "acceptance_deadline": task.acceptance_deadline,
+            "execution_deadline": task.execution_deadline,
+            "review_deadline": task.review_deadline,
         },
         "timestamps": {
-            "created_at": created_at,
-            "accepted_at": accepted_at,
-            "submitted_at": submitted_at,
-            "approved_at": approved_at,
+            "created_at": task.created_at,
+            "accepted_at": task.accepted_at,
+            "submitted_at": task.submitted_at,
+            "approved_at": task.approved_at,
         },
         "bids": bids,
         "assets": assets,
         "feedback": feedback,
         "dispute": dispute,
+        "financial_effect": task.financial_effect.model_dump(),
     }
 
 
@@ -277,13 +347,13 @@ async def get_competitive_tasks(
             "FROM board_tasks bt "
             "LEFT JOIN board_bids bb ON bt.task_id = bb.task_id "
             "JOIN identity_agents ia ON bt.poster_id = ia.agent_id "
-            "WHERE bt.status IN ('open', 'accepted') "
+            f"WHERE bt.status IN ({sql_placeholders(COMPETITIVE_OPEN_STATUSES)}) "  # nosec B608
             "GROUP BY bt.task_id "
             "HAVING COUNT(bb.bid_id) > 0 "
             "ORDER BY COUNT(bb.bid_id) DESC "
             "LIMIT ?"
         )
-        rows = await execute_fetchall(db, sql, (limit,))
+        rows = await execute_fetchall(db, sql, (*COMPETITIVE_OPEN_STATUSES, limit))
     else:
         sql = (
             "SELECT bt.task_id, bt.title, bt.reward, bt.status, "
@@ -329,13 +399,13 @@ async def get_uncontested_tasks(
         "FROM board_tasks bt "
         "JOIN identity_agents ia ON bt.poster_id = ia.agent_id "
         "LEFT JOIN board_bids bb ON bt.task_id = bb.task_id "
-        "WHERE bt.status = 'open' "
+        "WHERE bt.status = ? "
         "AND bb.bid_id IS NULL "
         "AND (julianday('now') - julianday(bt.created_at)) * 1440 >= ? "
         "ORDER BY bt.created_at ASC "
         "LIMIT ?"
     )
-    rows = await execute_fetchall(db, sql, (min_age_minutes, limit))
+    rows = await execute_fetchall(db, sql, (TaskStatus.OPEN, min_age_minutes, limit))
 
     return [
         {
@@ -352,63 +422,18 @@ async def get_uncontested_tasks(
 
 
 async def get_task_list(
-    db: aiosqlite.Connection,
+    reader: TaskBoardReader,
     status: str | None,
+    poster_id: str | None,
+    worker_id: str | None,
     limit: int,
     offset: int,
 ) -> tuple[list[dict[str, Any]], int]:
-    """Return a paginated list of tasks with optional status filter."""
-    if status is None:
-        total_count = int(
-            await execute_scalar(
-                db,
-                "SELECT COUNT(*) FROM board_tasks",
-                (),
-            )
-            or 0
-        )
-        rows = await execute_fetchall(
-            db,
-            "SELECT bt.task_id, bt.title, bt.status, bt.reward, bt.poster_id, "
-            "bt.created_at, "
-            "(SELECT COUNT(*) FROM board_bids bb WHERE bb.task_id = bt.task_id) as bid_count "
-            "FROM board_tasks bt "
-            "ORDER BY bt.created_at DESC "
-            "LIMIT ? OFFSET ?",
-            (limit, offset),
-        )
-    else:
-        total_count = int(
-            await execute_scalar(
-                db,
-                "SELECT COUNT(*) FROM board_tasks WHERE status = ?",
-                (status,),
-            )
-            or 0
-        )
-        rows = await execute_fetchall(
-            db,
-            "SELECT bt.task_id, bt.title, bt.status, bt.reward, bt.poster_id, "
-            "bt.created_at, "
-            "(SELECT COUNT(*) FROM board_bids bb WHERE bb.task_id = bt.task_id) as bid_count "
-            "FROM board_tasks bt "
-            "WHERE bt.status = ? "
-            "ORDER BY bt.created_at DESC "
-            "LIMIT ? OFFSET ?",
-            (status, limit, offset),
-        )
-
-    tasks = [
-        {
-            "task_id": r[0],
-            "title": r[1],
-            "status": r[2],
-            "reward": r[3],
-            "poster_id": r[4],
-            "created_at": r[5],
-            "bid_count": r[6],
-        }
-        for r in rows
-    ]
-
-    return tasks, total_count
+    """Slice one coherent, ordered Task Board list snapshot."""
+    tasks = await list_authoritative_tasks(
+        reader,
+        status=status,
+        poster_id=poster_id,
+        worker_id=worker_id,
+    )
+    return tasks[offset : offset + limit], len(tasks)

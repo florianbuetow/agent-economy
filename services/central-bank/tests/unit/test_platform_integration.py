@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
+from service_commons.exceptions import ServiceError
 
-from central_bank_service.config import clear_settings_cache, get_settings
+from central_bank_service.config import clear_settings_cache
 from central_bank_service.core.state import get_app_state, init_app_state, reset_app_state
 from central_bank_service.routers.helpers import get_platform_agent_id
 
@@ -24,17 +25,20 @@ def _use_real_config(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.unit
-def test_get_platform_agent_id_returns_config_value_when_no_platform_agent(
+def test_get_platform_agent_id_errors_when_no_platform_agent(
     _use_real_config: None,
 ) -> None:
-    """Falls back to config platform.agent_id when no runtime PlatformAgent exists."""
+    """With no registered PlatformAgent, resolving the platform id is an explicit
+    not-ready error — there is no configured fallback (WP-03.1)."""
     reset_app_state()
     init_app_state()
 
     state = get_app_state()
     state.platform_agent = None
 
-    assert get_platform_agent_id() == get_settings().platform.agent_id
+    with pytest.raises(ServiceError) as exc_info:
+        get_platform_agent_id()
+    assert exc_info.value.status_code == 503
 
     reset_app_state()
 

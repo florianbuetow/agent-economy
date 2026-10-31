@@ -1,0 +1,59 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /tmp/agent-economy-mp02-ui-baseline/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 13 items / 8 deselected / 5 selected
+
+../../../../../../../tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py F [ 20%]
+FFFF                                                                     [100%]
+
+=================================== FAILURES ===================================
+_______ test_stored_strings_are_inert_on_every_browser_view[/-.lb-name] ________
+/tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py:63: in test_stored_strings_are_inert_on_every_browser_view
+    assert e2e_page.locator('[data-mp02-xss="stored"]').count() == 0
+E   assert 10 == 0
+E    +  where 10 = count()
+E    +    where count = <Locator frame=<Frame name= url='http://127.0.0.1:59151/'> selector='[data-mp02-xss="stored"]'>.count
+E    +      where <Locator frame=<Frame name= url='http://127.0.0.1:59151/'> selector='[data-mp02-xss="stored"]'> = locator('[data-mp02-xss="stored"]')
+E    +        where locator = <Page url='http://127.0.0.1:59151/'>.locator
+_ test_stored_strings_are_inert_on_every_browser_view[/task.html?task_id=t-task1-.feedback-row] _
+/tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py:63: in test_stored_strings_are_inert_on_every_browser_view
+    assert e2e_page.locator('[data-mp02-xss="stored"]').count() == 0
+E   assert 22 == 0
+E    +  where 22 = count()
+E    +    where count = <Locator frame=<Frame name= url='http://127.0.0.1:59151/task.html?task_id=t-task1'> selector='[data-mp02-xss="stored"]'>.count
+E    +      where <Locator frame=<Frame name= url='http://127.0.0.1:59151/task.html?task_id=t-task1'> selector='[data-mp02-xss="stored"]'> = locator('[data-mp02-xss="stored"]')
+E    +        where locator = <Page url='http://127.0.0.1:59151/task.html?task_id=t-task1'>.locator
+_ test_stored_strings_are_inert_on_every_browser_view[/agent.html?agent_id=a-alice-.profile-name] _
+/tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py:63: in test_stored_strings_are_inert_on_every_browser_view
+    assert e2e_page.locator('[data-mp02-xss="stored"]').count() == 0
+E   assert 13 == 0
+E    +  where 13 = count()
+E    +    where count = <Locator frame=<Frame name= url='http://127.0.0.1:59151/agent.html?agent_id=a-alice'> selector='[data-mp02-xss="stored"]'>.count
+E    +      where <Locator frame=<Frame name= url='http://127.0.0.1:59151/agent.html?agent_id=a-alice'> selector='[data-mp02-xss="stored"]'> = locator('[data-mp02-xss="stored"]')
+E    +        where locator = <Page url='http://127.0.0.1:59151/agent.html?agent_id=a-alice'>.locator
+_ test_stored_strings_are_inert_on_every_browser_view[/quarterly-report.html?quarter=2026-Q1-.notable-row] _
+/tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py:63: in test_stored_strings_are_inert_on_every_browser_view
+    assert e2e_page.locator('[data-mp02-xss="stored"]').count() == 0
+E   assert 12 == 0
+E    +  where 12 = count()
+E    +    where count = <Locator frame=<Frame name= url='http://127.0.0.1:59151/quarterly-report.html?quarter=2026-Q1'> selector='[data-mp02-xss="stored"]'>.count
+E    +      where <Locator frame=<Frame name= url='http://127.0.0.1:59151/quarterly-report.html?quarter=2026-Q1'> selector='[data-mp02-xss="stored"]'> = locator('[data-mp02-xss="stored"]')
+E    +        where locator = <Page url='http://127.0.0.1:59151/quarterly-report.html?quarter=2026-Q1'>.locator
+_ test_stored_strings_are_inert_on_every_browser_view[/observatory.html-.feed-item] _
+/tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py:63: in test_stored_strings_are_inert_on_every_browser_view
+    assert e2e_page.locator('[data-mp02-xss="stored"]').count() == 0
+E   assert 60 == 0
+E    +  where 60 = count()
+E    +    where count = <Locator frame=<Frame name= url='http://127.0.0.1:59151/observatory.html'> selector='[data-mp02-xss="stored"]'>.count
+E    +      where <Locator frame=<Frame name= url='http://127.0.0.1:59151/observatory.html'> selector='[data-mp02-xss="stored"]'> = locator('[data-mp02-xss="stored"]')
+E    +        where locator = <Page url='http://127.0.0.1:59151/observatory.html'>.locator
+=========================== short test summary info ============================
+FAILED ../../../../../../../tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py::test_stored_strings_are_inert_on_every_browser_view[/-.lb-name]
+FAILED ../../../../../../../tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py::test_stored_strings_are_inert_on_every_browser_view[/task.html?task_id=t-task1-.feedback-row]
+FAILED ../../../../../../../tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py::test_stored_strings_are_inert_on_every_browser_view[/agent.html?agent_id=a-alice-.profile-name]
+FAILED ../../../../../../../tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py::test_stored_strings_are_inert_on_every_browser_view[/quarterly-report.html?quarter=2026-Q1-.notable-row]
+FAILED ../../../../../../../tmp/agent-economy-mp02-ui-baseline/services/ui/tests/e2e/test_mp02_browser_security.py::test_stored_strings_are_inert_on_every_browser_view[/observatory.html-.feed-item]
+======================= 5 failed, 8 deselected in 2.64s ========================

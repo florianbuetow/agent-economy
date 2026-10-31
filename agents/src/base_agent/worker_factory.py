@@ -10,10 +10,10 @@ import yaml
 from service_commons.config import get_config_path as resolve_config_path
 
 from base_agent.factory import AgentFactory
+from base_agent.runtime_config import RuntimeStateConfig, load_runtime_state_config
 from base_agent.worker_config import WorkerProfile
 from math_worker.config import LLMConfig, MathWorkerConfig
 from math_worker.llm_client import LLMClient
-from math_worker.loop import MathWorkerLoop
 
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
@@ -21,11 +21,13 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class MathWorkerBundle:
-    """Everything needed to run a math worker — agent, LLM client, and loop."""
+    """Worker construction inputs; the loop is created after durable startup."""
 
     agent: BaseAgent
     llm: LLMClient
-    loop: MathWorkerLoop
+    config: MathWorkerConfig
+    profile_name: str
+    runtime_config: RuntimeStateConfig
 
 
 class WorkerFactory:
@@ -55,6 +57,7 @@ class WorkerFactory:
             )
 
         raw = self._load_raw_config(config_path)
+        self._runtime_config = load_runtime_state_config(config_path)
         self._profiles = self._parse_profiles(raw, config_path)
         roster_handles = self._load_roster_handles(raw, config_path)
 
@@ -80,7 +83,7 @@ class WorkerFactory:
                 workers section.
 
         Returns:
-            A MathWorkerBundle containing the agent, LLM client, and loop.
+            Inputs for registration, durable state binding and loop construction.
 
         Raises:
             KeyError: If worker_name is not found in the profiles.
@@ -117,9 +120,13 @@ class WorkerFactory:
         )
 
         llm = LLMClient(llm_config)
-        loop = MathWorkerLoop(agent=agent, llm=llm, config=worker_config)
-
-        return MathWorkerBundle(agent=agent, llm=llm, loop=loop)
+        return MathWorkerBundle(
+            agent=agent,
+            llm=llm,
+            config=worker_config,
+            profile_name=worker_name,
+            runtime_config=self._runtime_config,
+        )
 
     @staticmethod
     def _load_raw_config(config_path: Path) -> dict[str, object]:

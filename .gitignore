@@ -1,12 +1,9 @@
-# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
 
-# C extensions
 *.so
 
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -26,11 +23,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
 htmlcov/
 .tox/
 .nox/
@@ -45,15 +40,12 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Translations
 *.mo
 *.pot
 
-# Logs
 *.log
 **/logs/
 
-# Environments
 .env
 .envrc
 .venv
@@ -63,42 +55,32 @@ ENV/
 env.bak/
 venv.bak/
 
-# IDE
 .idea/
 .vscode/
 .cursorignore
 .cursorindexingignore
 
-# Ruff
 .ruff_cache/
 
-# Mypy
 .mypy_cache/
 .dmypy.json
 dmypy.json
 
-# Pyright
 .pyre/
 .pytype/
 
-# macOS
 **/.DS_Store
 .AppleDouble
 .LSOverride
 
-# Reports (except performance reports which are tracked)
 reports/*
 !reports/performance/
 
-# === Microservices ===
-
-# Per-service runtime data
 services/*/data/
 !services/ui/data/
 services/ui/data/*
 !services/ui/data/web/
 
-# Per-service artifacts
 services/*/reports/
 services/*/.venv/
 services/*/__pycache__/
@@ -106,7 +88,6 @@ services/*/.pytest_cache/
 services/*/.mypy_cache/
 services/*/.ruff_cache/
 
-# Tools
 tools/.venv/
 tools/__pycache__/
 tools/.pytest_cache/
@@ -114,20 +95,41 @@ tools/.mypy_cache/
 tools/.ruff_cache/
 tools/reports/
 
-# Data (keep structure, ignore contents)
 data/*
 !data/.gitkeep
 
-# Scratch (example project, not part of the repo)
 scratch/
 
-# Guard (file integrity tracking, machine-specific)
 .guardfile
 .worktrees/
 
-# Security audit (local-only)
 .appsec/*
 !.appsec/config.yaml
 
-# Claude Code
-.claude/worktrees/
+.claude/
+
+.omx/
+
+.codex/
+
+.codebasescout/
+
+.superpowers/
+
+services/ui/data/logs/
+
+.beads/*.bak-*
+
+demo/
+
+docs/*
+!docs/specifications/
+docs/plans/
+
+.dolt/
+*.db
+
+.agents/
+.backpassrc.json
+MASTERPLAN-TO-COMPLETE-THE-PROJECT.md
+openspec/changes/

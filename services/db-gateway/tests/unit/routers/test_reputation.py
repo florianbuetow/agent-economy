@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 
 from tests.conftest import make_event
+from tests.fakes.native_board_history import publish_task
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
@@ -54,6 +55,7 @@ def _setup_funded_account(
         "event": make_event(source="bank", event_type="account.created"),
     }
     if balance > 0:
+        data["operation_id"] = f"op-{uuid4()}"
         data["initial_credit"] = {
             "tx_id": f"tx-{uuid4()}",
             "amount": balance,
@@ -64,53 +66,27 @@ def _setup_funded_account(
     return aid
 
 
-def _lock_escrow(
-    client: TestClient,
-    payer_id: str,
-    amount: int = 100,
-    task_id: str | None = None,
-) -> tuple[str, str]:
-    tid = task_id or f"t-{uuid4()}"
-    eid = f"esc-{uuid4()}"
-    client.post(
-        "/bank/escrow/lock",
-        json={
-            "escrow_id": eid,
-            "payer_account_id": payer_id,
-            "amount": amount,
-            "task_id": tid,
-            "created_at": "2026-02-28T10:10:00Z",
-            "tx_id": f"tx-{uuid4()}",
-            "event": make_event(source="bank", event_type="escrow.locked", task_id=tid),
-        },
-    )
-    return eid, tid
-
-
 def _create_task(
     client: TestClient,
     poster_id: str | None = None,
 ) -> tuple[str, str, str]:
     """Create a full task with all prerequisites. Returns (task_id, poster_id, escrow_id)."""
     pid = poster_id or _setup_funded_account(client)
-    eid, tid = _lock_escrow(client, pid)
-    client.post(
-        "/board/tasks",
-        json={
-            "task_id": tid,
-            "poster_id": pid,
-            "title": "Test Task",
-            "spec": "Build a login page",
-            "reward": 100,
-            "status": "open",
-            "bidding_deadline_seconds": 86400,
-            "deadline_seconds": 172800,
-            "review_deadline_seconds": 43200,
-            "bidding_deadline": "2026-03-01T10:00:00Z",
-            "escrow_id": eid,
-            "created_at": "2026-02-28T10:15:00Z",
-            "event": make_event(source="board", event_type="task.created", task_id=tid),
-        },
+    tid = f"t-{uuid4()}"
+    eid = f"esc-{uuid4()}"
+    publish_task(
+        client,
+        task_id=tid,
+        poster_id=pid,
+        escrow_id=eid,
+        title="Test Task",
+        spec="Build a login page",
+        reward=100,
+        bidding_deadline_seconds=86400,
+        acceptance_window_seconds=3600,
+        execution_deadline_seconds=172800,
+        review_deadline_seconds=43200,
+        lock_timestamp="2026-02-28T10:10:00Z",
     )
     return tid, pid, eid
 
@@ -147,6 +123,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": alice,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": "Good work",
@@ -176,6 +153,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": bob,
                 "to_agent_id": alice,
                 "role": "worker",
+                "source": "peer",
                 "category": "spec_quality",
                 "rating": "satisfied",
                 "comment": "Clear spec",
@@ -195,6 +173,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": alice,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": "Good work",
@@ -223,6 +202,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": bob,
                 "to_agent_id": alice,
                 "role": "worker",
+                "source": "peer",
                 "category": "spec_quality",
                 "rating": "satisfied",
                 "comment": "Clear spec",
@@ -242,6 +222,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": alice,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": "Good work",
@@ -281,6 +262,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": alice,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": "Good work",
@@ -298,6 +280,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": alice,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "extremely_satisfied",
                 "comment": "Actually great",
@@ -325,6 +308,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": alice,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": "Good",
@@ -341,6 +325,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": alice,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": "Also good",
@@ -365,6 +350,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": fake_agent,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": "Test",
@@ -388,6 +374,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": alice,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 # rating omitted
                 "comment": "Good work",
@@ -411,6 +398,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": alice,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": "Good work",
@@ -434,6 +422,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": alice,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": None,
@@ -459,6 +448,7 @@ class TestFeedbackSubmission:
                 "from_agent_id": alice,
                 "to_agent_id": bob,
                 "role": "poster",
+                "source": "peer",
                 "category": "delivery_quality",
                 "rating": "satisfied",
                 "comment": "Test",

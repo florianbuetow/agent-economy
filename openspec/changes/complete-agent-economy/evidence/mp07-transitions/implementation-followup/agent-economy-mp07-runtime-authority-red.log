@@ -1,0 +1,37 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_____ test_runtime_rebinds_board_authority_to_owned_economic_platform_key ______
+../../tests/runtime/test_mp07_board_authority_runtime.py:174: in test_runtime_rebinds_board_authority_to_owned_economic_platform_key
+    assert authority["platform_public_key_path"] == str(runtime_platform)
+E   AssertionError: assert '/private/var.../platform.pub' == '/private/var.../platform.pub'
+E     
+E     Skipping 105 identical leading characters in diff, use -v to show
+E     - oard_aut0/runtime-edabbae9f0b34a54a257a05c3d7c7b03-eb76dooo/keys/platform.pub
+E     + oard_aut0/ordinary-runtime/keys/platform.pub
+----------------------------- Captured stdout call -----------------------------
+provisioned handle=alice fingerprint_sha256=e278cc06769548c93db7494442fe806e2bb120a8edf06023facb87f02eda5bb5
+provisioned handle=bob fingerprint_sha256=6cfb55d9a2dbfdf57437708281c52a3070055abdf08d13cd42e0825f0db5ec38
+provisioned handle=feeder fingerprint_sha256=5daa80b28c5151f911f93d0d7ecd4fb0fb3eb08fb9482b24f43d3c52d6b618a0
+provisioned handle=mathbot fingerprint_sha256=1eceef6b3da8c1f7bfa77649d3fab1ce3148084e6e0b51cc538e96eacd41a844
+provisioned handle=mathbot_mistral fingerprint_sha256=939e3640a7e2290fe196f95325fe4860348f6a6502b9a1712c2980ee96792b91
+provisioned handle=mathbot_openai fingerprint_sha256=84ed96b8576bad371eafcd24a6ae10192f76fe911dbaed5c65a130673a12a4d6
+provisioned handle=operator fingerprint_sha256=0dd7e393c01684e5419289b46c960c48af9d64aa8747991c9b5873a5c67ed3ed
+provisioned handle=platform fingerprint_sha256=1eb4601c8ee737d660b064f168ced65a6bfd780cf029633fa5d7bf99baa02cb5
+provisioned handle=gateway-central-bank fingerprint_sha256=208e324afcdc76ddf51b598e7b4dd38474147b618f40eea03af8e9fe46614585
+provisioned handle=gateway-court fingerprint_sha256=7094590eb5a020a5a8297828535fa068e08e3524d9d3a4e62e5c27ca71cf458e
+provisioned handle=gateway-identity fingerprint_sha256=4a319346ffd0b4ca20c61fc660c90564fcfbcab395dc274774c5786be7fbc341
+provisioned handle=gateway-reputation fingerprint_sha256=b88ddc639310f1468f7daeaecb7f4a859ac9a7a11a287cf6b7ed6a654186a470
+provisioned handle=gateway-task-board fingerprint_sha256=1e92483cc5011c0e60591e21052b2d62634ec50e968e775f50a7e93bd1132e27
+_______ test_recovery_classifies_board_authority_as_platform_public_key ________
+../../tests/runtime/test_mp07_board_authority_runtime.py:201: in test_recovery_classifies_board_authority_as_platform_public_key
+    authority = next(
+E   StopIteration
+_______ test_recovery_restores_board_authority_to_restored_platform_key ________
+../../tests/runtime/test_mp07_board_authority_runtime.py:218: in test_recovery_restores_board_authority_to_restored_platform_key
+    binding = next(
+E   StopIteration
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_mp07_board_authority_runtime.py::test_runtime_rebinds_board_authority_to_owned_economic_platform_key
+FAILED ../../tests/runtime/test_mp07_board_authority_runtime.py::test_recovery_classifies_board_authority_as_platform_public_key
+FAILED ../../tests/runtime/test_mp07_board_authority_runtime.py::test_recovery_restores_board_authority_to_restored_platform_key
+3 failed in 0.58s

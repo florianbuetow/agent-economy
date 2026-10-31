@@ -1,0 +1,202 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 33 items
+
+tests/unit/test_runtime_intent_ack_regressions.py FFFFFFFFFF..F.F.F...FF [ 66%]
+FFFFFFFF...                                                              [100%]
+
+=================================== FAILURES ===================================
+_____ test_dispute_intent_does_not_require_future_court_generated_identity _____
+tests/unit/test_runtime_intent_ack_regressions.py:45: in test_dispute_intent_does_not_require_future_court_generated_identity
+    pending = store.create(NewTaskIntent(**descriptor))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_intents.py:308: in create
+    validate_owner_intent(self.owner, intent)
+src/base_agent/runtime_intent_ack.py:139: in validate_owner_intent
+    _validate_mutation_facts(intent, actor_id, public, frozen, result)
+src/base_agent/runtime_intent_ack.py:220: in _validate_mutation_facts
+    raise RuntimeIntentError("invalid_input", "dispute result facts are invalid")
+E   base_agent.runtime_intent_models.RuntimeIntentError: dispute result facts are invalid
+____ test_bool_financial_request_version_with_integer_hash_cannot_complete _____
+tests/unit/test_runtime_intent_ack_regressions.py:86: in test_bool_financial_request_version_with_integer_hash_cannot_complete
+    assert observed.state == "attention_required"
+E   AssertionError: assert 'completed' == 'attention_required'
+E     
+E     - attention_required
+E     + completed
+______ test_definitive_rejection_persists_normalized_evidence_and_reopens ______
+tests/unit/test_runtime_intent_ack_regressions.py:109: in test_definitive_rejection_persists_normalized_evidence_and_reopens
+    assert rejected.result == {"status_code": 409, "error": error}
+E   AssertionError: assert None == {'error': {'details': {'actual_lifecycle_version': 8, 'current_status': 'open', 'expected_lifecycle_version': 7}, 'err...task_version_conflict', 'message': 'Task lifecycle version differs from the command precondition'}, 'status_code': 409}
+E    +  where None = FrozenTaskIntent(schema_version=1, revision=2, semantic_sha256='689af0536700a05c0888618d7c5bf596d2759aa7718ae91c9950a8...nitive_rejection', result=None, diagnostics=(mappingproxy({'kind': 'definitive_nonapplication', 'status_code': 409}),)).result
+___ test_fabricated_definitive_state_without_rejection_evidence_fails_closed ___
+tests/unit/test_runtime_intent_ack_regressions.py:129: in test_fabricated_definitive_state_without_rejection_evidence_fails_closed
+    with _store(tmp_path) as reopened, pytest.raises(RuntimeIntentError) as raised:
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'base_agent.runtime_intent_models.RuntimeIntentError'>
+_______ test_invalid_event_id_in_envelope_and_result_cannot_complete[0] ________
+tests/unit/test_runtime_intent_ack_regressions.py:156: in test_invalid_event_id_in_envelope_and_result_cannot_complete
+    assert observed.state == "attention_required"
+E   AssertionError: assert 'completed' == 'attention_required'
+E     
+E     - attention_required
+E     + completed
+_______ test_invalid_event_id_in_envelope_and_result_cannot_complete[-1] _______
+tests/unit/test_runtime_intent_ack_regressions.py:156: in test_invalid_event_id_in_envelope_and_result_cannot_complete
+    assert observed.state == "attention_required"
+E   AssertionError: assert 'completed' == 'attention_required'
+E     
+E     - attention_required
+E     + completed
+_ test_invalid_event_id_in_envelope_and_result_cannot_complete[9223372036854775808] _
+tests/unit/test_runtime_intent_ack_regressions.py:156: in test_invalid_event_id_in_envelope_and_result_cannot_complete
+    assert observed.state == "attention_required"
+E   AssertionError: assert 'completed' == 'attention_required'
+E     
+E     - attention_required
+E     + completed
+___________ test_impossible_version_conflict_cannot_be_definitive[7] ___________
+tests/unit/test_runtime_intent_ack_regressions.py:182: in test_impossible_version_conflict_cannot_be_definitive
+    assert observed.state == "pending"
+E   AssertionError: assert 'definitive_rejection' == 'pending'
+E     
+E     - pending
+E     + definitive_rejection
+__________ test_impossible_version_conflict_cannot_be_definitive[-1] ___________
+tests/unit/test_runtime_intent_ack_regressions.py:182: in test_impossible_version_conflict_cannot_be_definitive
+    assert observed.state == "pending"
+E   AssertionError: assert 'definitive_rejection' == 'pending'
+E     
+E     - pending
+E     + definitive_rejection
+__ test_impossible_version_conflict_cannot_be_definitive[9223372036854775808] __
+tests/unit/test_runtime_intent_ack_regressions.py:182: in test_impossible_version_conflict_cannot_be_definitive
+    assert observed.state == "pending"
+E   AssertionError: assert 'definitive_rejection' == 'pending'
+E     
+E     - pending
+E     + definitive_rejection
+_________ test_same_operation_transition_pending_is_not_foreign_owner __________
+tests/unit/test_runtime_intent_ack_regressions.py:232: in test_same_operation_transition_pending_is_not_foreign_owner
+    assert observed.state == "pending"
+E   AssertionError: assert 'blocked' == 'pending'
+E     
+E     - pending
+E     + blocked
+_________ test_sqlite_integer_bounds_are_enforced_before_store[amount] _________
+tests/unit/test_runtime_intent_ack_regressions.py:244: in test_sqlite_integer_bounds_are_enforced_before_store
+    with pytest.raises(RuntimeIntentError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'base_agent.runtime_intent_models.RuntimeIntentError'>
+__ test_sqlite_integer_bounds_are_enforced_before_store[selected_bid_amount] ___
+tests/unit/test_runtime_intent_ack_regressions.py:244: in test_sqlite_integer_bounds_are_enforced_before_store
+    with pytest.raises(RuntimeIntentError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'base_agent.runtime_intent_models.RuntimeIntentError'>
+_ test_exact_documented_preclaim_error_is_definitive[submit_bid-invalid_status] _
+tests/unit/test_runtime_intent_ack_regressions.py:358: in test_exact_documented_preclaim_error_is_definitive
+    assert rejected.state == "definitive_rejection"
+E   AssertionError: assert 'pending' == 'definitive_rejection'
+E     
+E     - definitive_rejection
+E     + pending
+_ test_exact_documented_preclaim_error_is_definitive[submit_bid-cutoff_reached] _
+tests/unit/test_runtime_intent_ack_regressions.py:358: in test_exact_documented_preclaim_error_is_definitive
+    assert rejected.state == "definitive_rejection"
+E   AssertionError: assert 'pending' == 'definitive_rejection'
+E     
+E     - definitive_rejection
+E     + pending
+_ test_exact_documented_preclaim_error_is_definitive[accept_bid-invalid_status] _
+tests/unit/test_runtime_intent_ack_regressions.py:358: in test_exact_documented_preclaim_error_is_definitive
+    assert rejected.state == "definitive_rejection"
+E   AssertionError: assert 'pending' == 'definitive_rejection'
+E     
+E     - definitive_rejection
+E     + pending
+_ test_exact_documented_preclaim_error_is_definitive[accept_bid-cutoff_reached] _
+tests/unit/test_runtime_intent_ack_regressions.py:358: in test_exact_documented_preclaim_error_is_definitive
+    assert rejected.state == "definitive_rejection"
+E   AssertionError: assert 'pending' == 'definitive_rejection'
+E     
+E     - definitive_rejection
+E     + pending
+_ test_exact_documented_preclaim_error_is_definitive[submit_deliverable-invalid_status] _
+tests/unit/test_runtime_intent_ack_regressions.py:358: in test_exact_documented_preclaim_error_is_definitive
+    assert rejected.state == "definitive_rejection"
+E   AssertionError: assert 'pending' == 'definitive_rejection'
+E     
+E     - definitive_rejection
+E     + pending
+_ test_exact_documented_preclaim_error_is_definitive[submit_deliverable-cutoff_reached] _
+tests/unit/test_runtime_intent_ack_regressions.py:358: in test_exact_documented_preclaim_error_is_definitive
+    assert rejected.state == "definitive_rejection"
+E   AssertionError: assert 'pending' == 'definitive_rejection'
+E     
+E     - definitive_rejection
+E     + pending
+_ test_exact_documented_preclaim_error_is_definitive[approve_task-invalid_status] _
+tests/unit/test_runtime_intent_ack_regressions.py:358: in test_exact_documented_preclaim_error_is_definitive
+    assert rejected.state == "definitive_rejection"
+E   AssertionError: assert 'pending' == 'definitive_rejection'
+E     
+E     - definitive_rejection
+E     + pending
+_ test_exact_documented_preclaim_error_is_definitive[approve_task-cutoff_reached] _
+tests/unit/test_runtime_intent_ack_regressions.py:358: in test_exact_documented_preclaim_error_is_definitive
+    assert rejected.state == "definitive_rejection"
+E   AssertionError: assert 'pending' == 'definitive_rejection'
+E     
+E     - definitive_rejection
+E     + pending
+_ test_exact_documented_preclaim_error_is_definitive[dispute_task-invalid_status] _
+tests/unit/test_runtime_intent_ack_regressions.py:350: in test_exact_documented_preclaim_error_is_definitive
+    pending = store.create(intent)
+              ^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_intents.py:308: in create
+    validate_owner_intent(self.owner, intent)
+src/base_agent/runtime_intent_ack.py:139: in validate_owner_intent
+    _validate_mutation_facts(intent, actor_id, public, frozen, result)
+src/base_agent/runtime_intent_ack.py:220: in _validate_mutation_facts
+    raise RuntimeIntentError("invalid_input", "dispute result facts are invalid")
+E   base_agent.runtime_intent_models.RuntimeIntentError: dispute result facts are invalid
+_ test_exact_documented_preclaim_error_is_definitive[dispute_task-cutoff_reached] _
+tests/unit/test_runtime_intent_ack_regressions.py:350: in test_exact_documented_preclaim_error_is_definitive
+    pending = store.create(intent)
+              ^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_intents.py:308: in create
+    validate_owner_intent(self.owner, intent)
+src/base_agent/runtime_intent_ack.py:139: in validate_owner_intent
+    _validate_mutation_facts(intent, actor_id, public, frozen, result)
+src/base_agent/runtime_intent_ack.py:220: in _validate_mutation_facts
+    raise RuntimeIntentError("invalid_input", "dispute result facts are invalid")
+E   base_agent.runtime_intent_models.RuntimeIntentError: dispute result facts are invalid
+=========================== short test summary info ============================
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_dispute_intent_does_not_require_future_court_generated_identity
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_bool_financial_request_version_with_integer_hash_cannot_complete
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_definitive_rejection_persists_normalized_evidence_and_reopens
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_fabricated_definitive_state_without_rejection_evidence_fails_closed
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_invalid_event_id_in_envelope_and_result_cannot_complete[0]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_invalid_event_id_in_envelope_and_result_cannot_complete[-1]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_invalid_event_id_in_envelope_and_result_cannot_complete[9223372036854775808]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_impossible_version_conflict_cannot_be_definitive[7]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_impossible_version_conflict_cannot_be_definitive[-1]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_impossible_version_conflict_cannot_be_definitive[9223372036854775808]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_same_operation_transition_pending_is_not_foreign_owner
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_sqlite_integer_bounds_are_enforced_before_store[amount]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_sqlite_integer_bounds_are_enforced_before_store[selected_bid_amount]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_exact_documented_preclaim_error_is_definitive[submit_bid-invalid_status]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_exact_documented_preclaim_error_is_definitive[submit_bid-cutoff_reached]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_exact_documented_preclaim_error_is_definitive[accept_bid-invalid_status]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_exact_documented_preclaim_error_is_definitive[accept_bid-cutoff_reached]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_exact_documented_preclaim_error_is_definitive[submit_deliverable-invalid_status]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_exact_documented_preclaim_error_is_definitive[submit_deliverable-cutoff_reached]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_exact_documented_preclaim_error_is_definitive[approve_task-invalid_status]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_exact_documented_preclaim_error_is_definitive[approve_task-cutoff_reached]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_exact_documented_preclaim_error_is_definitive[dispute_task-invalid_status]
+FAILED tests/unit/test_runtime_intent_ack_regressions.py::test_exact_documented_preclaim_error_is_definitive[dispute_task-cutoff_reached]
+======================== 23 failed, 10 passed in 0.35s =========================

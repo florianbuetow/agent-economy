@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI
+from service_commons.telemetry import setup_telemetry
 
 from identity_service.config import get_settings
 from identity_service.core.exceptions import register_exception_handlers
@@ -27,6 +30,12 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+    setup_telemetry(
+        settings.telemetry,
+        service_name=settings.service.name,
+        app=app,
+        log_logger=logging.getLogger(settings.service.name),
+    )
 
     app.include_router(health.router, tags=["Operations"])
     app.include_router(agents.router, tags=["Agents"])

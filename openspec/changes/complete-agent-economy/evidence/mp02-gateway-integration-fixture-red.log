@@ -1,0 +1,111 @@
+Isolated runtime: /private/tmp/agent-economy-mp02-gateway-runtime/runtime-89cfe09f96c84c4b9b09f927dd8e8a95-p7dn5ywg
+provisioned handle=alice fingerprint_sha256=6889acfca19d40bf6939ee6d4add8066f3418e2df55b6cbe9af6744d77be2c32
+provisioned handle=bob fingerprint_sha256=aeaf21f2692fcc285d6c8aefa19747a2c00fa8df76128b2c39f273adf548ccca
+provisioned handle=feeder fingerprint_sha256=a4bf43bf95d410a83a854ca831a778ae4be5fc43719a7547e40ac3bf578a4b9e
+provisioned handle=mathbot fingerprint_sha256=8cc0efa5594601ffe77870fce35b63a0657e8bdd16a1335a5211344bcf120dc2
+provisioned handle=mathbot_mistral fingerprint_sha256=093609acb2f6d8ac809ef2a529b21a4a399a0fb2e1948388b71dfa0701fe699e
+provisioned handle=mathbot_openai fingerprint_sha256=dbe74e79915170ceb72a8c1eb5ce7f00fdda98a66c6a0a821cbc1b6a40ec6938
+provisioned handle=operator fingerprint_sha256=dad45bd0ceea62af67ea2b9384ca8dd4976222b3219f1163e6522bdaace6630a
+provisioned handle=platform fingerprint_sha256=d44bcfd8f82838ce868c1262a2686eabde3a50678649f68e976d963cedc0fb00
+provisioned handle=gateway-central-bank fingerprint_sha256=58d883b7d01784a48a558221cd51fd48fe60dec7a4946362608ceb1c3bbd5a85
+provisioned handle=gateway-court fingerprint_sha256=1e75303e8ac0a58a49b61dd9c500cf2e933e26187197935b939f8a37c8223abc
+provisioned handle=gateway-identity fingerprint_sha256=0692347962a2c6b19f2f8b8146eda89d2259bd4e933c074391b33c975ba36580
+provisioned handle=gateway-reputation fingerprint_sha256=824a1a6095f10ac88142f32490d05bc68e7548f4c7f0453747f80c23f18b691c
+provisioned handle=gateway-task-board fingerprint_sha256=ec0a65d76df2f6abe1849a7c622e51007b0404c6730aae210ab2e17e6f1fbcc4
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/db-gateway/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/db-gateway
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 6 items
+
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_register_then_read_round_trips_over_live_http ERROR [ 16%]
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_duplicate_public_key_returns_409_over_live_http ERROR [ 33%]
+tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_health_total_events_increments_after_live_write ERROR [ 50%]
+tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_exactly_one_201_among_five_racing_distinct_agents ERROR [ 66%]
+tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_winner_is_readable_and_no_duplicate_rows_exist ERROR [ 83%]
+tests/integration/test_endpoints.py::TestHealthIntegration::test_health_check ERROR [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of TestAgentRegistrationIntegration.test_register_then_read_round_trips_over_live_http _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:730: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+tests/integration/conftest.py:63: in gateway_auth
+    signers[domain] = GatewayRequestSigner(
+../../libs/service-auth/src/service_auth/gateway.py:174: in __init__
+    self._private_key, _public_key = load_keypair(key_path.stem, key_path.parent)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/signing.py:353: in load_keypair
+    raise KeyMaterialError("absent_pair", msg)
+E   service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+_ ERROR at setup of TestAgentRegistrationIntegration.test_duplicate_public_key_returns_409_over_live_http _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:730: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+tests/integration/conftest.py:63: in gateway_auth
+    signers[domain] = GatewayRequestSigner(
+../../libs/service-auth/src/service_auth/gateway.py:174: in __init__
+    self._private_key, _public_key = load_keypair(key_path.stem, key_path.parent)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/signing.py:353: in load_keypair
+    raise KeyMaterialError("absent_pair", msg)
+E   service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+_ ERROR at setup of TestAgentRegistrationIntegration.test_health_total_events_increments_after_live_write _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:730: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+tests/integration/conftest.py:63: in gateway_auth
+    signers[domain] = GatewayRequestSigner(
+../../libs/service-auth/src/service_auth/gateway.py:174: in __init__
+    self._private_key, _public_key = load_keypair(key_path.stem, key_path.parent)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/signing.py:353: in load_keypair
+    raise KeyMaterialError("absent_pair", msg)
+E   service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+_ ERROR at setup of TestTrueMultiConnectionConcurrency.test_exactly_one_201_among_five_racing_distinct_agents _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:730: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+tests/integration/conftest.py:63: in gateway_auth
+    signers[domain] = GatewayRequestSigner(
+../../libs/service-auth/src/service_auth/gateway.py:174: in __init__
+    self._private_key, _public_key = load_keypair(key_path.stem, key_path.parent)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/signing.py:353: in load_keypair
+    raise KeyMaterialError("absent_pair", msg)
+E   service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+_ ERROR at setup of TestTrueMultiConnectionConcurrency.test_winner_is_readable_and_no_duplicate_rows_exist _
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:730: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+tests/integration/conftest.py:63: in gateway_auth
+    signers[domain] = GatewayRequestSigner(
+../../libs/service-auth/src/service_auth/gateway.py:174: in __init__
+    self._private_key, _public_key = load_keypair(key_path.stem, key_path.parent)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/signing.py:353: in load_keypair
+    raise KeyMaterialError("absent_pair", msg)
+E   service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+__________ ERROR at setup of TestHealthIntegration.test_health_check ___________
+.venv/lib/python3.13/site-packages/pytest_asyncio/plugin.py:730: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+tests/integration/conftest.py:63: in gateway_auth
+    signers[domain] = GatewayRequestSigner(
+../../libs/service-auth/src/service_auth/gateway.py:174: in __init__
+    self._private_key, _public_key = load_keypair(key_path.stem, key_path.parent)
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-auth/src/service_auth/signing.py:353: in load_keypair
+    raise KeyMaterialError("absent_pair", msg)
+E   service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+=========================== short test summary info ============================
+ERROR tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_register_then_read_round_trips_over_live_http - service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+ERROR tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_duplicate_public_key_returns_409_over_live_http - service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+ERROR tests/integration/test_agent_registration.py::TestAgentRegistrationIntegration::test_health_total_events_increments_after_live_write - service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+ERROR tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_exactly_one_201_among_five_racing_distinct_agents - service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+ERROR tests/integration/test_concurrent_registration.py::TestTrueMultiConnectionConcurrency::test_winner_is_readable_and_no_duplicate_rows_exist - service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+ERROR tests/integration/test_endpoints.py::TestHealthIntegration::test_health_check - service_auth.signing.KeyMaterialError: Keypair is not provisioned: missing ../../data/keys/gateway-identity.key and ../../data/keys/gateway-identity.pub
+============================== 6 errors in 0.09s ===============================

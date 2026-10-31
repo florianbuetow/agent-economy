@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI
+from service_commons.telemetry import setup_telemetry
 
 from task_board_service.config import get_settings
 from task_board_service.core.exceptions import register_exception_handlers
 from task_board_service.core.lifespan import lifespan
 from task_board_service.core.middleware import RequestValidationMiddleware
-from task_board_service.routers import assets, bids, health, tasks
+from task_board_service.routers import assets, bids, health, inputs, tasks
 
 
 def create_app() -> FastAPI:
@@ -27,11 +30,18 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+    setup_telemetry(
+        settings.telemetry,
+        service_name=settings.service.name,
+        app=app,
+        log_logger=logging.getLogger(settings.service.name),
+    )
 
     app.include_router(health.router, tags=["Operations"])
     app.include_router(tasks.router, tags=["Tasks"])
     app.include_router(bids.router, tags=["Bids"])
     app.include_router(assets.router, tags=["Assets"])
+    app.include_router(inputs.router, tags=["Inputs"])
 
     app.add_middleware(
         RequestValidationMiddleware,

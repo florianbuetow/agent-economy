@@ -1,0 +1,40 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/integration/test_mp07_atomic_task_transitions.py FFF               [100%]
+
+=================================== FAILURES ===================================
+__________ test_concurrent_approve_and_dispute_have_one_serial_winner __________
+tests/integration/test_mp07_atomic_task_transitions.py:568: in test_concurrent_approve_and_dispute_have_one_serial_winner
+    assert len(successes) == 1, diagnostics
+E   AssertionError: {'bank_release_count': 1, 'court_claim_count': 1, 'event_rows': [{'event_id': 10, 'event_type': 'task.disputed'}, {'ev... 'status_code': None}, {'error': None, 'operation': 'dispute', 'result_status': 'approved', 'status_code': None}], ...}
+E   assert 2 == 1
+E    +  where 2 = len([_Outcome(operation='approve', result={'task_id': 't-d1051015-6be1-4d20-a76f-4d1a6480b3f4', 'poster_id': 'a-mp07-poste...', 'execution_deadline': '2026-10-18T20:14:48.250871Z', 'review_deadline': '2026-10-18T20:14:48.262480Z'}, error=None)])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:14:48", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-d1051015-6be1-4d20-a76f-4d1a6480b3f4"}}
+______________ test_competing_acceptances_have_one_serial_winner _______________
+tests/integration/test_mp07_atomic_task_transitions.py:720: in test_competing_acceptances_have_one_serial_winner
+    assert len(successes) == 1, diagnostics
+E   AssertionError: {'bank_release_count': 0, 'court_claim_count': 0, 'event_rows': [{'event_id': 9, 'event_type': 'task.accepted'}, {'eve...us_code': None}, {'error': None, 'operation': 'accept-second', 'result_status': 'accepted', 'status_code': None}], ...}
+E   assert 2 == 1
+E    +  where 2 = len([_Outcome(operation='accept-first', result={'task_id': 't-b1029ab5-59f0-4e50-9e6f-62a0f4674dc6', 'poster_id': 'a-mp07-...26-10-18T20:14:48.820914Z', 'execution_deadline': '2026-10-18T20:14:48.878876Z', 'review_deadline': None}, error=None)])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:14:48", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-b1029ab5-59f0-4e50-9e6f-62a0f4674dc6"}}
+_____ test_concurrent_acceptance_and_poster_cancel_have_one_serial_winner ______
+tests/integration/test_mp07_atomic_task_transitions.py:864: in test_concurrent_acceptance_and_poster_cancel_have_one_serial_winner
+    assert len(successes) == 1, diagnostics
+E   AssertionError: {'accept_bank_release_count': 0, 'cancel_bank_release_count': 1, 'court_claim_count': 0, 'event_rows': [{'event_id': 9, 'event_type': 'task.cancelled'}, {'event_id': 10, 'event_type': 'task.accepted'}], ...}
+E   assert 2 == 1
+E    +  where 2 = len([_Outcome(operation='accept', result={'task_id': 't-90e4fe62-b4b4-431f-96af-38745809fcfc', 'poster_id': 'a-mp07-poster...26-10-18T20:14:49.383579Z', 'execution_deadline': '2026-10-18T20:14:49.437907Z', 'review_deadline': None}, error=None)])
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 20:14:49", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-90e4fe62-b4b4-431f-96af-38745809fcfc"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_atomic_task_transitions.py::test_concurrent_approve_and_dispute_have_one_serial_winner
+FAILED tests/integration/test_mp07_atomic_task_transitions.py::test_competing_acceptances_have_one_serial_winner
+FAILED tests/integration/test_mp07_atomic_task_transitions.py::test_concurrent_acceptance_and_poster_cancel_have_one_serial_winner
+============================== 3 failed in 1.78s ===============================

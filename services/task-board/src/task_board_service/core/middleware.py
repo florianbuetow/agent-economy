@@ -17,11 +17,17 @@ _JSON_VALIDATION_ENDPOINTS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("POST", re.compile(r"^/tasks/[^/]+/submit$")),
     ("POST", re.compile(r"^/tasks/[^/]+/approve$")),
     ("POST", re.compile(r"^/tasks/[^/]+/dispute$")),
+    ("POST", re.compile(r"^/tasks/[^/]+/rebuttal$")),
     ("POST", re.compile(r"^/tasks/[^/]+/ruling$")),
     ("POST", re.compile(r"^/tasks/[^/]+/bids$")),
     ("POST", re.compile(r"^/tasks/[^/]+/bids/[^/]+/accept$")),
+    ("POST", re.compile(r"^/task-publications$")),
+    ("POST", re.compile(r"^/task-publications/[^/]+/publish$")),
 )
-_MULTIPART_VALIDATION_ENDPOINT = ("POST", re.compile(r"^/tasks/[^/]+/assets$"))
+_MULTIPART_VALIDATION_ENDPOINT = (
+    "POST",
+    re.compile(r"^(?:/tasks/[^/]+/assets|/task-publications/[^/]+/inputs)$"),
+)
 
 
 class RequestValidationMiddleware:
@@ -83,6 +89,7 @@ class RequestValidationMiddleware:
                     error="unsupported_media_type",
                     message="Content-Type must be multipart/form-data",
                     status_code=415,
+                    details={},
                 )
                 await response(scope, receive, send)
                 return
@@ -98,6 +105,7 @@ class RequestValidationMiddleware:
                 error="unsupported_media_type",
                 message="Content-Type must be application/json",
                 status_code=415,
+                details={},
             )
             await response(scope, receive, send)
             return
@@ -117,6 +125,7 @@ class RequestValidationMiddleware:
                     error="payload_too_large",
                     message="Request body exceeds maximum allowed size",
                     status_code=413,
+                    details={},
                 )
                 await response(scope, receive, send)
                 return

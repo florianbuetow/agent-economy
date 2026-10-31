@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import os
 from typing import TYPE_CHECKING, Any
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -20,6 +21,7 @@ from httpx import ASGITransport, AsyncClient
 from reputation_service.app import create_app
 from reputation_service.config import clear_settings_cache
 from reputation_service.core.state import get_app_state, reset_app_state
+from tests.fakes.fake_task_board import FakeTaskBoard
 from tests.helpers import make_jws_token, make_mock_platform_agent
 
 if TYPE_CHECKING:
@@ -39,8 +41,18 @@ VALID_FEEDBACK: dict[str, object] = {
 }
 
 
-def _write_config(tmp_path: Path, db_path: str, reveal_timeout: int = 86400) -> str:
-    """Write a test config.yaml and return the path."""
+def _write_config(tmp_path: Path, _db_path: str, reveal_timeout: int = 86400) -> str:
+    """Write a test config.yaml and return the path.
+
+    ``_db_path`` is unused in this body — it no longer feeds a ``database:``
+    config section (GAP-C8/exception #15: reputation reads no local
+    database.path in production — it talks to the DB Gateway). The parameter
+    is kept (and still passed by every call site below) because the autouse
+    ``_patch_persistence_helpers`` fixture (tests/unit/conftest.py) monkeypatches
+    this function with a wrapper of the same signature that DOES use it, to
+    back the test-only SqliteFeedbackStore that lets these tests simulate
+    persistence across a restart.
+    """
     config_content = f"""\
 service:
   name: "reputation"
@@ -49,18 +61,27 @@ server:
   host: "127.0.0.1"
   port: 8004
   log_level: "info"
+telemetry:
+  enabled: false
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"
 logging:
   level: "INFO"
-  directory: "data/logs"
+  directory: "{tmp_path / "logs" / "reputation"}"
 platform:
   agent_config_path: ""
+task_board:
+  base_url: "http://localhost:8003"
+  timeout_seconds: 10
 request:
   max_body_size: 1048576
-database:
-  path: "{db_path}"
 feedback:
   reveal_timeout_seconds: {reveal_timeout}
   max_comment_length: 256
+  reveal_sweep_interval_seconds: 60
+quality:
+  operator_name: "operator"
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -86,11 +107,24 @@ def _restore_env(old_config: str | None) -> None:
     reset_app_state()
 
 
+def _prepare(payload: dict[str, object]) -> dict[str, object]:
+    """Authorize the payload against the fake Task Board (these tests cover storage)."""
+    board = get_app_state().task_board_client
+    assert isinstance(board, FakeTaskBoard)
+    return board.prepare(payload)
+
+
 def _inject_mock_identity(payload: dict[str, object], kid: str) -> None:
     """Inject a mock IdentityClient that returns the given payload."""
     _ = kid
     state = get_app_state()
     state.platform_agent = make_mock_platform_agent(verify_payload=payload)
+    identity_client = AsyncMock()
+    identity_client.close = AsyncMock()
+    identity_client.verify_jws = AsyncMock(
+        side_effect=state.platform_agent.validate_certificate,
+    )
+    state.identity_client = identity_client
 
 
 async def _make_client(app: FastAPI) -> AsyncIterator[AsyncClient]:
@@ -109,6 +143,7 @@ async def _submit_feedback(client: AsyncClient, **overrides: object) -> dict[str
     """Submit valid feedback with optional overrides, wrapped in JWS."""
     payload: dict[str, object] = dict(VALID_FEEDBACK)
     payload.update(overrides)
+    payload = _prepare(payload)
     kid = str(payload.get("from_agent_id", "agent-alice"))
     _inject_mock_identity(payload, kid)
     token = make_jws_token(payload, kid=kid)
@@ -125,7 +160,7 @@ async def _post_feedback_jws(
     body: Mapping[str, object],
 ) -> Any:
     """Post feedback body wrapped in JWS and return the response."""
-    payload: dict[str, object] = {"action": "submit_feedback", **body}
+    payload: dict[str, object] = _prepare({"action": "submit_feedback", **body})
     kid = str(payload.get("from_agent_id", "agent-alice"))
     _inject_mock_identity(payload, kid)
     token = make_jws_token(payload, kid=kid)
@@ -141,12 +176,60 @@ async def _post_feedback_jws(
 # ---------------------------------------------------------------------------
 
 
+# CFG-01..04 test config strictness (exception #15, WP-11 round 2): the
+# original `database.path` subject was ratified dead (GAP-C8, 0 src reads —
+# reputation talks to the DB Gateway, it owns no local database file). These
+# four now exercise the identical fail-fast SUBJECT — a required config
+# section, present-but-empty, and a value that passes schema validation but
+# fails a deeper runtime guard — against `db_gateway`, the section that is
+# genuinely read in production (see lifespan.py's "db_gateway configuration
+# is required" guard on an empty `db_gateway.url`).
+
+
 @pytest.mark.unit
-async def test_cfg_01_service_starts_with_valid_database_path(tmp_path: Path) -> None:
-    """CFG-01: Service starts with valid database.path."""
-    db_path = str(tmp_path / "test.db")
-    config_path = _write_config(tmp_path, db_path)
-    old = _setup_env(config_path)
+async def test_cfg_01_service_starts_with_valid_db_gateway(tmp_path: Path) -> None:
+    """CFG-01: Service starts with a valid db_gateway config."""
+    config_content = f"""\
+service:
+  name: "reputation"
+  version: "0.1.0"
+server:
+  host: "127.0.0.1"
+  port: 8004
+  log_level: "info"
+telemetry:
+  enabled: false
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"
+logging:
+  level: "INFO"
+  directory: "{tmp_path / "logs" / "reputation"}"
+platform:
+  agent_config_path: ""
+task_board:
+  base_url: "http://localhost:8003"
+  timeout_seconds: 10
+request:
+  max_body_size: 1048576
+feedback:
+  reveal_timeout_seconds: 86400
+  max_comment_length: 256
+  reveal_sweep_interval_seconds: 60
+quality:
+  operator_name: "operator"
+db_gateway:
+  url: "http://localhost:8007"
+  timeout_seconds: 10
+  signing:
+    kid: "gateway-reputation"
+    private_key_path: "gateway-reputation.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
+"""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(config_content)
+    old = _setup_env(str(config_path))
     try:
         app = create_app()
         async for client in _make_client(app):
@@ -158,8 +241,8 @@ async def test_cfg_01_service_starts_with_valid_database_path(tmp_path: Path) ->
 
 
 @pytest.mark.unit
-async def test_cfg_02_fails_without_database_section(tmp_path: Path) -> None:
-    """CFG-02: Service fails to start without database section."""
+async def test_cfg_02_fails_without_db_gateway_section(tmp_path: Path) -> None:
+    """CFG-02: Service fails to start without a db_gateway section."""
     config_content = """\
 service:
   name: "reputation"
@@ -168,12 +251,20 @@ server:
   host: "127.0.0.1"
   port: 8004
   log_level: "info"
+telemetry:
+  enabled: false
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"
 logging:
   level: "INFO"
   directory: "data/logs"
 feedback:
   reveal_timeout_seconds: 86400
   max_comment_length: 256
+  reveal_sweep_interval_seconds: 60
+quality:
+  operator_name: "operator"
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -188,8 +279,8 @@ feedback:
 
 
 @pytest.mark.unit
-async def test_cfg_03_fails_without_database_path(tmp_path: Path) -> None:
-    """CFG-03: Service fails to start without database.path."""
+async def test_cfg_03_fails_without_db_gateway_url(tmp_path: Path) -> None:
+    """CFG-03: Service fails to start without db_gateway.url."""
     config_content = """\
 service:
   name: "reputation"
@@ -198,13 +289,21 @@ server:
   host: "127.0.0.1"
   port: 8004
   log_level: "info"
+telemetry:
+  enabled: false
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"
 logging:
   level: "INFO"
   directory: "data/logs"
-database: {}
 feedback:
   reveal_timeout_seconds: 86400
   max_comment_length: 256
+  reveal_sweep_interval_seconds: 60
+quality:
+  operator_name: "operator"
+db_gateway: {}
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -219,11 +318,50 @@ feedback:
 
 
 @pytest.mark.unit
-async def test_cfg_04_fails_with_unwritable_path(tmp_path: Path) -> None:
-    """CFG-04: Service fails to start with unwritable database.path."""
-    db_path = "/proc/nonexistent/reputation.db"
-    config_path = _write_config(tmp_path, db_path)
-    old = _setup_env(config_path)
+async def test_cfg_04_fails_with_empty_db_gateway_url(tmp_path: Path) -> None:
+    """CFG-04: Service fails to start with an empty db_gateway.url.
+
+    An empty string still satisfies Pydantic's `str` schema check (unlike a
+    missing field, CFG-03's subject) but fails lifespan.py's runtime
+    fail-fast guard — the same "passes schema, fails deeper" shape the
+    original unwritable-database-path scenario tested.
+    """
+    config_content = """\
+service:
+  name: "reputation"
+  version: "0.1.0"
+server:
+  host: "127.0.0.1"
+  port: 8004
+  log_level: "info"
+telemetry:
+  enabled: false
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"
+logging:
+  level: "INFO"
+  directory: "data/logs"
+platform:
+  agent_config_path: ""
+task_board:
+  base_url: "http://localhost:8003"
+  timeout_seconds: 10
+request:
+  max_body_size: 1048576
+feedback:
+  reveal_timeout_seconds: 86400
+  max_comment_length: 256
+  reveal_sweep_interval_seconds: 60
+quality:
+  operator_name: "operator"
+db_gateway:
+  url: ""
+  timeout_seconds: 10
+"""
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(config_content)
+    old = _setup_env(str(config_path))
     try:
         with pytest.raises(Exception):  # noqa: B017
             app = create_app()
@@ -618,9 +756,10 @@ async def test_persist_10_uniqueness_survives_restart(tmp_path: Path) -> None:
                     "from_agent_id": "a-alice",
                     "to_agent_id": "a-bob",
                     "category": "delivery_quality",
-                    "rating": "satisfied",
+                    "rating": "dissatisfied",
                 },
             )
+            # Changed content for an existing (task, from, to) triple conflicts.
             assert resp.status_code == 409
             assert resp.json()["error"] == "feedback_exists"
     finally:
@@ -804,7 +943,7 @@ async def test_db_01_concurrent_duplicate_safe(tmp_path: Path) -> None:
                 "category": "delivery_quality",
                 "rating": "satisfied",
             }
-            payload: dict[str, object] = {"action": "submit_feedback", **body}
+            payload: dict[str, object] = _prepare({"action": "submit_feedback", **body})
             _inject_mock_identity(payload, "a-alice")
             token = make_jws_token(payload, kid="a-alice")
             jws_body: dict[str, object] = {"token": token}
@@ -814,7 +953,8 @@ async def test_db_01_concurrent_duplicate_safe(tmp_path: Path) -> None:
                 client.post("/feedback", json=jws_body, headers=hdrs),
             )
             status_codes = sorted([r.status_code for r in results])
-            assert status_codes == [201, 409]
+            # The loser of the insert race is an exact replay of the winner.
+            assert status_codes == [200, 201]
     finally:
         _restore_env(old)
 
@@ -841,7 +981,9 @@ async def test_db_02_concurrent_mutual_reveal_atomic(tmp_path: Path) -> None:
                 "category": "delivery_quality",
                 "rating": "satisfied",
             }
-            reveal_payload: dict[str, object] = {"action": "submit_feedback", **reveal_body}
+            reveal_payload: dict[str, object] = _prepare(
+                {"action": "submit_feedback", **reveal_body}
+            )
             _inject_mock_identity(reveal_payload, "a-bob")
             reveal_token = make_jws_token(reveal_payload, kid="a-bob")
             post_resp, get_resp = await asyncio.gather(

@@ -6,15 +6,15 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from pydantic import BaseModel, ValidationError
 
-ModelT = TypeVar("ModelT", bound=BaseModel)
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class ConfigurationError(Exception):
@@ -69,15 +69,19 @@ def load_yaml_config(config_path: Path) -> dict[str, Any]:
             f"Create the file or set CONFIG_PATH environment variable."
         )
 
+    return parse_yaml_config_bytes(config_path.read_bytes(), source=str(config_path))
+
+
+def parse_yaml_config_bytes(content: bytes, *, source: str) -> dict[str, Any]:
+    """Parse already-read configuration bytes without reopening an evidence file."""
     try:
-        with config_path.open() as f:
-            config = yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        raise ConfigurationError(f"Invalid YAML in {config_path}: {e}") from e
+        config = yaml.safe_load(content)
+    except (yaml.YAMLError, UnicodeError) as e:
+        raise ConfigurationError(f"Invalid YAML in {source}: {e}") from e
 
     if config is None:
         raise ConfigurationError(
-            f"Configuration file is empty: {config_path}\n"
+            f"Configuration file is empty: {source}\n"
             f"All configuration values must be explicitly specified."
         )
 
@@ -112,7 +116,7 @@ def get_config_path(
     return Path(config_path_str)
 
 
-def load_settings(
+def load_settings[ModelT: BaseModel](
     settings_model: type[ModelT],
     yaml_config: dict[str, Any],
 ) -> ModelT:
@@ -139,7 +143,7 @@ def load_settings(
         ) from e
 
 
-def create_settings_loader(
+def create_settings_loader[ModelT: BaseModel](
     settings_model: type[ModelT],
     get_config_path_fn: Callable[[], Path],
 ) -> tuple[Callable[[], ModelT], Callable[[], None]]:

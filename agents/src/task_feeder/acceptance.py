@@ -1,0 +1,257 @@
+"""Autonomous bid-acceptance loop for the Task Feeder (WP-15 / Q-16 / T-035).
+
+The feeder polls its own ``open`` tasks and, once a task is eligible, accepts the
+winning bid so the economy can leave ``open`` without a human or the scripted
+demo in the loop.
+
+Eligibility (Q-16): a task is eligible once its acceptance window has opened
+(``now - created_at >= acceptance_after_seconds``) **or** a bid quorum is met
+(``bid_count >= min_bids_to_accept``); a task with zero bids is never eligible
+and is left to expire.  ``acceptance_after_seconds`` is validated to be strictly
+less than the bidding deadline (T-035), so the window always opens before expiry.
+
+Winner rule (Q-16): the lowest ``amount`` wins — accepting the first bid to
+arrive is forbidden because it destroys the undercutting the thesis rests on.
+Ties on amount break toward the bidder with the higher delivery-quality
+score, read from the Reputation service's ``GET /agents/{id}/quality`` (G12:
+the service owns the formula; the feeder never aggregates raw feedback).  An
+unrated bidder ranks 0, so it ties with a rated 0.  Any remaining tie breaks
+deterministically toward the lexicographically smallest bid id.  A failed or
+malformed quality lookup is a dependency failure, never an unrated score: no
+acceptance intent is created and the task is retried on the next pass.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
+
+from service_auth.financial_identity import operation_id_for
+
+from base_agent.runtime_task_intent_factory import acceptance_intent
+from task_feeder.resilience import RECOVERABLE_DEPENDENCY_ERRORS
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from base_agent.agent import BaseAgent
+    from base_agent.runtime_intents import NewTaskIntent
+    from base_agent.runtime_task_commands import RuntimeTaskCommands
+    from task_feeder.config import AcceptanceConfig
+
+logger = logging.getLogger(__name__)
+
+QUALITY_FORMULA_VERSION = "quality-v1"
+# Q-M3 feeder ranking: an unrated bidder has selection rank 0 (it still shows as
+# unrated everywhere else).
+_UNRATED_RANK = 0
+_MAX_SCORE = 100
+
+
+def delivery_rank(report: dict[str, Any]) -> int:
+    """Selection rank from a Reputation quality report's delivery dimension.
+
+    Raises ``ValueError`` for an unsupported formula or a malformed dimension.
+    """
+    if report.get("formula_version") != QUALITY_FORMULA_VERSION:
+        raise ValueError("unsupported quality formula_version")
+    delivery = report.get("delivery_quality")
+    if not isinstance(delivery, dict):
+        raise ValueError("quality report lacks delivery_quality")
+    rated = delivery.get("rated")
+    score = delivery.get("score")
+    if rated is False and score is None:
+        return _UNRATED_RANK
+    if rated is True and type(score) is int and 0 <= score <= _MAX_SCORE:
+        return score
+    raise ValueError("malformed delivery quality dimension")
+
+
+def select_winning_bid(
+    bids: list[dict[str, Any]],
+    delivery_scores: dict[str, int],
+) -> dict[str, Any]:
+    """Pick the winning bid per the Q-16 rule.
+
+    Sort key (ascending ``min``): lowest ``amount`` first; then higher
+    delivery-quality reputation (negated so higher wins); then lexicographically
+    smallest ``bid_id`` as the deterministic final tie-break.
+    """
+    if not bids:
+        msg = "cannot select a winner from an empty bid list"
+        raise ValueError(msg)
+    return min(
+        bids,
+        key=lambda bid: (
+            int(bid["amount"]),
+            -delivery_scores.get(str(bid["bidder_id"]), _UNRATED_RANK),
+            str(bid["bid_id"]),
+        ),
+    )
+
+
+def _parse_created_at(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def _validated_bid(bid: object) -> dict[str, Any]:
+    if not isinstance(bid, dict):
+        raise ValueError("bid must be an object")
+    for key in ("bid_id", "bidder_id"):
+        value = bid.get(key)
+        if not isinstance(value, str) or value == "":
+            raise ValueError(f"{key} must be a nonempty string")
+    amount = bid.get("amount")
+    if type(amount) is not int or amount <= 0:
+        raise ValueError("bid amount must be a positive integer")
+    return bid
+
+
+class AcceptanceLoop:
+    """Poll the feeder's own open tasks and accept the winning bid when eligible."""
+
+    def __init__(
+        self,
+        agent: BaseAgent,
+        config: AcceptanceConfig,
+        now: Callable[[], datetime],
+        commands: RuntimeTaskCommands,
+    ) -> None:
+        self._agent = agent
+        self._config = config
+        self._now = now
+        self._commands = commands
+        self._running = True
+        self._finalized: set[str] = set()
+
+    def is_eligible(self, created_at: str, bid_count: int) -> bool:
+        """Return True when the task may be accepted now (Q-16 eligibility).
+
+        ``bid_count`` is the authoritative count from the bid list, not the task
+        summary's ``bid_count`` field (which the gateway-backed board leaves at 0).
+        """
+        if bid_count <= 0:
+            return False
+        if bid_count >= self._config.min_bids_to_accept:
+            return True
+        age_seconds = (self._now() - _parse_created_at(created_at)).total_seconds()
+        return age_seconds >= self._config.acceptance_after_seconds
+
+    async def _delivery_scores_for(self, bidder_ids: set[str]) -> dict[str, int]:
+        scores: dict[str, int] = {}
+        for bidder_id in sorted(bidder_ids):
+            url = f"{self._agent.config.reputation_url}/agents/{bidder_id}/quality"
+            scores[bidder_id] = delivery_rank(await self._agent._request("GET", url))
+        return scores
+
+    async def accept_one(self, task: dict[str, Any]) -> str:
+        """Evaluate one open task and, if eligible, accept its winning bid."""
+        task_id_value = task.get("task_id")
+        if not isinstance(task_id_value, str) or task_id_value == "":
+            raise ValueError("task_id must be a nonempty string")
+        task_id = task_id_value
+
+        async def prepare() -> NewTaskIntent:
+            # The bid list is the authoritative bid count; the task summary's
+            # bid_count is unreliable against the gateway-backed board.
+            bids = [_validated_bid(bid) for bid in await self._agent.list_bids(task_id)]
+            created_at = task.get("created_at")
+            if not isinstance(created_at, str):
+                raise ValueError("created_at must be a string")
+            if not self.is_eligible(created_at, len(bids)):
+                raise _NotEligible
+
+            lowest_amount = min(bid["amount"] for bid in bids)
+            contenders = {bid["bidder_id"] for bid in bids if bid["amount"] == lowest_amount}
+            delivery_scores = (
+                await self._delivery_scores_for(contenders) if len(contenders) > 1 else {}
+            )
+            winner = select_winning_bid(bids, delivery_scores)
+            snapshot = await self._agent.get_task(task_id)
+            if snapshot.get("task_id") != task_id:
+                raise ValueError("task detail identity does not match the selected task")
+            source_version = snapshot.get("lifecycle_version")
+            if type(source_version) is not int:
+                raise ValueError("lifecycle_version must be an integer")
+            operation_id = operation_id_for("task-accept", (task_id, str(source_version)))
+            actor_id = self._agent.agent_id
+            if not isinstance(actor_id, str) or actor_id == "":
+                raise ValueError("agent must be registered before accepting a bid")
+            return acceptance_intent(
+                task=snapshot,
+                actor_id=actor_id,
+                bid=winner,
+                operation_id=operation_id,
+            )
+
+        try:
+            intent = await self._commands.execute(
+                task_id=task_id,
+                slot="acceptance",
+                prepare=prepare,
+            )
+        except _NotEligible:
+            return "not_eligible"
+        if intent.state != "completed":
+            return intent.state
+        self._finalized.add(task_id)
+        logger.info("Accepted bid on task %s", task_id)
+        return "accepted"
+
+    async def process_open_tasks(self) -> None:
+        """Run one polling pass over the feeder's own open tasks."""
+        replayed = await self._commands.replay_unfinished()
+        replayed_task_ids = {intent.task_id for intent in replayed if intent.slot == "acceptance"}
+        self._finalized.update(
+            intent.task_id
+            for intent in replayed
+            if intent.slot == "acceptance" and intent.state == "completed"
+        )
+        tasks = await self._agent.list_tasks(
+            status="open",
+            poster_id=self._agent.agent_id,
+        )
+        for task in tasks:
+            task_id_value = task.get("task_id")
+            if not isinstance(task_id_value, str) or task_id_value == "":
+                logger.error("Ignoring open-task projection with invalid task_id")
+                continue
+            task_id = task_id_value
+            if task_id in self._finalized or task_id in replayed_task_ids:
+                continue
+            if task.get("status") != "open":
+                continue
+            try:
+                await self.accept_one(task)
+            except Exception:
+                logger.exception("Failed to process task_id=%s for acceptance", task_id)
+
+    async def run(self, retry_backoff_seconds: int) -> None:
+        """Continuously accept eligible bids on this poster's open tasks."""
+        logger.info(
+            "Acceptance loop starting (poll=%ss, after=%ss, quorum=%s)",
+            self._config.acceptance_poll_interval_seconds,
+            self._config.acceptance_after_seconds,
+            self._config.min_bids_to_accept,
+        )
+        while self._running:
+            try:
+                await self.process_open_tasks()
+            except RECOVERABLE_DEPENDENCY_ERRORS:
+                logger.exception(
+                    "Acceptance pass failed on a dependency error; retrying in %ss",
+                    retry_backoff_seconds,
+                )
+                await asyncio.sleep(retry_backoff_seconds)
+                continue
+            await asyncio.sleep(self._config.acceptance_poll_interval_seconds)
+
+    def stop(self) -> None:
+        """Signal the acceptance loop to stop after the current cycle."""
+        self._running = False
+
+
+class _NotEligible(Exception):
+    """Abort fresh preparation without publishing an acceptance intent."""

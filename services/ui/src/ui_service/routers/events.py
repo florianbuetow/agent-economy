@@ -1,13 +1,13 @@
 """Events route handlers."""
 
-from __future__ import annotations
+from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Header, Query
 from service_commons.exceptions import ServiceError
 from sse_starlette.sse import EventSourceResponse
 
 from ui_service.config import get_settings
-from ui_service.core.state import get_app_state
+from ui_service.core.deps import DbConn, get_db
 from ui_service.schemas import EventItem, EventsResponse
 from ui_service.services import events as events_service
 
@@ -16,6 +16,7 @@ router = APIRouter()
 
 @router.get("/events")  # nosemgrep
 async def get_events(
+    db: DbConn,
     limit: str = Query("50"),
     before: str | None = Query(None),
     after: str | None = Query(None),
@@ -53,15 +54,6 @@ async def get_events(
         except ValueError:
             raise ServiceError("invalid_parameter", "after must be an integer", 400, {}) from None
 
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
     events_list, has_more = await events_service.get_events(
         db,
         limit_int,
@@ -85,22 +77,34 @@ async def get_events(
 
 
 @router.get("/events/stream")  # nosemgrep
-async def stream_events(last_event_id: int = Query(0)) -> EventSourceResponse:
-    """Server-Sent Events stream of economy events."""
-    state = get_app_state()
-    db = state.db
-    if db is None:
-        raise ServiceError(
-            error="database_unavailable",
-            message="Database not available yet",
-            status_code=503,
-            details=None,
-        )
+async def stream_events(
+    last_event_id: int = Query(0),
+    last_event_id_header: Annotated[str | None, Header(alias="Last-Event-ID")] = None,
+) -> EventSourceResponse:
+    """Server-Sent Events stream of economy events.
+
+    A browser reconnect re-requests the original URL (original cursor) and adds
+    the ``Last-Event-ID`` header carrying the last delivered id. The stream
+    resumes from the larger of the two so no event is replayed.
+    """
+    cursor = last_event_id
+    if last_event_id_header is not None:
+        try:
+            header_id = int(last_event_id_header)
+        except ValueError:
+            raise ServiceError(
+                "invalid_parameter",
+                "Last-Event-ID must be an integer",
+                400,
+                {},
+            ) from None
+        cursor = max(cursor, header_id)
+    db = get_db()
     settings = get_settings()
     return EventSourceResponse(
         events_service.stream_events(
             db,
-            last_event_id,
+            cursor,
             settings.sse.batch_size,
             settings.sse.poll_interval_seconds,
             settings.sse.keepalive_interval_seconds,

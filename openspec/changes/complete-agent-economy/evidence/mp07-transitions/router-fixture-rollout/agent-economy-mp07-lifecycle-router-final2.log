@@ -1,0 +1,137 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 30 items
+
+tests/unit/routers/test_submission.py .......F....F...F.                 [ 60%]
+tests/unit/routers/test_lifecycle.py F.FFF.FFFFFF                        [100%]
+
+=================================== FAILURES ===================================
+____ TestDeliverableSubmission.test_sub_08_after_execution_deadline_expired ____
+tests/unit/routers/test_submission.py:287: in test_sub_08_after_execution_deadline_expired
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10b3b4790> == ('escrow_rele...73eb2a60b7de')
+E     
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-19 02:37:14", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/tasks/t-5883d9dc-45f2-43c7-9fd0-0ae07f6031cf/submit"}}
+__________ TestApproval.test_app_04_approve_releases_escrow_to_worker __________
+tests/unit/routers/test_submission.py:406: in test_app_04_approve_releases_escrow_to_worker
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10b5d9c00> == ('escrow_rele...dd709a578d9b')
+E     
+E     Use -v to get more diff
+____________ TestApproval.test_app_08_review_deadline_auto_approval ____________
+tests/unit/routers/test_submission.py:508: in test_app_08_review_deadline_auto_approval
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10b24b4f0> == ('escrow_rele...0b08b6ff821b')
+E     
+E     Use -v to get more diff
+______________________ TestLifecycle.test_full_happy_path ______________________
+tests/unit/routers/test_lifecycle.py:167: in test_full_happy_path
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10b4fbdc0> == ('escrow_rele...718ef8eb715f')
+E     
+E     Use -v to get more diff
+__________________ TestLifecycle.test_bidding_deadline_expiry __________________
+tests/unit/routers/test_lifecycle.py:280: in test_bidding_deadline_expiry
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10b1ae470> == ('escrow_rele...7e34a169345d')
+E     
+E     Use -v to get more diff
+_________________ TestLifecycle.test_execution_deadline_expiry _________________
+tests/unit/routers/test_lifecycle.py:332: in test_execution_deadline_expiry
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10b0452a0> == ('escrow_rele...3eb72c0bfbe5')
+E     
+E     Use -v to get more diff
+_______________ TestLifecycle.test_review_deadline_auto_approves _______________
+tests/unit/routers/test_lifecycle.py:391: in test_review_deadline_auto_approves
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10b1ccbe0> == ('escrow_rele...a3b58f462065')
+E     
+E     Use -v to get more diff
+________________ TestLifecycle.test_cannot_bid_on_expired_task _________________
+tests/unit/routers/test_lifecycle.py:472: in test_cannot_bid_on_expired_task
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10af49750> == ('escrow_rele...7bb2833363ea')
+E     
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/tasks/t-84277351-e055-429b-90f3-61a0ea0280be/bids"}}
+____________ TestLifecycle.test_cannot_submit_on_expired_execution _____________
+tests/unit/routers/test_lifecycle.py:531: in test_cannot_submit_on_expired_execution
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10b1f2e30> == ('escrow_rele...7b71e7739a7a')
+E     
+E     Use -v to get more diff
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2025-01-01 00:00:02", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "cutoff_reached", "status_code": 409, "path": "/tasks/t-38a8812e-dffe-4b0b-a94d-6b8bb6e5e481/submit"}}
+___________ TestLifecycle.test_terminal_status_blocks_all_mutations ____________
+tests/unit/routers/test_lifecycle.py:561: in test_terminal_status_blocks_all_mutations
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10b18ace0> == ('escrow_rele...d092044885b6')
+E     
+E     Use -v to get more diff
+_________ TestLifecycle.test_deadline_does_not_affect_terminal_states __________
+tests/unit/routers/test_lifecycle.py:628: in test_deadline_does_not_affect_terminal_states
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10b637730> == ('escrow_rele...c694aeeea243')
+E     
+E     Use -v to get more diff
+___________ TestLifecycle.test_terminal_status_permanent_across_gets ___________
+tests/unit/routers/test_lifecycle.py:688: in test_terminal_status_permanent_across_gets
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10a3c5270> == ('escrow_rele...c9490f5c1e03')
+E     
+E     Use -v to get more diff
+_______________ TestLifecycle.test_review_period_race_first_wins _______________
+tests/unit/routers/test_lifecycle.py:729: in test_review_period_race_first_wins
+    _assert_release(
+tests/unit/routers/test_submission.py:62: in _assert_release
+    assert store.writer.connection.execute(
+E   AssertionError: assert <sqlite3.Row ...t 0x10b230490> == ('escrow_rele...ee150a8604fe')
+E     
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/unit/routers/test_submission.py::TestDeliverableSubmission::test_sub_08_after_execution_deadline_expired
+FAILED tests/unit/routers/test_submission.py::TestApproval::test_app_04_approve_releases_escrow_to_worker
+FAILED tests/unit/routers/test_submission.py::TestApproval::test_app_08_review_deadline_auto_approval
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_full_happy_path
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_bidding_deadline_expiry
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_execution_deadline_expiry
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_review_deadline_auto_approves
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_cannot_bid_on_expired_task
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_cannot_submit_on_expired_execution
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_terminal_status_blocks_all_mutations
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_deadline_does_not_affect_terminal_states
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_terminal_status_permanent_across_gets
+FAILED tests/unit/routers/test_lifecycle.py::TestLifecycle::test_review_period_race_first_wins
+======================== 13 failed, 17 passed in 22.23s ========================

@@ -5,12 +5,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, field_validator
+from service_auth.gateway import GatewaySignerConfig
 from service_commons.config import (
     REDACTION_MARKER,
     create_settings_loader,
     get_safe_model_config,
 )
 from service_commons.config import get_config_path as resolve_config_path
+from service_commons.telemetry import TelemetryConfig
+
+from court_service.judges.output import validate_rating
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -41,20 +45,22 @@ class LoggingConfig(BaseModel):
     directory: str
 
 
-class DatabaseConfig(BaseModel):
-    """Database configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    path: str
-
-
 class PlatformConfig(BaseModel):
     """Platform agent configuration."""
 
     model_config = ConfigDict(extra="forbid")
     agent_id: str = ""
     private_key_path: str | None = None
-    agent_config_path: str | None = None
+    agent_config_path: str
+
+    @field_validator("agent_config_path")
+    @classmethod
+    def agent_config_path_must_not_be_blank(cls, value: str) -> str:
+        """Require the load-only platform credential configuration."""
+        if not value.strip():
+            msg = "platform.agent_config_path must not be blank"
+            raise ValueError(msg)
+        return value
 
     @field_validator("private_key_path")
     @classmethod
@@ -75,6 +81,15 @@ class DisputesConfig(BaseModel):
     rebuttal_deadline_seconds: int
     max_claim_length: int
     max_rebuttal_length: int
+    # WP-11 (exception #11): feedback cutoffs and comment cap de-hardcoded off
+    # RulingOrchestrator's ruling->feedback-rating mapping.
+    feedback_extremely_satisfied_cutoff: int
+    feedback_satisfied_cutoff: int
+    feedback_comment_max_length: int
+    # Plan 0.3: a ruling run owns a dispute through a Gateway judging lease of
+    # this many seconds; the reclaim sweep resumes expired or released leases.
+    judging_lease_seconds: int
+    reclaim_interval_seconds: int
 
 
 class JudgeConfig(BaseModel):
@@ -87,6 +102,7 @@ class JudgeConfig(BaseModel):
     api_base: str | None = None
     api_key_env: str | None = None
     temperature: float | None = None
+    timeout_seconds: float | None = None
 
 
 class JudgesConfig(BaseModel):
@@ -94,7 +110,17 @@ class JudgesConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     panel_size: int
+    mock_worker_pct: int
+    # Plan 3.2: mock judges return these fixed quality findings (dev/test/CI).
+    mock_spec_quality: str
+    mock_delivery_quality: str
     judges: list[JudgeConfig]
+
+    @field_validator("mock_spec_quality", "mock_delivery_quality")
+    @classmethod
+    def validate_mock_rating(cls, value: str, info: Any) -> str:
+        """Mock findings must use the Reputation rating vocabulary."""
+        return validate_rating(str(info.field_name), value)
 
     @field_validator("judges")
     @classmethod
@@ -118,11 +144,52 @@ class JudgesConfig(BaseModel):
         return judges
 
 
+class EvidenceConfig(BaseModel):
+    """Plan 3.1: evidence limits and supported text formats for the judge bundle."""
+
+    model_config = ConfigDict(extra="forbid")
+    max_total_bytes: int
+    max_file_bytes: int
+    allowed_extensions: list[str]
+    allowed_content_types: list[str]
+
+    @field_validator("max_total_bytes", "max_file_bytes")
+    @classmethod
+    def limits_must_be_positive(cls, value: int, info: Any) -> int:
+        """Reject non-positive byte limits."""
+        if value < 1:
+            msg = f"evidence.{info.field_name} must be >= 1"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("allowed_extensions")
+    @classmethod
+    def extensions_must_be_dotted_lowercase(cls, value: list[str]) -> list[str]:
+        """Extensions are compared lowercase and include the leading dot."""
+        if not value or any(not e.startswith(".") or e != e.lower() for e in value):
+            msg = "evidence.allowed_extensions must be non-empty lowercase '.ext' values"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("allowed_content_types")
+    @classmethod
+    def content_types_must_be_lowercase(cls, value: list[str]) -> list[str]:
+        """Media types are compared lowercase without parameters."""
+        if not value or any(t != t.lower() or ";" in t or "/" not in t for t in value):
+            msg = "evidence.allowed_content_types must be non-empty lowercase media types"
+            raise ValueError(msg)
+        return value
+
+
 class RequestConfig(BaseModel):
     """Request validation configuration."""
 
     model_config = ConfigDict(extra="forbid")
     max_body_size: int
+
+
+class GatewaySigningConfig(GatewaySignerConfig):
+    """Court's shared strict Gateway signer configuration."""
 
 
 class DbGatewayConfig(BaseModel):
@@ -131,6 +198,7 @@ class DbGatewayConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     url: str
     timeout_seconds: int
+    signing: GatewaySigningConfig
 
 
 class Settings(BaseModel):
@@ -140,10 +208,11 @@ class Settings(BaseModel):
     service: ServiceConfig
     server: ServerConfig
     logging: LoggingConfig
-    database: DatabaseConfig
+    telemetry: TelemetryConfig
     platform: PlatformConfig
     disputes: DisputesConfig
     judges: JudgesConfig
+    evidence: EvidenceConfig
     request: RequestConfig
     db_gateway: DbGatewayConfig | None = None
 

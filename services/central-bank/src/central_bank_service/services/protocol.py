@@ -6,48 +6,69 @@ from typing import Protocol
 
 
 class LedgerStorageInterface(Protocol):
-    """Protocol defining the Central Bank storage interface."""
+    """Protocol defining the Central Bank storage interface.
 
-    def create_account(
+    Async (GAP-E2): the production implementation, LedgerDbClient, is backed by
+    the shared async GatewayClient — routers await every call directly.
+    """
+
+    async def create_account(
         self,
         account_id: str,
         initial_balance: int,
+        operation_id: str | None,
     ) -> dict[str, object]: ...
 
-    def get_account(self, account_id: str) -> dict[str, object] | None: ...
+    async def get_account(self, account_id: str) -> dict[str, object] | None: ...
 
-    def credit(
+    async def credit(
         self,
         account_id: str,
         amount: int,
         reference: str,
+        operation_id: str,
     ) -> dict[str, object]: ...
 
-    def get_transactions(self, account_id: str) -> list[dict[str, object]]: ...
+    async def get_transactions(self, account_id: str) -> list[dict[str, object]]: ...
 
-    def escrow_lock(
+    async def escrow_lock(
         self,
         payer_account_id: str,
         amount: int,
         task_id: str,
+        operation_id: str,
     ) -> dict[str, object]: ...
 
-    def escrow_release(
+    async def escrow_release(
         self,
         escrow_id: str,
         recipient_account_id: str,
+        operation_id: str,
+        source_reference: str,
     ) -> dict[str, object]: ...
 
-    def escrow_split(
+    async def escrow_split(
         self,
         escrow_id: str,
         worker_account_id: str,
         worker_pct: int,
         poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
     ) -> dict[str, object]: ...
 
-    def count_accounts(self) -> int: ...
+    async def escrow_settle(
+        self,
+        escrow_id: str,
+        worker_account_id: str,
+        worker_amount: int,
+        poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
+    ) -> dict[str, object]: ...
 
-    def total_escrowed(self) -> int: ...
+    async def count_accounts(self) -> int: ...
 
-    def close(self) -> None: ...
+    async def total_escrowed(self) -> int: ...
+
+    async def close(self) -> None: ...

@@ -3,9 +3,11 @@
 Usage::
 
     cd agents/
-    uv run python -m math_worker                  # legacy: flat config sections
     uv run python -m math_worker mathbot           # factory: named worker profile
     uv run python -m math_worker mathbot_openai    # factory: different profile
+
+A worker profile name is required. Profiles are defined in config.yaml's
+``workers:`` section and validated against roster.yaml.
 """
 
 from __future__ import annotations
@@ -14,30 +16,32 @@ import asyncio
 import logging
 import signal
 import sys
+from typing import TYPE_CHECKING
 
 import httpx
+from service_commons.config import get_config_path as resolve_config_path
 
-from base_agent.agent import BaseAgent
-from base_agent.config import load_agent_config
+from base_agent.runtime_intents import FileTaskIntentStore
+from base_agent.runtime_task_commands import (
+    RuntimeTaskCommands,
+    log_runtime_replay,
+    runtime_owner_from_agent,
+)
+from base_agent.telemetry import configure_observability
 from base_agent.worker_factory import WorkerFactory
-from math_worker.config import load_math_worker_settings
-from math_worker.llm_client import LLMClient
 from math_worker.loop import MathWorkerLoop
+
+if TYPE_CHECKING:
+    from base_agent.agent import BaseAgent
+    from math_worker.llm_client import LLMClient
 
 
 def _setup_logging() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S",
-        stream=sys.stderr,
-    )
+    configure_observability("math-worker")
 
 
-async def _register_and_create_account(agent: BaseAgent, logger: logging.Logger) -> None:
-    """Register the agent and create a bank account (idempotent)."""
-    await agent.register()
-    logger.info("Registered as agent_id=%s", agent.agent_id)
+async def _create_account(agent: BaseAgent, logger: logging.Logger) -> None:
+    """Create the account only after journal admission and lease acquisition."""
     try:
         await agent.create_account()
         logger.info("Bank account created for agent_id=%s", agent.agent_id)
@@ -49,28 +53,26 @@ async def _register_and_create_account(agent: BaseAgent, logger: logging.Logger)
 
 
 async def _run_loop(
-    agent: BaseAgent,
-    llm: LLMClient,
     loop: MathWorkerLoop,
     logger: logging.Logger,
 ) -> None:
     """Run the worker loop with graceful shutdown."""
-    stop_event = asyncio.Event()
 
     def _handle_signal() -> None:
         logger.info("Received shutdown signal")
         loop.stop()
-        stop_event.set()
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         asyncio.get_running_loop().add_signal_handler(sig, _handle_signal)
 
+    await loop.run()
+
+
+async def _close_clients(agent: BaseAgent, llm: LLMClient) -> None:
     try:
-        await loop.run()
-    finally:
         await llm.close()
+    finally:
         await agent.close()
-        logger.info("Math Worker Agent shut down cleanly")
 
 
 async def _main_factory(worker_name: str) -> None:
@@ -78,7 +80,10 @@ async def _main_factory(worker_name: str) -> None:
     _setup_logging()
     logger = logging.getLogger("math_worker")
 
-    factory = WorkerFactory()
+    config_path = resolve_config_path(
+        env_var_name="AGENT_CONFIG_PATH", default_filename="config.yaml"
+    )
+    factory = WorkerFactory(config_path=config_path)
     bundle = factory.create_math_worker(worker_name)
 
     logger.info(
@@ -87,36 +92,60 @@ async def _main_factory(worker_name: str) -> None:
         bundle.agent.name,
     )
 
-    await _register_and_create_account(bundle.agent, logger)
-    await _run_loop(bundle.agent, bundle.llm, bundle.loop, logger)
-
-
-async def _main_legacy() -> None:
-    """Launch a math worker via the legacy flat config sections."""
-    _setup_logging()
-    logger = logging.getLogger("math_worker")
-
-    llm_config, worker_config = load_math_worker_settings()
-    agent_config = load_agent_config(worker_config.handle)
-
-    logger.info("Starting Math Worker Agent (handle=%s)", worker_config.handle)
-    logger.info("LLM endpoint: %s model: %s", llm_config.base_url, llm_config.model_id)
-
-    agent = BaseAgent(agent_config)
-    await _register_and_create_account(agent, logger)
-
-    llm = LLMClient(llm_config)
-    loop = MathWorkerLoop(agent=agent, llm=llm, config=worker_config)
-    await _run_loop(agent, llm, loop, logger)
+    clients_closed = False
+    try:
+        await bundle.agent.register()
+        logger.info("Registered as agent_id=%s", bundle.agent.agent_id)
+        owner = runtime_owner_from_agent(
+            runtime_config=bundle.runtime_config,
+            agent=bundle.agent,
+            role="math-worker",
+            profile=bundle.profile_name,
+            handle=bundle.config.handle,
+        )
+        with FileTaskIntentStore(
+            root_directory=bundle.runtime_config.directory,
+            owner=owner,
+            diagnostic_limit=bundle.runtime_config.diagnostic_limit,
+            max_record_bytes=bundle.runtime_config.max_record_bytes,
+        ) as store:
+            try:
+                await _create_account(bundle.agent, logger)
+                commands = RuntimeTaskCommands(bundle.agent, store)
+                replayed = await commands.replay_unfinished()
+                log_runtime_replay(
+                    replayed, logger=logger, diagnostic_limit=bundle.runtime_config.diagnostic_limit
+                )
+                loop = MathWorkerLoop(
+                    agent=bundle.agent,
+                    llm=bundle.llm,
+                    config=bundle.config,
+                    commands=commands,
+                )
+                await _run_loop(loop, logger)
+            finally:
+                clients_closed = True
+                await _close_clients(bundle.agent, bundle.llm)
+    finally:
+        if not clients_closed:
+            await _close_clients(bundle.agent, bundle.llm)
+        logger.info("Math Worker Agent clients closed")
 
 
 def main() -> None:
-    """Sync entry point."""
-    if len(sys.argv) > 1:
-        worker_name = sys.argv[1]
-        asyncio.run(_main_factory(worker_name))
-    else:
-        asyncio.run(_main_legacy())
+    """Sync entry point.
+
+    Requires a worker profile name (config.yaml's ``workers:`` section).
+    Fails loudly with a usage message rather than silently falling back
+    to any implicit default.
+    """
+    if len(sys.argv) <= 1:
+        sys.exit(
+            "Usage: python -m math_worker <worker_profile_name>\n"
+            "Worker profiles are defined in config.yaml's 'workers:' section."
+        )
+    worker_name = sys.argv[1]
+    asyncio.run(_main_factory(worker_name))
 
 
 if __name__ == "__main__":

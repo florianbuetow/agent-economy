@@ -1,0 +1,24 @@
+{
+  "claims": {
+    "parent": 9202,
+    "exit_code": 0,
+    "passed": 89,
+    "warnings": 1,
+    "scope": "MP02 authority/write admission plus native HTTP operation boundary. No production changes. Negative predicates and whole-DB nonmutation unchanged; Board valid control now native submit_bid200."
+  },
+  "review": "APPROVE by /root/mp07_board_rollout_review after archived-diff inspection; no substantive findings. Wider Gateway failures remain open.",
+  "artifacts": {
+    "agent-economy-mp07-gateway-authority-fixture-format.log": "3bc53bf3e981a98a34a852e175bf9b77af841edea74fca595d9aedcbaf9a4938",
+    "agent-economy-mp07-gateway-authority-fixture-green.log": "0a8fd065224d926494ba4a920d5dbb36dc622a6fee4e0122a35f4d32e9089bda",
+    "agent-economy-mp07-gateway-authority-fixture-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "baseline/test_mp02_gateway_authority.py": "65927ff49ca8db37eecafb193900ebdc2e1c47d61a776f1efb4191f391f741fa",
+    "baseline/test_mp02_gateway_write_admission.py": "5dba334ecc2c01ecdd0bc3c13a2f4c2db871f6b34e57b114919ebc8a1983df56",
+    "agent-economy-mp07-gateway-three-fixtures-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-gateway-three-fixtures-format.log": "177f260a5645724013185e4b140c7045cc39e56c0c97b120f5cb23599f85f0de"
+  },
+  "sources": {
+    "services/db-gateway/tests/unit/test_mp02_gateway_authority.py": "aeb0b8136be3cecaf08075eadcb540516ca41f651e3723577929a545eb92a1b9",
+    "services/db-gateway/tests/unit/test_mp02_gateway_write_admission.py": "752371d004f42cb8fec5335eb25d7c607455af29d8be310e96b675a706a31b47",
+    "docs/plans/2026-10-18-mp07-gateway-authority-fixture-reconciliation.md": "7c61d39f6ab40d94aabf024ceaacb34241b4a050d6d344aba8fb6f64b8989182"
+  }
+}

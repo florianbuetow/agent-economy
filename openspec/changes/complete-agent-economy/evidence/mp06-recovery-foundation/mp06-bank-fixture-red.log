@@ -1,0 +1,223 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/central-bank
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 14 items
+
+tests/unit/test_ledger_store_contract.py .E.E.E.E.E.E.E                  [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of TestEscrowLockTransactionShape.test_writes_escrow_lock_type_with_bare_task_id_reference[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:191: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:141: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:29: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowReleaseTransactionShape.test_writes_escrow_release_type_with_bare_escrow_id_reference[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:191: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:141: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:29: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowSplitTransactionShape.test_both_legs_write_escrow_release_type_with_bare_escrow_id_reference[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:191: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:141: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:29: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowSplitTransactionShape.test_zero_amount_worker_leg_is_not_written[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:191: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:141: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:29: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowSplitTransactionShape.test_zero_amount_poster_leg_is_not_written[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:191: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:141: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:29: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowSplitTransactionShape.test_rejects_poster_that_does_not_match_the_escrow_payer[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:191: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:141: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:29: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowSplitTransactionShape.test_rejects_out_of_range_worker_pct_with_invalid_amount[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:191: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:141: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:29: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   recovery
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+=========================== short test summary info ============================
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowLockTransactionShape::test_writes_escrow_lock_type_with_bare_task_id_reference[gateway]
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowReleaseTransactionShape::test_writes_escrow_release_type_with_bare_escrow_id_reference[gateway]
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_both_legs_write_escrow_release_type_with_bare_escrow_id_reference[gateway]
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_worker_leg_is_not_written[gateway]
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_poster_leg_is_not_written[gateway]
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_poster_that_does_not_match_the_escrow_payer[gateway]
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_out_of_range_worker_pct_with_invalid_amount[gateway]
+========================= 7 passed, 7 errors in 0.16s ==========================

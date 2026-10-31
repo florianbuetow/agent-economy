@@ -1,0 +1,255 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/court
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 46 items
+
+tests/unit/test_mp07_ruling_producer.py .....FFFFFFFFFFFFFFFFFFFFFFFFFFF [ 69%]
+FFFFFFFFFFFF..                                                           [100%]
+
+=================================== FAILURES ===================================
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[nonmapping_ack] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[missing_operation] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[pending] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_protocol] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[foreign_current_task] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[foreign_operation] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[foreign_task] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_command] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_source_status] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_source_version] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_target_status] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_target_version] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_effect_kind] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_effect_state] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_effect_operation] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_receipt_reference] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_event] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[nonpositive_event] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[bool_event] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[missing_result] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[null_result] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[nonmapping_result] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_task] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_command] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_status] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_version] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_effect_reference] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_reward] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_ruling_id] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_worker_pct] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_summary] _
+tests/unit/test_mp07_ruling_producer.py:495: in test_invalid_task_board_ack_stops_before_feedback_and_local_persist
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+__________ test_same_snapshot_retry_preserves_native_ruling_identity ___________
+tests/unit/test_mp07_ruling_producer.py:531: in test_same_snapshot_retry_preserves_native_ruling_identity
+    assert payloads[0] == {
+E   AssertionError: assert {'action': 'r...0000001', ...} == {'action': 'r...0000001', ...}
+E     
+E     Omitting 5 identical items, use -vv to show
+E     Right contains 2 more items:
+E     {'expected_lifecycle_version': 3,
+E      'operation_id': 'op-19006f07-e09a-59e7-a986-707f384bf7f5'}
+E     Use -v to get more diff
+___ test_invalid_task_snapshot_version_stops_before_external_calls[missing] ____
+tests/unit/test_mp07_ruling_producer.py:555: in test_invalid_task_snapshot_version_stops_before_external_calls
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_____ test_invalid_task_snapshot_version_stops_before_external_calls[True] _____
+tests/unit/test_mp07_ruling_producer.py:555: in test_invalid_task_snapshot_version_stops_before_external_calls
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+______ test_invalid_task_snapshot_version_stops_before_external_calls[-1] ______
+tests/unit/test_mp07_ruling_producer.py:555: in test_invalid_task_snapshot_version_stops_before_external_calls
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_____ test_invalid_task_snapshot_version_stops_before_external_calls[1.5] ______
+tests/unit/test_mp07_ruling_producer.py:555: in test_invalid_task_snapshot_version_stops_before_external_calls
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+______ test_invalid_task_snapshot_version_stops_before_external_calls[3] _______
+tests/unit/test_mp07_ruling_producer.py:555: in test_invalid_task_snapshot_version_stops_before_external_calls
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_ test_invalid_task_snapshot_version_stops_before_external_calls[9223372036854775808] _
+tests/unit/test_mp07_ruling_producer.py:555: in test_invalid_task_snapshot_version_stops_before_external_calls
+    with pytest.raises(ServiceError) as raised:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'service_commons.exceptions.ServiceError'>
+_______ test_stale_version_conflict_retries_same_attempt_without_refresh _______
+tests/unit/test_mp07_ruling_producer.py:611: in test_stale_version_conflict_retries_same_attempt_without_refresh
+    assert raised.value.error == "task_version_conflict"
+E   AssertionError: assert 'task_board_unavailable' == 'task_version_conflict'
+E     
+E     - task_version_conflict
+E     + task_board_unavailable
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[nonmapping_ack]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[missing_operation]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[pending]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_protocol]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[foreign_current_task]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[foreign_operation]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[foreign_task]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_command]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_source_status]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_source_version]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_target_status]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_target_version]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_effect_kind]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_effect_state]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_effect_operation]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_receipt_reference]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_event]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[nonpositive_event]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[bool_event]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[missing_result]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[null_result]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[nonmapping_result]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_task]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_command]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_status]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_version]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_effect_reference]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_result_reward]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_ruling_id]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_worker_pct]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_board_ack_stops_before_feedback_and_local_persist[wrong_summary]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_same_snapshot_retry_preserves_native_ruling_identity
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_snapshot_version_stops_before_external_calls[missing]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_snapshot_version_stops_before_external_calls[True]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_snapshot_version_stops_before_external_calls[-1]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_snapshot_version_stops_before_external_calls[1.5]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_snapshot_version_stops_before_external_calls[3]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_invalid_task_snapshot_version_stops_before_external_calls[9223372036854775808]
+FAILED tests/unit/test_mp07_ruling_producer.py::test_stale_version_conflict_retries_same_attempt_without_refresh
+========================= 39 failed, 7 passed in 1.47s =========================

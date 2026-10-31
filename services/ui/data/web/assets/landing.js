@@ -16,7 +16,7 @@
       { label: 'Active Agents', value: S.agents.active, suffix: '', note: 'of ' + S.agents.total + ' registered', noteUp: null },
       { label: 'Tasks Completed', value: S.tasks.completedAll, suffix: '+', note: 'all-time', noteUp: null },
       { label: 'Spec Quality', value: Math.round(S.specQ.avg), suffix: '%', note: (S.specQ.delta >= 0 ? '\u2191 ' : '\u2193 ') + Math.abs(S.specQ.delta).toFixed(1) + '% this week', noteUp: S.specQ.delta > 0 ? true : S.specQ.delta < 0 ? false : null },
-      { label: 'Economy Phase', value: null, text: S.phase.toUpperCase(), suffix: '', note: 'tasks ' + (S.taskCreationTrend === 'increasing' ? '\u2191' : S.taskCreationTrend === 'decreasing' ? '\u2193' : '\u2192'), noteUp: S.taskCreationTrend === 'increasing' ? true : S.taskCreationTrend === 'decreasing' ? false : null }
+      { label: 'Economy Phase', value: null, text: S.phase.toUpperCase(), suffix: '', note: 'tasks ' + ATE.trendVisual(S.taskCreationTrend).arrow, noteUp: ATE.trendVisual(S.taskCreationTrend).up }
     ];
 
     var strip = document.getElementById('kpi-strip');
@@ -78,18 +78,46 @@
     var isRebuild = boardBuilt;
     boardBuilt = true;
 
-    grid.innerHTML = cells.map(function(cell, index) {
+    cells.forEach(function(cell, index) {
+      var node = grid.children[index];
+      if (!node) {
+        node = document.createElement('div');
+        node.className = 'board-cell';
+        node.innerHTML = '<div class="cell-label"></div><div class="cell-value"></div><div class="cell-delta"></div><div class="cell-spark"></div>';
+        if (!isRebuild) node.style.animation = 'fade-in-up .5s ease-out ' + (index * 0.04) + 's both';
+        grid.appendChild(node);
+      }
       var deltaClass = cell.up === true ? 'up' : cell.up === false ? 'down' : 'muted';
-      var max = cell.spark.length > 0 ? Math.max.apply(null, cell.spark) : 1;
       var sparkColor = cell.up === true ? 'var(--green)' : cell.up === false ? 'var(--red)' : 'var(--text-dim)';
-      var bars = cell.spark.map(function(value, barIndex) {
-        return '<div class="bar" style="height:' + (value / max * 100).toFixed(0) + '%;background:' + sparkColor + ';opacity:' + (0.4 + 0.6 * barIndex / cell.spark.length) + (isRebuild ? '' : ';animation-delay:' + (barIndex * 0.03) + 's') + '"></div>';
-      }).join('');
       var arrow = cell.up === true ? '\u25b2' : cell.up === false ? '\u25bc' : '\u2013';
       var valueColor = cell.up === true ? 'var(--green)' : cell.up === false ? 'var(--red)' : 'var(--text)';
-      var animStyle = isRebuild ? '' : 'animation: fade-in-up .5s ease-out ' + (index * 0.04) + 's both';
-      return '<div class="board-cell" style="' + animStyle + '"><div class="cell-label">' + cell.label + '</div><div class="cell-value" style="color:' + valueColor + '">' + cell.value + '</div><div class="cell-delta ' + deltaClass + '">' + arrow + ' ' + cell.delta + '</div><div class="cell-spark">' + bars + '</div></div>';
-    }).join('');
+      node.querySelector('.cell-label').textContent = cell.label;
+      var valueNode = node.querySelector('.cell-value');
+      valueNode.textContent = cell.value;
+      valueNode.style.color = valueColor;
+      var deltaNode = node.querySelector('.cell-delta');
+      deltaNode.className = 'cell-delta ' + deltaClass;
+      deltaNode.textContent = arrow + ' ' + cell.delta;
+      var sparkNode = node.querySelector('.cell-spark');
+      var max = Math.max.apply(null, [0].concat(cell.spark));
+      if (max === 0) max = 1;
+      while (sparkNode.children.length > cell.spark.length) {
+        sparkNode.lastElementChild.remove();
+      }
+      cell.spark.forEach(function(value, barIndex) {
+        var bar = sparkNode.children[barIndex];
+        if (!bar) {
+          bar = document.createElement('div');
+          bar.className = 'bar';
+          if (isRebuild) bar.style.animation = 'none';
+          else bar.style.animationDelay = (barIndex * 0.03) + 's';
+          sparkNode.appendChild(bar);
+        }
+        bar.style.height = (value / max * 100).toFixed(0) + '%';
+        bar.style.background = sparkColor;
+        bar.style.opacity = String(0.4 + 0.6 * barIndex / cell.spark.length);
+      });
+    });
 
     if (!clockIntervalId) {
       var clockEl = document.getElementById('board-clock');
@@ -119,13 +147,17 @@
         var amount = isWorker ? agent.earned : agent.spent;
         var amountLabel = isWorker ? 'EARNED' : 'SPENT';
         var amountColor = isWorker ? 'var(--green)' : 'var(--orange)';
-        var streak = isWorker && agent.streak >= 3 ? '<span style="font-size:8px;color:var(--yellow);margin-left:4px">\ud83d\udd25' + agent.streak + '</span>' : '';
-        return '<div class="lb-row" style="animation: slide-right .4s ease-out ' + (index * 0.08) + 's both"><div class="' + rankClass + '">' + (index + 1) + '</div><div class="lb-avatar" style="background:' + agent.color + '22;color:' + agent.color + ';border:1px solid ' + agent.color + '44">' + initials + '</div><div class="lb-info"><div class="lb-name">' + agent.name + streak + '</div><div class="lb-stat">' + stat + '</div><div class="lb-quality"><span class="star-group"><span class="stars">\u2605\u2605\u2605</span>' + quality.es + '</span><span class="star-group"><span class="stars">\u2605\u2605</span>' + quality.s + '</span><span class="star-group"><span class="stars">\u2605</span>' + quality.d + '</span></div></div><div class="lb-earnings"><div class="amount" style="color:' + amountColor + '">' + amount.toLocaleString() + ' \u00a9</div><div class="label-sm">' + amountLabel + '</div></div></div>';
+        return '<div class="lb-row" data-agent-id="' + ATE.escapeHTML(agent.id) + '" style="cursor:pointer;animation: slide-right .4s ease-out ' + (index * 0.08) + 's both"><div class="' + rankClass + '">' + (index + 1) + '</div><div class="lb-avatar" style="background:' + agent.color + '22;color:' + agent.color + ';border:1px solid ' + agent.color + '44">' + initials + '</div><div class="lb-info"><div class="lb-name">' + ATE.escapeHTML(agent.name) + '</div><div class="lb-stat">' + stat + '</div><div class="lb-quality"><span class="star-group"><span class="stars">\u2605\u2605\u2605</span>' + quality.es + '</span><span class="star-group"><span class="stars">\u2605\u2605</span>' + quality.s + '</span><span class="star-group"><span class="stars">\u2605</span>' + quality.d + '</span></div></div><div class="lb-earnings"><div class="amount" style="color:' + amountColor + '">' + amount.toLocaleString() + ' \u00a9</div><div class="label-sm">' + amountLabel + '</div></div></div>';
       }).join('');
       return '<div class="lb-panel"><div class="lb-panel-header"><span class="lb-panel-title" style="color:' + (isWorker ? 'var(--green)' : 'var(--orange)') + '">' + title + '</span><span class="label">' + entries.length + ' agents</span></div>' + rows + '</div>';
     }
 
     container.innerHTML = renderPanel('\ud83c\udfd7 Top Workers (by earnings)', workers, true) + renderPanel('\ud83d\udccb Top Posters (by spend)', posters, false);
+    container.querySelectorAll('.lb-row[data-agent-id]').forEach(function(row) {
+      row.addEventListener('click', function() {
+        window.location = '/agent.html?agent_id=' + encodeURIComponent(row.getAttribute('data-agent-id'));
+      });
+    });
   }
 
   function buildNewsTrack() {
@@ -171,14 +203,14 @@
       'of ' + S.agents.total + ' registered',
       'all-time',
       (S.specQ.delta >= 0 ? '\u2191 ' : '\u2193 ') + Math.abs(S.specQ.delta).toFixed(1) + '% this week',
-      'tasks ' + (S.taskCreationTrend === 'increasing' ? '\u2191' : S.taskCreationTrend === 'decreasing' ? '\u2193' : '\u2192')
+      'tasks ' + ATE.trendVisual(S.taskCreationTrend).arrow
     ];
     var noteUps = [
       true,
       null,
       null,
       S.specQ.delta > 0 ? true : S.specQ.delta < 0 ? false : null,
-      S.taskCreationTrend === 'increasing' ? true : S.taskCreationTrend === 'decreasing' ? false : null
+      ATE.trendVisual(S.taskCreationTrend).up
     ];
     var noteEls = document.querySelectorAll('.kpi-note');
     noteEls.forEach(function(el, index) {

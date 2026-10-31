@@ -1,0 +1,19 @@
+{
+  "parent": {
+    "handle": 29681,
+    "exit_code": 0,
+    "command": "just ci-quiet",
+    "all_gates_passed": true
+  },
+  "snapshot_verification": {
+    "scoped_sources": 179,
+    "ordinary_logs": 202,
+    "unchanged": true
+  },
+  "limits": "Gateway componentCI only. Fullroot andremainingCore/Visionwork notcomplete. Old1068/79/12discovery superseded by thiscomponentgate; archivedfortraceability.",
+  "artifacts": {
+    "agent-economy-mp07-gateway-ci-final2-after.json": "26834ca45f1780c7d8c6612a6f497b2a3ca68fe4943e0b7efc308217b1441a16",
+    "agent-economy-mp07-gateway-parent-ci-final2.log": "7292462d160c9b628366654574915ea4ce336d941670b11acc54977d7c43e5a2",
+    "agent-economy-mp07-gateway-ci-final2-before.json": "26834ca45f1780c7d8c6612a6f497b2a3ca68fe4943e0b7efc308217b1441a16"
+  }
+}

@@ -1,0 +1,191 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 12 items
+
+tests/unit/math_worker/test_mp07_native_intent_regressions.py FFFFFFFFFF [ 83%]
+F.                                                                       [100%]
+
+=================================== FAILURES ===================================
+_ test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[boolean] _
+tests/unit/math_worker/test_mp07_native_intent_regressions.py:70: in test_bidding_rejects_invalid_reward_before_decision_identity_or_transport
+    await loop._phase_bidding(worker_fixtures._TASK_ID)
+src/math_worker/loop.py:265: in _phase_bidding
+    return await self._commands.execute(task_id=task_id, slot="bid", prepare=prepare)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_commands.py:140: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/math_worker/loop.py:250: in prepare
+    response = await self._llm.complete(BID_AMOUNT_SYSTEM, prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:2321: in _execute_mock_call
+    raise effect
+E   AssertionError: invalid reward called LLM
+------------------------------ Captured log call -------------------------------
+WARNING  math_worker.loop:loop.py:472 Could not fetch balance, using 0
+_ test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[numeric-string] _
+tests/unit/math_worker/test_mp07_native_intent_regressions.py:70: in test_bidding_rejects_invalid_reward_before_decision_identity_or_transport
+    await loop._phase_bidding(worker_fixtures._TASK_ID)
+src/math_worker/loop.py:265: in _phase_bidding
+    return await self._commands.execute(task_id=task_id, slot="bid", prepare=prepare)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_commands.py:140: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/math_worker/loop.py:250: in prepare
+    response = await self._llm.complete(BID_AMOUNT_SYSTEM, prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:2321: in _execute_mock_call
+    raise effect
+E   AssertionError: invalid reward called LLM
+------------------------------ Captured log call -------------------------------
+WARNING  math_worker.loop:loop.py:472 Could not fetch balance, using 0
+_ test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[integral-float] _
+tests/unit/math_worker/test_mp07_native_intent_regressions.py:70: in test_bidding_rejects_invalid_reward_before_decision_identity_or_transport
+    await loop._phase_bidding(worker_fixtures._TASK_ID)
+src/math_worker/loop.py:265: in _phase_bidding
+    return await self._commands.execute(task_id=task_id, slot="bid", prepare=prepare)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_commands.py:140: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/math_worker/loop.py:250: in prepare
+    response = await self._llm.complete(BID_AMOUNT_SYSTEM, prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:2321: in _execute_mock_call
+    raise effect
+E   AssertionError: invalid reward called LLM
+------------------------------ Captured log call -------------------------------
+WARNING  math_worker.loop:loop.py:472 Could not fetch balance, using 0
+_ test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[fractional-float] _
+tests/unit/math_worker/test_mp07_native_intent_regressions.py:70: in test_bidding_rejects_invalid_reward_before_decision_identity_or_transport
+    await loop._phase_bidding(worker_fixtures._TASK_ID)
+src/math_worker/loop.py:265: in _phase_bidding
+    return await self._commands.execute(task_id=task_id, slot="bid", prepare=prepare)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_commands.py:140: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/math_worker/loop.py:250: in prepare
+    response = await self._llm.complete(BID_AMOUNT_SYSTEM, prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:2321: in _execute_mock_call
+    raise effect
+E   AssertionError: invalid reward called LLM
+------------------------------ Captured log call -------------------------------
+WARNING  math_worker.loop:loop.py:472 Could not fetch balance, using 0
+_ test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[sqlite-overflow] _
+tests/unit/math_worker/test_mp07_native_intent_regressions.py:70: in test_bidding_rejects_invalid_reward_before_decision_identity_or_transport
+    await loop._phase_bidding(worker_fixtures._TASK_ID)
+src/math_worker/loop.py:265: in _phase_bidding
+    return await self._commands.execute(task_id=task_id, slot="bid", prepare=prepare)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_commands.py:140: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/math_worker/loop.py:250: in prepare
+    response = await self._llm.complete(BID_AMOUNT_SYSTEM, prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:2321: in _execute_mock_call
+    raise effect
+E   AssertionError: invalid reward called LLM
+------------------------------ Captured log call -------------------------------
+WARNING  math_worker.loop:loop.py:472 Could not fetch balance, using 0
+_ test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[zero] _
+tests/unit/math_worker/test_mp07_native_intent_regressions.py:70: in test_bidding_rejects_invalid_reward_before_decision_identity_or_transport
+    await loop._phase_bidding(worker_fixtures._TASK_ID)
+src/math_worker/loop.py:265: in _phase_bidding
+    return await self._commands.execute(task_id=task_id, slot="bid", prepare=prepare)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_commands.py:140: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/math_worker/loop.py:250: in prepare
+    response = await self._llm.complete(BID_AMOUNT_SYSTEM, prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:2321: in _execute_mock_call
+    raise effect
+E   AssertionError: invalid reward called LLM
+------------------------------ Captured log call -------------------------------
+WARNING  math_worker.loop:loop.py:472 Could not fetch balance, using 0
+_ test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[negative] _
+tests/unit/math_worker/test_mp07_native_intent_regressions.py:70: in test_bidding_rejects_invalid_reward_before_decision_identity_or_transport
+    await loop._phase_bidding(worker_fixtures._TASK_ID)
+src/math_worker/loop.py:265: in _phase_bidding
+    return await self._commands.execute(task_id=task_id, slot="bid", prepare=prepare)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_commands.py:140: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/math_worker/loop.py:250: in prepare
+    response = await self._llm.complete(BID_AMOUNT_SYSTEM, prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/flo/.local/share/uv/python/cpython-3.13.5-macos-aarch64-none/lib/python3.13/unittest/mock.py:2321: in _execute_mock_call
+    raise effect
+E   AssertionError: invalid reward called LLM
+------------------------------ Captured log call -------------------------------
+WARNING  math_worker.loop:loop.py:472 Could not fetch balance, using 0
+_ test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[missing] _
+tests/unit/math_worker/test_mp07_native_intent_regressions.py:70: in test_bidding_rejects_invalid_reward_before_decision_identity_or_transport
+    await loop._phase_bidding(worker_fixtures._TASK_ID)
+src/math_worker/loop.py:265: in _phase_bidding
+    return await self._commands.execute(task_id=task_id, slot="bid", prepare=prepare)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/base_agent/runtime_task_commands.py:140: in execute
+    candidate = await prepare()
+                ^^^^^^^^^^^^^^^
+src/math_worker/loop.py:245: in prepare
+    reward = int(task.get("reward", 0))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'
+_ test_scanning_excludes_invalid_reward_and_keeps_valid_candidate_eligible[boolean] _
+tests/unit/math_worker/test_mp07_native_intent_regressions.py:124: in test_scanning_excludes_invalid_reward_and_keeps_valid_candidate_eligible
+    assert worker_fixtures._TASK_ID not in prompt
+E   AssertionError: assert 't-20000000-...000000000001' not in 'Your curren...ger answer\n'
+E     
+E     't-20000000-0000-4000-8000-000000000001' is contained here:
+E        task_id: t-20000000-0000-4000-8000-000000000001 ---
+E       Title: Malformed reward candidate
+E       Reward: True
+E       Spec: Return the exact integer answer
+E       ...
+E     
+E     ...Full output truncated (4 lines hidden), use '-vv' to show
+_ test_scanning_excludes_invalid_reward_and_keeps_valid_candidate_eligible[numeric-string] _
+tests/unit/math_worker/test_mp07_native_intent_regressions.py:115: in test_scanning_excludes_invalid_reward_and_keeps_valid_candidate_eligible
+    selected = await worker_fixtures._loop(worker_agent, llm, commands)._phase_scanning()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/math_worker/loop.py:212: in _phase_scanning
+    if self._config.min_reward <= t.get("reward", 0) <= self._config.max_reward
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: '<=' not supported between instances of 'int' and 'str'
+_ test_scanning_excludes_invalid_reward_and_keeps_valid_candidate_eligible[float] _
+tests/unit/math_worker/test_mp07_native_intent_regressions.py:124: in test_scanning_excludes_invalid_reward_and_keeps_valid_candidate_eligible
+    assert worker_fixtures._TASK_ID not in prompt
+E   AssertionError: assert 't-20000000-...000000000001' not in 'Your curren...ger answer\n'
+E     
+E     't-20000000-0000-4000-8000-000000000001' is contained here:
+E        task_id: t-20000000-0000-4000-8000-000000000001 ---
+E       Title: Malformed reward candidate
+E       Reward: 100.0
+E       Spec: Return the exact integer answer
+E       ...
+E     
+E     ...Full output truncated (4 lines hidden), use '-vv' to show
+=========================== short test summary info ============================
+FAILED tests/unit/math_worker/test_mp07_native_intent_regressions.py::test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[boolean]
+FAILED tests/unit/math_worker/test_mp07_native_intent_regressions.py::test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[numeric-string]
+FAILED tests/unit/math_worker/test_mp07_native_intent_regressions.py::test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[integral-float]
+FAILED tests/unit/math_worker/test_mp07_native_intent_regressions.py::test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[fractional-float]
+FAILED tests/unit/math_worker/test_mp07_native_intent_regressions.py::test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[sqlite-overflow]
+FAILED tests/unit/math_worker/test_mp07_native_intent_regressions.py::test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[zero]
+FAILED tests/unit/math_worker/test_mp07_native_intent_regressions.py::test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[negative]
+FAILED tests/unit/math_worker/test_mp07_native_intent_regressions.py::test_bidding_rejects_invalid_reward_before_decision_identity_or_transport[missing]
+FAILED tests/unit/math_worker/test_mp07_native_intent_regressions.py::test_scanning_excludes_invalid_reward_and_keeps_valid_candidate_eligible[boolean]
+FAILED tests/unit/math_worker/test_mp07_native_intent_regressions.py::test_scanning_excludes_invalid_reward_and_keeps_valid_candidate_eligible[numeric-string]
+FAILED tests/unit/math_worker/test_mp07_native_intent_regressions.py::test_scanning_excludes_invalid_reward_and_keeps_valid_candidate_eligible[float]
+========================= 11 failed, 1 passed in 0.45s =========================

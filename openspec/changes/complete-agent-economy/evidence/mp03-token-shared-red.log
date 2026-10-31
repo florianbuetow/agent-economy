@@ -1,0 +1,281 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-auth/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /tmp
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 75 items / 40 deselected / 35 selected
+
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_header_is_rejected_as_invalid_jws[None] FAILED [  2%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_header_is_rejected_as_invalid_jws[header1] FAILED [  5%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_header_is_rejected_as_invalid_jws[header] FAILED [  8%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_header_is_rejected_as_invalid_jws[7] FAILED [ 11%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[None] FAILED [ 14%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[payload1] FAILED [ 17%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[payload] FAILED [ 20%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[7] FAILED [ 22%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header0] FAILED [ 25%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header1] FAILED [ 28%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header2] FAILED [ 31%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header3] FAILED [ 34%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header4] FAILED [ 37%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header5] FAILED [ 40%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header6] FAILED [ 42%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header7] FAILED [ 45%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header8] FAILED [ 48%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header9] FAILED [ 51%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header10] FAILED [ 54%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header11] FAILED [ 57%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header12] FAILED [ 60%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header13] FAILED [ 62%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header14] FAILED [ 65%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header15] FAILED [ 68%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header16] FAILED [ 71%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header17] FAILED [ 74%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header18] FAILED [ 77%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header19] FAILED [ 80%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header20] FAILED [ 82%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header21] FAILED [ 85%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header22] FAILED [ 88%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_exact_expiry_is_rejected FAILED [ 91%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_temporal_relation_is_rejected[header0] FAILED [ 94%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_temporal_relation_is_rejected[header1] FAILED [ 97%]
+../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_wrong_local_platform_kid_is_rejected FAILED [100%]
+
+=================================== FAILURES ===================================
+___ test_required_contract_nonobject_header_is_rejected_as_invalid_jws[None] ___
+/tmp/test_mp03_token_contract.py:219: in test_required_contract_nonobject_header_is_rejected_as_invalid_jws
+    _verify(header, _payload(), private_key)
+/tmp/test_mp03_token_contract.py:75: in _verify
+    return verify_jws(token, private_key.public_key())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/signing.py:557: in verify_jws
+    exp = header.get("exp")
+          ^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'get'
+_ test_required_contract_nonobject_header_is_rejected_as_invalid_jws[header1] __
+/tmp/test_mp03_token_contract.py:219: in test_required_contract_nonobject_header_is_rejected_as_invalid_jws
+    _verify(header, _payload(), private_key)
+/tmp/test_mp03_token_contract.py:75: in _verify
+    return verify_jws(token, private_key.public_key())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/signing.py:557: in verify_jws
+    exp = header.get("exp")
+          ^^^^^^^^^^
+E   AttributeError: 'list' object has no attribute 'get'
+__ test_required_contract_nonobject_header_is_rejected_as_invalid_jws[header] __
+/tmp/test_mp03_token_contract.py:219: in test_required_contract_nonobject_header_is_rejected_as_invalid_jws
+    _verify(header, _payload(), private_key)
+/tmp/test_mp03_token_contract.py:75: in _verify
+    return verify_jws(token, private_key.public_key())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/signing.py:557: in verify_jws
+    exp = header.get("exp")
+          ^^^^^^^^^^
+E   AttributeError: 'str' object has no attribute 'get'
+____ test_required_contract_nonobject_header_is_rejected_as_invalid_jws[7] _____
+/tmp/test_mp03_token_contract.py:219: in test_required_contract_nonobject_header_is_rejected_as_invalid_jws
+    _verify(header, _payload(), private_key)
+/tmp/test_mp03_token_contract.py:75: in _verify
+    return verify_jws(token, private_key.public_key())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/signing.py:557: in verify_jws
+    exp = header.get("exp")
+          ^^^^^^^^^^
+E   AttributeError: 'int' object has no attribute 'get'
+__ test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[None] ___
+/tmp/test_mp03_token_contract.py:227: in test_required_contract_nonobject_payload_is_rejected_as_invalid_jws
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[payload1] _
+/tmp/test_mp03_token_contract.py:227: in test_required_contract_nonobject_payload_is_rejected_as_invalid_jws
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[payload] _
+/tmp/test_mp03_token_contract.py:227: in test_required_contract_nonobject_payload_is_rejected_as_invalid_jws
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+____ test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[7] ____
+/tmp/test_mp03_token_contract.py:227: in test_required_contract_nonobject_payload_is_rejected_as_invalid_jws
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header0] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header1] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header2] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header3] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header4] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header5] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header6] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header7] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header8] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header9] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header10] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header11] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header12] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header13] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header14] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header15] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header16] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header17] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header18] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header19] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header20] _
+/tmp/test_mp03_token_contract.py:264: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    _verify(header, _payload(), private_key)
+/tmp/test_mp03_token_contract.py:75: in _verify
+    return verify_jws(token, private_key.public_key())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/signing.py:560: in verify_jws
+    raise TokenExpiredError(msg)
+E   service_auth.signing.TokenExpiredError: JWS token has expired
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header21] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_required_contract_invalid_or_missing_profile_field_is_rejected[header22] _
+/tmp/test_mp03_token_contract.py:263: in test_required_contract_invalid_or_missing_profile_field_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_______________ test_required_contract_exact_expiry_is_rejected ________________
+/tmp/test_mp03_token_contract.py:270: in test_required_contract_exact_expiry_is_rejected
+    with pytest.raises(TokenExpiredError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE TokenExpiredError
+____ test_required_contract_invalid_temporal_relation_is_rejected[header0] _____
+/tmp/test_mp03_token_contract.py:285: in test_required_contract_invalid_temporal_relation_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+____ test_required_contract_invalid_temporal_relation_is_rejected[header1] _____
+/tmp/test_mp03_token_contract.py:285: in test_required_contract_invalid_temporal_relation_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_________ test_required_contract_wrong_local_platform_kid_is_rejected __________
+/tmp/test_mp03_token_contract.py:313: in test_required_contract_wrong_local_platform_kid_is_rejected
+    with pytest.raises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+=========================== short test summary info ============================
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_header_is_rejected_as_invalid_jws[None]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_header_is_rejected_as_invalid_jws[header1]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_header_is_rejected_as_invalid_jws[header]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_header_is_rejected_as_invalid_jws[7]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[None]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[payload1]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[payload]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_nonobject_payload_is_rejected_as_invalid_jws[7]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header0]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header1]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header2]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header3]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header4]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header5]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header6]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header7]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header8]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header9]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header10]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header11]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header12]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header13]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header14]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header15]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header16]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header17]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header18]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header19]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header20]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header21]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_or_missing_profile_field_is_rejected[header22]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_exact_expiry_is_rejected
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_temporal_relation_is_rejected[header0]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_invalid_temporal_relation_is_rejected[header1]
+FAILED ../../../../../../../tmp/test_mp03_token_contract.py::test_required_contract_wrong_local_platform_kid_is_rejected
+====================== 35 failed, 40 deselected in 0.26s =======================

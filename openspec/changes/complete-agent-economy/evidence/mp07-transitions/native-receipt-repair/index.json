@@ -1,0 +1,22 @@
+{
+  "scope": "native-receipt-repair",
+  "limits": "Each log proves its recorded source version and scope; earlier passes do not certify later harness changes. Root gate and full goal remain open.",
+  "artifacts": [
+    {
+      "origin": "/private/tmp/agent-economy-mp07-receipt-live-confirm.log",
+      "artifact": "agent-economy-mp07-receipt-live-confirm.log",
+      "sha256": "3d5baddbb287e79c371062e34aba09461d803da71722d24c79d47bf336664c98"
+    },
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-native-receipt-integration.md",
+      "artifact": "2026-10-18-mp07-native-receipt-integration.md",
+      "sha256": "088d914453fe3282eaee6ccba7c217f0866de207ad7e63934b354e3443380f01"
+    }
+  ],
+  "current_sources": {
+    "services/db-gateway/src/db_gateway_service/services/task_operation_writer.py": "9c9fd823f8a8331d063dad57371b26cd1a205333021edb91de51d421293e6008",
+    "services/db-gateway/src/db_gateway_service/task_contract_audit.py": "d4bba5b313a73aca6903cb187c7095aee2d9cb077a51e9331f9362b5234b7b0f",
+    "services/db-gateway/tests/unit/test_mp07_native_receipt_integration.py": "c50c19d2003571020fd0795e5b6d0235fb151dbfe7c4501de55d1759c9422b60",
+    "services/central-bank/tests/unit/test_mp07_receipt_event_provenance.py": "40b0a8227c56fd12748504748cfeeb8e6c73c851c965df4c77657c775415a784"
+  }
+}

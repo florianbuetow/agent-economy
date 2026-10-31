@@ -2,25 +2,57 @@
 
 from __future__ import annotations
 
-import uuid
-from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock
+from typing import TYPE_CHECKING, Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from task_board_service.core.state import get_app_state
+from tests.fakes.gateway_task_store import GatewayTaskStore
 from tests.helpers import make_jws_token
 from tests.unit.routers.conftest import (
     create_task,
     file_dispute,
     make_task_id,
+    new_operation_fields,
     setup_task_in_dispute,
     setup_task_in_review,
     submit_ruling,
 )
 
 if TYPE_CHECKING:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from httpx import AsyncClient
+
+
+def fixture_store() -> GatewayTaskStore:
+    store = get_app_state().store
+    assert isinstance(store, GatewayTaskStore)
+    return store
+
+
+def fixture_platform() -> MagicMock:
+    platform = get_app_state().platform_agent
+    assert isinstance(platform, MagicMock)
+    return platform
+
+
+def fixture_bank() -> AsyncMock:
+    bank = get_app_state().central_bank_client
+    assert isinstance(bank, AsyncMock)
+    return bank
+
+
+def stored_task(task_id: str) -> dict[str, Any]:
+    task = fixture_store().get_task(task_id)
+    assert task is not None
+    return task
+
+
+def stored_dispute_id(task_id: str) -> str:
+    dispute_id = stored_task(task_id)["dispute_id"]
+    assert isinstance(dispute_id, str)
+    return dispute_id
 
 
 class TestDispute:
@@ -30,11 +62,11 @@ class TestDispute:
     async def test_poster_disputes_deliverable(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+    ) -> None:
         """DIS-01: Poster disputes deliverable - returns 200 with disputed status."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -53,13 +85,13 @@ class TestDispute:
     async def test_non_poster_cannot_dispute(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        carol_keypair,
-        carol_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        carol_keypair: tuple[Ed25519PrivateKey, str],
+        carol_agent_id: str,
+    ) -> None:
         """DIS-02: Non-poster agent cannot dispute - returns 403 forbidden."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -76,11 +108,11 @@ class TestDispute:
     async def test_worker_cannot_dispute(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+    ) -> None:
         """DIS-03: Worker cannot dispute their own task - returns 403 forbidden."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -95,9 +127,9 @@ class TestDispute:
     async def test_cannot_dispute_non_submitted_task(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+    ) -> None:
         """DIS-04: Cannot dispute a task not in SUBMITTED status - returns 409."""
         task_id = make_task_id()
         await create_task(client, alice_keypair, alice_agent_id, task_id=task_id)
@@ -113,11 +145,11 @@ class TestDispute:
     async def test_empty_dispute_reason(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+    ) -> None:
         """DIS-05: Empty dispute reason - returns 400 invalid_reason."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -132,11 +164,11 @@ class TestDispute:
     async def test_dispute_reason_exceeding_max_length(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+    ) -> None:
         """DIS-06: Dispute reason exceeding max length - returns 400 invalid_reason."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -154,11 +186,11 @@ class TestDispute:
     async def test_dispute_reason_at_max_length(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+    ) -> None:
         """DIS-07: Dispute reason at exactly max length (10,000 chars) - returns 200."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -173,11 +205,11 @@ class TestDispute:
     async def test_wrong_action_in_dispute_token(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+    ) -> None:
         """DIS-08: Wrong action in dispute token - returns 400 invalid_payload."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -186,11 +218,14 @@ class TestDispute:
         private_key = alice_keypair[0]
         payload = {
             "action": "approve_task",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "poster_id": alice_agent_id,
             "reason": "Wrong action test",
         }
-        token = make_jws_token(private_key, alice_agent_id, payload)
+        token = make_jws_token(
+            private_key, alice_agent_id, payload, resource=f"POST /tasks/{task_id}/dispute"
+        )
         resp = await client.post(f"/tasks/{task_id}/dispute", json={"token": token})
 
         assert resp.status_code == 400
@@ -200,9 +235,9 @@ class TestDispute:
     async def test_dispute_on_nonexistent_task(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+    ) -> None:
         """DIS-09: Dispute on non-existent task - returns 404 task_not_found."""
         fake_task_id = "t-00000000-0000-0000-0000-000000000000"
         resp = await file_dispute(
@@ -216,11 +251,11 @@ class TestDispute:
     async def test_task_id_in_payload_must_match_url(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+    ) -> None:
         """DIS-10: task_id in payload must match URL path - returns 400."""
         task_id_1 = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -232,11 +267,14 @@ class TestDispute:
         private_key = alice_keypair[0]
         payload = {
             "action": "dispute_task",
+            **new_operation_fields(task_id_1),
             "task_id": task_id_2,
             "poster_id": alice_agent_id,
             "reason": "Mismatch test",
         }
-        token = make_jws_token(private_key, alice_agent_id, payload)
+        token = make_jws_token(
+            private_key, alice_agent_id, payload, resource=f"POST /tasks/{task_id_1}/dispute"
+        )
         resp = await client.post(f"/tasks/{task_id_1}/dispute", json={"token": token})
 
         assert resp.status_code == 400
@@ -250,28 +288,31 @@ class TestRuling:
     async def test_platform_records_ruling(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        platform_keypair,
-        platform_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+    ) -> None:
         """RUL-01: Platform submits ruling - returns 200 with ruled status."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
 
-        ruling_id = f"rul-{uuid.uuid4()}"
+        ruling_id = stored_dispute_id(task_id)
         private_key = platform_keypair[0]
         payload = {
             "action": "record_ruling",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "ruling_id": ruling_id,
             "worker_pct": 40,
             "ruling_summary": "Worker delivered but omitted email validation.",
         }
-        token = make_jws_token(private_key, platform_agent_id, payload)
+        token = make_jws_token(
+            private_key, platform_agent_id, payload, resource=f"POST /tasks/{task_id}/ruling"
+        )
         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
 
         assert resp.status_code == 200
@@ -286,20 +327,21 @@ class TestRuling:
     async def test_non_platform_agent_cannot_record_ruling(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+    ) -> None:
         """RUL-02: Non-platform agent cannot record ruling - returns 403 forbidden."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
 
-        ruling_id = f"rul-{uuid.uuid4()}"
+        ruling_id = stored_dispute_id(task_id)
         private_key = alice_keypair[0]
         payload = {
             "action": "record_ruling",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "ruling_id": ruling_id,
             "worker_pct": 50,
@@ -315,13 +357,13 @@ class TestRuling:
     async def test_cannot_rule_on_non_disputed_task(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        platform_keypair,
-        platform_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+    ) -> None:
         """RUL-03: Cannot rule on non-DISPUTED task - returns 409 invalid_status."""
         task_id = await setup_task_in_review(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -343,13 +385,13 @@ class TestRuling:
     async def test_worker_pct_zero_full_poster_win(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        platform_keypair,
-        platform_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+    ) -> None:
         """RUL-04: worker_pct=0 means full refund to poster - returns 200."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -368,20 +410,19 @@ class TestRuling:
         data = resp.json()
         assert data["worker_pct"] == 0
 
-        state = get_app_state()
-        state.central_bank_client.escrow_release.assert_called_once()
+        fixture_bank().escrow_release.assert_called_once()
 
     @pytest.mark.unit
     async def test_worker_pct_100_full_worker_win(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        platform_keypair,
-        platform_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+    ) -> None:
         """RUL-05: worker_pct=100 means full payout to worker - returns 200."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -400,20 +441,19 @@ class TestRuling:
         data = resp.json()
         assert data["worker_pct"] == 100
 
-        state = get_app_state()
-        state.central_bank_client.escrow_release.assert_called_once()
+        fixture_bank().escrow_release.assert_called_once()
 
     @pytest.mark.unit
     async def test_worker_pct_50_split(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        platform_keypair,
-        platform_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+    ) -> None:
         """RUL-06: worker_pct=50 means split payout - returns 200."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -432,8 +472,7 @@ class TestRuling:
         data = resp.json()
         assert data["worker_pct"] == 50
 
-        state = get_app_state()
-        state.central_bank_client.escrow_split.assert_called_once()
+        fixture_bank().escrow_split.assert_called_once()
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
@@ -444,29 +483,32 @@ class TestRuling:
     async def test_invalid_worker_pct_values(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        platform_keypair,
-        platform_agent_id,
-        invalid_pct,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+        invalid_pct: object,
+    ) -> None:
         """RUL-07: Invalid worker_pct values - returns 400 invalid_worker_pct."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
 
-        ruling_id = f"rul-{uuid.uuid4()}"
+        ruling_id = stored_dispute_id(task_id)
         private_key = platform_keypair[0]
         payload = {
             "action": "record_ruling",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "ruling_id": ruling_id,
             "worker_pct": invalid_pct,
             "ruling_summary": "Invalid pct test",
         }
-        token = make_jws_token(private_key, platform_agent_id, payload)
+        token = make_jws_token(
+            private_key, platform_agent_id, payload, resource=f"POST /tasks/{task_id}/ruling"
+        )
         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
 
         assert resp.status_code == 400
@@ -476,13 +518,13 @@ class TestRuling:
     async def test_ruling_summary_stored_in_response(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        platform_keypair,
-        platform_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+    ) -> None:
         """RUL-08: Ruling summary is stored and returned in response."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -505,13 +547,13 @@ class TestRuling:
     async def test_ruling_sets_ruled_at_worker_pct_summary(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        platform_keypair,
-        platform_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+    ) -> None:
         """RUL-09: Ruling sets ruled_at, worker_pct, and ruling_summary fields."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -537,28 +579,31 @@ class TestRuling:
     async def test_wrong_action_in_ruling_token(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        platform_keypair,
-        platform_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+    ) -> None:
         """RUL-10: Wrong action in ruling token - returns 400 invalid_payload."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
 
-        ruling_id = f"rul-{uuid.uuid4()}"
+        ruling_id = stored_dispute_id(task_id)
         private_key = platform_keypair[0]
         payload = {
             "action": "approve_task",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "ruling_id": ruling_id,
             "worker_pct": 50,
             "ruling_summary": "Wrong action",
         }
-        token = make_jws_token(private_key, platform_agent_id, payload)
+        token = make_jws_token(
+            private_key, platform_agent_id, payload, resource=f"POST /tasks/{task_id}/ruling"
+        )
         resp = await client.post(f"/tasks/{task_id}/ruling", json={"token": token})
 
         assert resp.status_code == 400
@@ -568,9 +613,9 @@ class TestRuling:
     async def test_ruling_on_nonexistent_task(
         self,
         client: AsyncClient,
-        platform_keypair,
-        platform_agent_id,
-    ):
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+    ) -> None:
         """RUL-11: Ruling on non-existent task - returns 404 task_not_found."""
         fake_task_id = "t-00000000-0000-0000-0000-000000000000"
         resp = await submit_ruling(
@@ -589,13 +634,13 @@ class TestRuling:
     async def test_missing_payload_fields_in_ruling(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        platform_keypair,
-        platform_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+    ) -> None:
         """RUL-12: Missing required payload fields - returns 400 invalid_payload."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
@@ -606,6 +651,7 @@ class TestRuling:
         # Missing ruling_id
         payload_no_ruling_id = {
             "action": "record_ruling",
+            **new_operation_fields(task_id),
             "task_id": task_id,
             "worker_pct": 50,
             "ruling_summary": "Missing ruling_id",
@@ -618,8 +664,9 @@ class TestRuling:
         # Missing worker_pct
         payload_no_pct = {
             "action": "record_ruling",
+            **new_operation_fields(task_id),
             "task_id": task_id,
-            "ruling_id": f"rul-{uuid.uuid4()}",
+            "ruling_id": stored_dispute_id(task_id),
             "ruling_summary": "Missing worker_pct",
         }
         token = make_jws_token(private_key, platform_agent_id, payload_no_pct)
@@ -630,8 +677,9 @@ class TestRuling:
         # Missing ruling_summary
         payload_no_summary = {
             "action": "record_ruling",
+            **new_operation_fields(task_id),
             "task_id": task_id,
-            "ruling_id": f"rul-{uuid.uuid4()}",
+            "ruling_id": stored_dispute_id(task_id),
             "worker_pct": 50,
         }
         token = make_jws_token(private_key, platform_agent_id, payload_no_summary)
@@ -643,24 +691,23 @@ class TestRuling:
     async def test_central_bank_unavailable_during_ruling(
         self,
         client: AsyncClient,
-        alice_keypair,
-        alice_agent_id,
-        bob_keypair,
-        bob_agent_id,
-        platform_keypair,
-        platform_agent_id,
-    ):
+        alice_keypair: tuple[Ed25519PrivateKey, str],
+        alice_agent_id: str,
+        bob_keypair: tuple[Ed25519PrivateKey, str],
+        bob_agent_id: str,
+        platform_keypair: tuple[Ed25519PrivateKey, str],
+        platform_agent_id: str,
+    ) -> None:
         """RUL-13: Central Bank unavailable during escrow - returns 502."""
         task_id = await setup_task_in_dispute(
             client, alice_keypair, alice_agent_id, bob_keypair, bob_agent_id
         )
 
         # Make central bank unavailable for escrow operations
-        state = get_app_state()
-        state.central_bank_client.escrow_release = AsyncMock(
+        fixture_bank().escrow_release = AsyncMock(
             side_effect=ConnectionError("Central Bank unreachable")
         )
-        state.central_bank_client.escrow_split = AsyncMock(
+        fixture_bank().escrow_split = AsyncMock(
             side_effect=ConnectionError("Central Bank unreachable")
         )
 

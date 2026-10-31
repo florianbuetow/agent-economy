@@ -5,20 +5,60 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
+from service_commons.exceptions import ServiceError
 
+from court_service.judges.output import QUALITY_RATINGS, median_rating
 from court_service.services.errors import DuplicateDisputeError
+
+if TYPE_CHECKING:
+    from service_auth.gateway import GatewayRequestSigner
 
 
 class DisputeDbClient:
     """Dispute storage backed by the DB Gateway HTTP API."""
 
-    def __init__(self, base_url: str, timeout_seconds: int) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout_seconds: int,
+        signer: GatewayRequestSigner,
+    ) -> None:
         self._client = httpx.Client(
             base_url=base_url,
             timeout=httpx.Timeout(timeout_seconds),
+        )
+        self._signer = signer
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        action: str,
+        json: dict[str, Any] | None,
+        params: dict[str, Any] | None,
+    ) -> httpx.Response:
+        request = self._client.build_request(method, path, json=json, params=params)
+        return self._client.send(self._signer.sign_request(request, action=action))
+
+    def _court_request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict[str, Any] | None,
+        params: dict[str, Any] | None,
+    ) -> httpx.Response:
+        access = "read" if method == "GET" else "write"
+        return self._request(
+            method,
+            path,
+            action=f"gateway.court.{access}",
+            json=json,
+            params=params,
         )
 
     def _now_iso(self) -> str:
@@ -40,7 +80,7 @@ class DisputeDbClient:
             return {}
 
     def _get_claim(self, dispute_id: str) -> dict[str, Any] | None:
-        response = self._client.get(f"/court/claims/{dispute_id}")
+        response = self._court_request("GET", f"/court/claims/{dispute_id}", json=None, params=None)
         if response.status_code == 404:
             return None
         if response.status_code != 200:
@@ -49,7 +89,9 @@ class DisputeDbClient:
         return self._json(response)
 
     def _get_rebuttal(self, dispute_id: str) -> dict[str, Any] | None:
-        response = self._client.get(f"/court/claims/{dispute_id}/rebuttal")
+        response = self._court_request(
+            "GET", f"/court/claims/{dispute_id}/rebuttal", json=None, params=None
+        )
         if response.status_code == 404:
             return None
         if response.status_code != 200:
@@ -58,7 +100,9 @@ class DisputeDbClient:
         return self._json(response)
 
     def _get_ruling(self, dispute_id: str) -> dict[str, Any] | None:
-        response = self._client.get(f"/court/rulings/{dispute_id}")
+        response = self._court_request(
+            "GET", f"/court/rulings/{dispute_id}", json=None, params=None
+        )
         if response.status_code == 404:
             return None
         if response.status_code != 200:
@@ -68,7 +112,13 @@ class DisputeDbClient:
 
     def _get_escrow_id(self, task_id: str) -> str:
         """Look up escrow_id from the board task record."""
-        response = self._client.get(f"/board/tasks/{task_id}")
+        response = self._request(
+            "GET",
+            f"/board/tasks/{task_id}",
+            action="gateway.board.task.read",
+            json=None,
+            params=None,
+        )
         if response.status_code != 200:
             return ""
         data = self._json(response)
@@ -101,11 +151,35 @@ class DisputeDbClient:
                     "dispute_id": dispute_id,
                     "judge_id": judge_id,
                     "worker_pct": worker_pct,
+                    "spec_quality": self._optional_str(vote, "spec_quality"),
+                    "spec_quality_explanation": self._optional_str(
+                        vote, "spec_quality_explanation"
+                    ),
+                    "delivery_quality": self._optional_str(vote, "delivery_quality"),
+                    "delivery_quality_explanation": self._optional_str(
+                        vote, "delivery_quality_explanation"
+                    ),
                     "reasoning": reasoning,
                     "voted_at": voted_at,
                 }
             )
         return votes
+
+    @staticmethod
+    def _optional_str(vote: dict[str, Any], field: str) -> str | None:
+        value = vote.get(field)
+        return value if isinstance(value, str) else None
+
+    @staticmethod
+    def _panel_quality(votes: list[dict[str, Any]]) -> dict[str, str | None]:
+        """Panel findings: the median rating per category, as the orchestrator computes."""
+        findings: dict[str, str | None] = {}
+        for field in ("spec_quality", "delivery_quality"):
+            ratings = [vote[field] for vote in votes if vote.get(field) in QUALITY_RATINGS]
+            findings[field] = (
+                median_rating(ratings) if ratings and len(ratings) == len(votes) else None
+            )
+        return findings
 
     def _compose_dispute(
         self,
@@ -114,6 +188,10 @@ class DisputeDbClient:
         rebuttal: dict[str, Any] | None,
         ruling: dict[str, Any] | None,
     ) -> dict[str, Any]:
+        # A decision row exists while deliveries are pending (status "judging");
+        # it becomes the public ruling only once the claim is "ruled".
+        if str(claim["status"]) != "ruled":
+            ruling = None
         judge_votes = ruling.get("judge_votes") if ruling is not None else []
         votes = self._parse_votes(dispute_id, judge_votes)
         return {
@@ -132,6 +210,7 @@ class DisputeDbClient:
             "rebutted_at": str(rebuttal["submitted_at"]) if rebuttal is not None else None,
             "ruled_at": str(ruling["ruled_at"]) if ruling is not None else None,
             "votes": votes,
+            **self._panel_quality(votes),
         }
 
     def get_dispute_row(self, dispute_id: str) -> Any:
@@ -174,7 +253,7 @@ class DisputeDbClient:
             },
         }
 
-        response = self._client.post("/court/claims", json=payload)
+        response = self._court_request("POST", "/court/claims", json=payload, params=None)
         if response.status_code == 409:
             raise DuplicateDisputeError(f"A dispute already exists for task_id={task_id}")
         if response.status_code not in (200, 201):
@@ -217,75 +296,105 @@ class DisputeDbClient:
             },
         }
 
-        response = self._client.post("/court/rebuttals", json=payload)
+        response = self._court_request("POST", "/court/rebuttals", json=payload, params=None)
         if response.status_code not in (200, 201):
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
 
-    def set_status(self, dispute_id: str, status: str) -> None:
-        response = self._client.post(
-            f"/court/claims/{dispute_id}/status",
-            json={"status": status},
-        )
+    def _error_code(self, response: httpx.Response) -> str:
+        return str(self._json(response).get("error", ""))
+
+    def _gateway_failure(self, response: httpx.Response) -> RuntimeError:
+        return RuntimeError(f"Gateway error: {response.status_code} {response.text}")
+
+    def _ruling_conflict(self, response: httpx.Response) -> ServiceError | RuntimeError:
+        """Map a Gateway ruling-progress rejection onto Court's public errors."""
         if response.status_code == 404:
-            return
-        if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+            return ServiceError("dispute_not_found", "Dispute not found", 404, {})
+        if response.status_code != 409:
+            return self._gateway_failure(response)
+        error = self._error_code(response)
+        if error == "judging_lease_held":
+            return ServiceError(
+                "dispute_not_ready", "A ruling for this dispute is already in progress", 409, {}
+            )
+        if error == "invalid_claim_status":
+            details = self._json(response).get("details")
+            current = details.get("current_status") if isinstance(details, dict) else None
+            if current == "ruled":
+                return ServiceError(
+                    "dispute_already_ruled", "Dispute has already been ruled", 409, {}
+                )
+            return ServiceError("dispute_not_ready", "Dispute is not ready for ruling", 409, {})
+        return ServiceError(
+            "ruling_lease_lost",
+            "This ruling run no longer owns the dispute",
+            409,
+            {"reason": error},
+        )
 
-    def revert_to_rebuttal_pending(self, dispute_id: str) -> None:
-        self.set_status(dispute_id, "rebuttal_pending")
-        self._delete_ruling(dispute_id)
+    def _ruling_post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        response = self._court_request("POST", path, json=payload, params=None)
+        if response.status_code not in (200, 201):
+            raise self._ruling_conflict(response)
+        return self._json(response)
 
-    def _delete_ruling(self, dispute_id: str) -> None:
-        """Delete the ruling record for a dispute (removes votes too)."""
-        response = self._client.delete(f"/court/rulings/{dispute_id}")
-        if response.status_code not in (200, 404):
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+    def acquire_judging_lease(
+        self, dispute_id: str, lease_id: str, lease_seconds: int
+    ) -> dict[str, Any]:
+        return self._ruling_post(
+            f"/court/claims/{dispute_id}/judging-lease",
+            {"lease_id": lease_id, "lease_seconds": lease_seconds},
+        )
 
-    def persist_ruling(
+    def release_judging_lease(self, dispute_id: str, lease_id: str) -> None:
+        self._ruling_post(
+            f"/court/claims/{dispute_id}/judging-lease/release", {"lease_id": lease_id}
+        )
+
+    def claim_decision(
         self,
         dispute_id: str,
+        lease_id: str,
         worker_pct: int,
         ruling_summary: str,
         votes: list[dict[str, Any]],
+        request: dict[str, Any],
     ) -> None:
-        dispute = self.get_dispute(dispute_id)
-        if dispute is None:
-            return
-
-        ruled_at = self._now_iso()
-        payload: dict[str, Any] = {
-            "ruling_id": dispute_id,
-            "claim_id": dispute_id,
-            "task_id": dispute["task_id"],
-            "worker_pct": worker_pct,
-            "summary": ruling_summary,
-            "judge_votes": json.dumps(votes),
-            "ruled_at": ruled_at,
-            "claim_status_update": "ruled",
-            "event": {
-                "event_source": "court",
-                "event_type": "ruling.delivered",
-                "timestamp": ruled_at,
-                "task_id": dispute["task_id"],
-                "summary": f"Ruling delivered for claim {dispute_id}",
-                "payload": json.dumps({"claim_id": dispute_id, "worker_pct": worker_pct}),
+        self._ruling_post(
+            f"/court/claims/{dispute_id}/decision",
+            {
+                "lease_id": lease_id,
+                "worker_pct": worker_pct,
+                "summary": ruling_summary,
+                "judge_votes": json.dumps(votes),
+                "request": request,
             },
-        }
+        )
 
-        response = self._client.post("/court/rulings", json=payload)
-        if response.status_code not in (200, 201):
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+    def record_acknowledgment(self, dispute_id: str, lease_id: str, step: str) -> None:
+        self._ruling_post(
+            f"/court/claims/{dispute_id}/acknowledgments",
+            {"lease_id": lease_id, "step": step},
+        )
+
+    def complete_ruling(self, dispute_id: str, lease_id: str) -> None:
+        self._ruling_post(f"/court/claims/{dispute_id}/ruled", {"lease_id": lease_id})
+
+    def get_ruling_progress(self, dispute_id: str) -> dict[str, Any]:
+        response = self._court_request(
+            "GET", f"/court/claims/{dispute_id}/ruling-progress", json=None, params=None
+        )
+        if response.status_code != 200:
+            raise self._ruling_conflict(response)
+        return self._json(response)
 
     def list_disputes(self, task_id: str | None, status: str | None) -> list[dict[str, Any]]:
         params: dict[str, str] = {}
         if status is not None:
             params["status"] = status
 
-        response = self._client.get("/court/claims", params=params)
+        response = self._court_request("GET", "/court/claims", json=None, params=params)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
@@ -302,6 +411,11 @@ class DisputeDbClient:
             dispute_id = str(claim.get("claim_id", ""))
             claim_status = str(claim.get("status", ""))
             ruling = self._get_ruling(dispute_id) if claim_status == "ruled" else None
+            panel = self._panel_quality(
+                self._parse_votes(dispute_id, ruling.get("judge_votes"))
+                if ruling is not None
+                else []
+            )
             disputes.append(
                 {
                     "dispute_id": dispute_id,
@@ -312,19 +426,20 @@ class DisputeDbClient:
                     "worker_pct": int(ruling["worker_pct"]) if ruling is not None else None,
                     "filed_at": str(claim.get("filed_at", "")),
                     "ruled_at": str(ruling["ruled_at"]) if ruling is not None else None,
+                    **panel,
                 }
             )
         return disputes
 
     def count_disputes(self) -> int:
-        response = self._client.get("/court/claims/count")
+        response = self._court_request("GET", "/court/claims/count", json=None, params=None)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)
         return int(self._json(response)["count"])
 
     def count_active(self) -> int:
-        response = self._client.get("/court/claims/count-active")
+        response = self._court_request("GET", "/court/claims/count-active", json=None, params=None)
         if response.status_code != 200:
             msg = f"Gateway error: {response.status_code} {response.text}"
             raise RuntimeError(msg)

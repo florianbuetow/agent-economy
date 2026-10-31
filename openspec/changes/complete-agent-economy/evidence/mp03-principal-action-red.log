@@ -1,0 +1,39 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items / 2 deselected / 2 selected
+
+tests/unit/test_platform_signer_keys.py FF                               [100%]
+
+=================================== FAILURES ===================================
+_______ test_local_principal_rejection_precedes_action_content[payload0] _______
+tests/unit/test_platform_signer_keys.py:93: in test_local_principal_rejection_precedes_action_content
+    agent.validate_certificate(token)
+src/service_auth/agent.py:156: in validate_certificate
+    verified = verify_jws(token, self._public_key, policy=self.config.token_policy)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:389: in verify_jws
+    return VerifiedJws(header=parsed.header, payload=_parse_payload(parsed.payload))
+                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+_______ test_local_principal_rejection_precedes_action_content[payload1] _______
+tests/unit/test_platform_signer_keys.py:93: in test_local_principal_rejection_precedes_action_content
+    agent.validate_certificate(token)
+src/service_auth/agent.py:156: in validate_certificate
+    verified = verify_jws(token, self._public_key, policy=self.config.token_policy)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:389: in verify_jws
+    return VerifiedJws(header=parsed.header, payload=_parse_payload(parsed.payload))
+                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/service_auth/jws.py:285: in _parse_payload
+    raise InvalidPayloadError(msg)
+E   service_auth.jws.InvalidPayloadError: Invalid JWS payload action: expected a non-blank string
+=========================== short test summary info ============================
+FAILED tests/unit/test_platform_signer_keys.py::test_local_principal_rejection_precedes_action_content[payload0]
+FAILED tests/unit/test_platform_signer_keys.py::test_local_principal_rejection_precedes_action_content[payload1]
+======================= 2 failed, 2 deselected in 0.08s ========================

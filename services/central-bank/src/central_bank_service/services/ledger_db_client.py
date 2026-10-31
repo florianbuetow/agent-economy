@@ -2,156 +2,277 @@
 
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import httpx
+from service_auth.financial_responses import (
+    LegacyFinancialEnvelope,
+    NativeFinancialEnvelope,
+    parse_account_projection,
+    parse_financial_envelope,
+    parse_native_financial_envelope,
+    validate_operation_id,
+)
 from service_commons.exceptions import ServiceError
+
+from central_bank_service.logging import get_logger
+from central_bank_service.monetary import (
+    require_nonnegative_money,
+    require_positive_money,
+    require_worker_percentage,
+)
+from central_bank_service.services.settlement import (
+    SettlementGatewayClient,
+    parse_settlement_envelope,
+)
+
+if TYPE_CHECKING:
+    from service_auth.gateway import GatewayRequestSigner
+
+_logger = get_logger(__name__)
+
+
+def _log_credit_or_lock(result: dict[str, object]) -> None:
+    """Audit the authoritative outcome without assigning new ownership to history."""
+    if result["outcome"] == "legacy_observation":
+        historical = LegacyFinancialEnvelope.model_validate(result)
+        transaction = historical.observation.transaction
+        _logger.info(
+            "audit",
+            extra={
+                "operation": "legacy_observation",
+                "operation_kind": historical.attempt.operation_kind,
+                "operation_id": None,
+                "attempt_operation_id": historical.attempt.operation_id,
+                "account_id": transaction.account_id,
+                "amount": transaction.amount,
+                "reference": transaction.reference,
+                "tx_id": transaction.tx_id,
+            },
+        )
+        return
+    receipt = NativeFinancialEnvelope.model_validate(result).receipt
+    leg = receipt.legs[0]
+    extra: dict[str, object] = {
+        "operation": receipt.operation_kind,
+        "operation_id": receipt.operation_id,
+        "account_id": leg.account_id,
+        "amount": leg.amount,
+        "reference": receipt.source_reference,
+        "tx_id": leg.transaction_id,
+    }
+    if receipt.operation_kind == "escrow_lock":
+        extra.update(payer_account_id=leg.account_id, task_id=receipt.source_reference)
+    _logger.info("audit", extra=extra)
+
+
+def _require_utf8(value: str, field: str) -> str:
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ServiceError(
+            "invalid_financial_request", f"{field} must contain valid UTF-8 text", 400, {}
+        ) from exc
+    return value
 
 
 class LedgerDbClient:
-    """Ledger storage backed by the DB Gateway HTTP API."""
+    """Ledger storage backed by the DB Gateway HTTP API (via the shared GatewayClient).
 
-    def __init__(self, base_url: str, timeout_seconds: int) -> None:
-        self._client = httpx.Client(
+    GatewayClient raises ServiceError for every non-2xx gateway response, carrying
+    the gateway's own error code/message/status code. This facade inspects those
+    fields to reproduce LedgerDbClient's pre-consolidation contract exactly (its
+    own error codes for account_exists/insufficient_funds/etc., RuntimeError on
+    anything genuinely unexpected), so callers see no behavior change.
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        timeout_seconds: int,
+        signer: GatewayRequestSigner,
+    ) -> None:
+        self._gateway = SettlementGatewayClient(
             base_url=base_url,
-            timeout=httpx.Timeout(timeout_seconds),
+            timeout_seconds=timeout_seconds,
+            signer=signer,
         )
 
-    def _now(self) -> str:
+    @staticmethod
+    def _now() -> str:
         return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
-    def _new_tx_id(self) -> str:
+    @staticmethod
+    def _new_tx_id() -> str:
         return f"tx-{uuid.uuid4()}"
 
-    def _new_escrow_id(self) -> str:
+    @staticmethod
+    def _new_escrow_id() -> str:
         return f"esc-{uuid.uuid4()}"
 
-    def _json(self, response: httpx.Response) -> dict[str, Any]:
-        try:
-            data = response.json()
-            if isinstance(data, dict):
-                return data
-            return {}
-        except Exception:
-            return {}
+    @staticmethod
+    def _as_gateway_runtime_error(exc: ServiceError) -> RuntimeError:
+        return RuntimeError(f"Gateway error: {exc.status_code} {exc.message}")
 
-    def create_account(self, account_id: str, initial_balance: int) -> dict[str, object]:
-        if initial_balance < 0:
-            raise ServiceError("invalid_amount", "Initial balance must be non-negative", 400, {})
+    @staticmethod
+    def _raise_preserved_money_error(exc: ServiceError) -> None:
+        if exc.error in {
+            "amount_out_of_range",
+            "financial_operation_already_committed",
+            "historical_settlement_unreplayable",
+            "invalid_amount",
+            "invalid_financial_request",
+            "invalid_operation_id",
+            "legacy_operation_conflict",
+            "operation_id_conflict",
+            "payload_mismatch",
+            "receipt_ownership_failed",
+            "receipt_ownership_missing",
+        }:
+            raise ServiceError(exc.error, exc.message, exc.status_code, exc.details) from exc
+
+    async def create_account(
+        self, account_id: str, initial_balance: int, operation_id: str | None
+    ) -> dict[str, object]:
+        initial_balance = require_nonnegative_money(initial_balance, "initial_balance")
+        if initial_balance == 0:
+            if operation_id is not None:
+                raise ServiceError(
+                    "invalid_operation_id",
+                    "Zero-balance account creation must not carry operation_id",
+                    400,
+                    {},
+                )
+        else:
+            try:
+                operation_id = validate_operation_id(operation_id)
+            except ValueError as exc:
+                raise ServiceError("invalid_operation_id", str(exc), 400, {}) from exc
 
         now = self._now()
-        payload: dict[str, Any] = {
-            "account_id": account_id,
-            "balance": initial_balance,
-            "created_at": now,
-            "event": {
-                "event_source": "bank",
-                "event_type": "account.created",
-                "timestamp": now,
-                "agent_id": account_id,
-                "summary": f"Account created for {account_id}",
-                "payload": json.dumps({"agent_name": account_id}),
-            },
-        }
+        tx_id: str | None = None
+        initial_credit_data: dict[str, Any] | None = None
         if initial_balance > 0:
-            payload["initial_credit"] = {
-                "tx_id": self._new_tx_id(),
+            tx_id = self._new_tx_id()
+            initial_credit_data = {
+                "tx_id": tx_id,
                 "amount": initial_balance,
                 "reference": "initial_balance",
                 "timestamp": now,
             }
 
-        response = self._client.post("/bank/accounts", json=payload)
-        if response.status_code == 409:
-            raise ServiceError("account_exists", "Account already exists for this agent", 409, {})
-        if response.status_code not in (200, 201):
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+        try:
+            data = await self._gateway.create_account(
+                account_id=account_id,
+                created_at=now,
+                balance=initial_balance,
+                initial_credit_data=initial_credit_data,
+                agent_name=account_id,
+                operation_id=operation_id,
+            )
+        except ServiceError as exc:
+            self._raise_preserved_money_error(exc)
+            if exc.status_code == 409:
+                raise ServiceError(
+                    "account_exists", "Account already exists for this agent", 409, {}
+                ) from exc
+            raise self._as_gateway_runtime_error(exc) from exc
 
-        return {
+        if initial_balance > 0:
+            if operation_id is None:
+                raise RuntimeError("Validated positive issuance lost its operation identity")
+            return parse_native_financial_envelope(
+                data,
+                operation_id,
+                "account_issuance",
+                {
+                    "account_id": account_id,
+                    "amount": initial_balance,
+                    "reference": "initial_balance",
+                },
+            )
+        account = await self.get_account(account_id)
+        if account is None:
+            raise RuntimeError("Gateway account creation succeeded without an account row")
+        result: dict[str, object] = {
             "account_id": account_id,
-            "balance": initial_balance,
-            "created_at": now,
+            "balance": account["balance"],
+            "created_at": account["created_at"],
         }
+        audit_extra: dict[str, object] = {
+            "operation": "create_account",
+            "account_id": account_id,
+            "initial_balance": initial_balance,
+            "reference": "initial_balance",
+        }
+        if tx_id is not None:
+            audit_extra["tx_id"] = tx_id
+        _logger.info("audit", extra=audit_extra)
+        return result
 
-    def get_account(self, account_id: str) -> dict[str, object] | None:
-        response = self._client.get(f"/bank/accounts/{account_id}")
-        if response.status_code == 404:
+    async def get_account(self, account_id: str) -> dict[str, object] | None:
+        try:
+            data = await self._gateway.get_account(account_id)
+        except ServiceError as exc:
+            raise self._as_gateway_runtime_error(exc) from exc
+        if data is None:
             return None
-        if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+        return parse_account_projection(data, account_id)
 
-        data = self._json(response)
-        return {
-            "account_id": str(data["account_id"]),
-            "balance": int(data["balance"]),
-            "created_at": str(data["created_at"]),
-        }
-
-    def credit(self, account_id: str, amount: int, reference: str) -> dict[str, object]:
-        if amount <= 0:
-            raise ServiceError("invalid_amount", "Amount must be a positive integer", 400, {})
+    async def credit(
+        self, account_id: str, amount: int, reference: str, operation_id: str
+    ) -> dict[str, object]:
+        amount = require_positive_money(amount, "amount")
+        reference = _require_utf8(reference, "reference")
 
         now = self._now()
         tx_id = self._new_tx_id()
-        payload: dict[str, Any] = {
-            "tx_id": tx_id,
-            "account_id": account_id,
-            "amount": amount,
-            "reference": reference,
-            "timestamp": now,
-            "event": {
-                "event_source": "bank",
-                "event_type": "salary.paid",
-                "timestamp": now,
-                "agent_id": account_id,
-                "summary": f"Credited {amount} to {account_id}",
-                "payload": json.dumps({"amount": amount}),
-            },
-        }
-        response = self._client.post("/bank/credit", json=payload)
 
-        if response.status_code == 404:
-            raise ServiceError("account_not_found", "Account not found", 404, {})
-        if response.status_code == 409:
-            error_code = str(self._json(response).get("error", ""))
-            if error_code in {"reference_conflict", "constraint_violation"}:
+        try:
+            data = await self._gateway.credit_account(
+                tx_id=tx_id,
+                account_id=account_id,
+                amount=amount,
+                reference=reference,
+                timestamp=now,
+                operation_id=operation_id,
+            )
+        except ServiceError as exc:
+            self._raise_preserved_money_error(exc)
+            if exc.status_code == 404:
+                raise ServiceError("account_not_found", "Account not found", 404, {}) from exc
+            conflict_codes = {"reference_conflict", "constraint_violation"}
+            if exc.status_code == 409 and exc.error in conflict_codes:
                 raise ServiceError(
                     "payload_mismatch",
                     "Duplicate credit reference used with a different amount",
                     400,
                     {},
-                )
-        if response.status_code not in (200, 201):
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+                ) from exc
+            raise self._as_gateway_runtime_error(exc) from exc
 
-        data = self._json(response)
-        return {
-            "tx_id": str(data.get("tx_id", tx_id)),
-            "balance_after": int(data.get("balance_after", 0)),
-        }
+        result = parse_financial_envelope(
+            data,
+            operation_id,
+            "credit",
+            {"account_id": account_id, "amount": amount, "reference": reference},
+        )
+        _log_credit_or_lock(result)
+        return result
 
-    def get_transactions(self, account_id: str) -> list[dict[str, object]]:
-        account = self.get_account(account_id)
+    async def get_transactions(self, account_id: str) -> list[dict[str, object]]:
+        account = await self.get_account(account_id)
         if account is None:
             raise ServiceError("account_not_found", "Account not found", 404, {})
 
-        response = self._client.get(f"/bank/accounts/{account_id}/transactions")
-        if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+        try:
+            items = await self._gateway.get_transactions(account_id)
+        except ServiceError as exc:
+            raise self._as_gateway_runtime_error(exc) from exc
 
-        items_raw = self._json(response).get("transactions", [])
-        items = items_raw if isinstance(items_raw, list) else []
         transactions: list[dict[str, object]] = []
         for item in items:
-            if not isinstance(item, dict):
-                continue
             transactions.append(
                 {
                     "tx_id": str(item["tx_id"]),
@@ -164,208 +285,250 @@ class LedgerDbClient:
             )
         return transactions
 
-    def escrow_lock(self, payer_account_id: str, amount: int, task_id: str) -> dict[str, object]:
-        if amount <= 0:
-            raise ServiceError("invalid_amount", "Amount must be a positive integer", 400, {})
+    async def escrow_lock(
+        self, payer_account_id: str, amount: int, task_id: str, operation_id: str
+    ) -> dict[str, object]:
+        amount = require_positive_money(amount, "amount")
 
         now = self._now()
         escrow_id = self._new_escrow_id()
-        payload: dict[str, Any] = {
-            "escrow_id": escrow_id,
-            "payer_account_id": payer_account_id,
-            "amount": amount,
-            "task_id": task_id,
-            "created_at": now,
-            "tx_id": self._new_tx_id(),
-            "event": {
-                "event_source": "bank",
-                "event_type": "escrow.locked",
-                "timestamp": now,
-                "agent_id": payer_account_id,
+        tx_id = self._new_tx_id()
+
+        try:
+            data = await self._gateway.escrow_lock(
+                escrow_id=escrow_id,
+                payer_account_id=payer_account_id,
+                amount=amount,
+                task_id=task_id,
+                created_at=now,
+                tx_id=tx_id,
+                operation_id=operation_id,
+            )
+        except ServiceError as exc:
+            self._raise_preserved_money_error(exc)
+            if exc.status_code == 404:
+                raise ServiceError("account_not_found", "Account not found", 404, {}) from exc
+            if exc.status_code == 402:
+                raise ServiceError(
+                    "insufficient_funds",
+                    "Account balance is less than the escrow amount",
+                    402,
+                    {},
+                ) from exc
+            if exc.status_code == 409:
+                raise ServiceError("escrow_already_locked", exc.message, 409, {}) from exc
+            raise self._as_gateway_runtime_error(exc) from exc
+
+        result = parse_financial_envelope(
+            data,
+            operation_id,
+            "escrow_lock",
+            {
+                "payer_account_id": payer_account_id,
                 "task_id": task_id,
-                "summary": f"Escrow locked: {amount} for task {task_id}",
-                "payload": json.dumps({"escrow_id": escrow_id, "amount": amount, "title": task_id}),
+                "amount": amount,
             },
-        }
-        response = self._client.post("/bank/escrow/lock", json=payload)
+        )
+        _log_credit_or_lock(result)
+        return result
 
-        if response.status_code == 404:
-            raise ServiceError("account_not_found", "Account not found", 404, {})
-        if response.status_code == 402:
-            raise ServiceError(
-                "insufficient_funds",
-                "Account balance is less than the escrow amount",
-                402,
-                {},
-            )
-        if response.status_code == 409:
-            msg = self._json(response).get("message", "Escrow already locked")
-            raise ServiceError("escrow_already_locked", str(msg), 409, {})
-        if response.status_code not in (200, 201):
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
-
-        data = self._json(response)
-        return {
-            "escrow_id": str(data.get("escrow_id", escrow_id)),
-            "amount": amount,
-            "task_id": task_id,
-            "status": "locked",
-        }
-
-    def escrow_release(self, escrow_id: str, recipient_account_id: str) -> dict[str, object]:
+    async def escrow_release(
+        self,
+        escrow_id: str,
+        recipient_account_id: str,
+        operation_id: str,
+        source_reference: str,
+    ) -> dict[str, object]:
+        source_reference = _require_utf8(source_reference, "source_reference")
         now = self._now()
-        payload: dict[str, Any] = {
-            "escrow_id": escrow_id,
-            "recipient_account_id": recipient_account_id,
-            "tx_id": self._new_tx_id(),
-            "resolved_at": now,
-            "constraints": {"status": "locked"},
-            "event": {
-                "event_source": "bank",
-                "event_type": "escrow.released",
-                "timestamp": now,
-                "summary": f"Escrow {escrow_id} released to {recipient_account_id}",
-                "payload": json.dumps(
-                    {
-                        "escrow_id": escrow_id,
-                        "recipient_id": recipient_account_id,
-                    }
-                ),
-            },
-        }
-        response = self._client.post("/bank/escrow/release", json=payload)
+        tx_id = self._new_tx_id()
 
-        if response.status_code == 404:
-            error_code = str(self._json(response).get("error", ""))
-            if error_code == "account_not_found":
-                raise ServiceError("account_not_found", "Recipient account not found", 404, {})
-            raise ServiceError("escrow_not_found", "Escrow not found", 404, {})
-        if response.status_code == 409:
-            raise ServiceError(
-                "escrow_already_resolved",
-                "Escrow has already been resolved",
-                409,
-                {},
+        try:
+            data = await self._gateway.escrow_release(
+                escrow_id=escrow_id,
+                recipient_account_id=recipient_account_id,
+                tx_id=tx_id,
+                resolved_at=now,
+                source_reference=source_reference,
+                operation_id=operation_id,
             )
-        if response.status_code not in (200, 201):
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+        except ServiceError as exc:
+            self._raise_preserved_money_error(exc)
+            if exc.status_code == 404:
+                if exc.error == "account_not_found":
+                    raise ServiceError(
+                        "account_not_found", "Recipient account not found", 404, {}
+                    ) from exc
+                raise ServiceError("escrow_not_found", "Escrow not found", 404, {}) from exc
+            if exc.status_code == 409:
+                raise ServiceError(
+                    "escrow_already_resolved", "Escrow has already been resolved", 409, {}
+                ) from exc
+            raise self._as_gateway_runtime_error(exc) from exc
 
-        data = self._json(response)
-        return {
-            "escrow_id": escrow_id,
-            "status": "released",
-            "recipient": recipient_account_id,
-            "amount": int(data.get("amount", 0)),
-        }
+        result = parse_native_financial_envelope(
+            data,
+            operation_id,
+            "escrow_release",
+            {
+                "escrow_id": escrow_id,
+                "recipient_account_id": recipient_account_id,
+                "source_reference": source_reference,
+            },
+        )
+        _logger.info(
+            "audit",
+            extra={
+                "operation": "escrow_release",
+                "escrow_id": escrow_id,
+                "recipient": recipient_account_id,
+                "source_reference": source_reference,
+                "operation_id": operation_id,
+            },
+        )
+        return result
 
-    def escrow_split(
+    async def escrow_split(
         self,
         escrow_id: str,
         worker_account_id: str,
         worker_pct: int,
         poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
     ) -> dict[str, object]:
-        if not (0 <= worker_pct <= 100):
-            raise ServiceError("invalid_amount", "worker_pct must be between 0 and 100", 400, {})
-
-        escrow_response = self._client.get(f"/bank/escrow/{escrow_id}")
-        if escrow_response.status_code == 404:
-            raise ServiceError("escrow_not_found", "Escrow not found", 404, {})
-        if escrow_response.status_code != 200:
-            msg = f"Gateway error: {escrow_response.status_code} {escrow_response.text}"
-            raise RuntimeError(msg)
-        escrow_data = self._json(escrow_response)
-
-        if str(escrow_data["status"]) != "locked":
-            raise ServiceError(
-                "escrow_already_resolved",
-                "Escrow has already been resolved",
-                409,
-                {},
-            )
-
-        if str(escrow_data["payer_account_id"]) != poster_account_id:
-            raise ServiceError(
-                "payload_mismatch",
-                "poster_account_id must match the escrow payer_account_id",
-                400,
-                {},
-            )
-
-        total_amount = int(escrow_data["amount"])
-        worker_amount = total_amount * worker_pct // 100
-        poster_amount = total_amount - worker_amount
+        worker_pct = require_worker_percentage(worker_pct)
+        source_reference = _require_utf8(source_reference, "source_reference")
 
         now = self._now()
-        payload: dict[str, Any] = {
-            "escrow_id": escrow_id,
-            "worker_account_id": worker_account_id,
-            "poster_account_id": poster_account_id,
-            "worker_amount": worker_amount,
-            "poster_amount": poster_amount,
-            "worker_tx_id": self._new_tx_id(),
-            "poster_tx_id": self._new_tx_id(),
-            "resolved_at": now,
-            "constraints": {"status": "locked"},
-            "event": {
-                "event_source": "bank",
-                "event_type": "escrow.split",
-                "timestamp": now,
-                "summary": (
-                    f"Escrow {escrow_id} split: worker={worker_amount}, poster={poster_amount}"
-                ),
-                "payload": json.dumps(
-                    {
-                        "escrow_id": escrow_id,
-                        "worker_amount": worker_amount,
-                        "poster_amount": poster_amount,
-                    }
-                ),
-            },
-        }
-        response = self._client.post("/bank/escrow/split", json=payload)
+        worker_tx_id = self._new_tx_id()
+        poster_tx_id = self._new_tx_id()
 
-        if response.status_code == 404:
-            error_code = str(self._json(response).get("error", ""))
-            if error_code == "account_not_found":
-                raise ServiceError("account_not_found", "Account not found", 404, {})
-            raise ServiceError("escrow_not_found", "Escrow not found", 404, {})
-        if response.status_code == 409:
-            raise ServiceError(
-                "escrow_already_resolved",
-                "Escrow has already been resolved",
-                409,
-                {},
+        try:
+            data = await self._gateway.escrow_split(
+                escrow_id=escrow_id,
+                worker_account_id=worker_account_id,
+                poster_account_id=poster_account_id,
+                worker_tx_id=worker_tx_id,
+                poster_tx_id=poster_tx_id,
+                resolved_at=now,
+                worker_pct=worker_pct,
+                source_reference=source_reference,
+                operation_id=operation_id,
             )
-        if response.status_code not in (200, 201):
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+        except ServiceError as exc:
+            self._raise_preserved_money_error(exc)
+            if exc.status_code == 404:
+                if exc.error == "account_not_found":
+                    raise ServiceError("account_not_found", "Account not found", 404, {}) from exc
+                raise ServiceError("escrow_not_found", "Escrow not found", 404, {}) from exc
+            if exc.status_code == 409:
+                raise ServiceError(
+                    "escrow_already_resolved", "Escrow has already been resolved", 409, {}
+                ) from exc
+            raise self._as_gateway_runtime_error(exc) from exc
 
-        return {
-            "escrow_id": escrow_id,
-            "status": "split",
-            "worker_amount": worker_amount,
-            "poster_amount": poster_amount,
-        }
+        result = parse_native_financial_envelope(
+            data,
+            operation_id,
+            "escrow_split",
+            {
+                "escrow_id": escrow_id,
+                "worker_account_id": worker_account_id,
+                "poster_account_id": poster_account_id,
+                "worker_pct": worker_pct,
+                "source_reference": source_reference,
+            },
+        )
+        _logger.info(
+            "audit",
+            extra={
+                "operation": "escrow_split",
+                "escrow_id": escrow_id,
+                "worker_account_id": worker_account_id,
+                "poster_account_id": poster_account_id,
+                "worker_pct": worker_pct,
+                "source_reference": source_reference,
+                "operation_id": operation_id,
+            },
+        )
+        return result
 
-    def count_accounts(self) -> int:
-        response = self._client.get("/bank/accounts/count")
-        if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
-        return int(self._json(response)["count"])
+    async def escrow_settle(
+        self,
+        escrow_id: str,
+        worker_account_id: str,
+        worker_amount: int,
+        poster_account_id: str,
+        operation_id: str,
+        source_reference: str,
+    ) -> dict[str, object]:
+        worker_amount = require_nonnegative_money(worker_amount, "worker_amount")
+        source_reference = _require_utf8(source_reference, "source_reference")
 
-    def total_escrowed(self) -> int:
-        response = self._client.get("/bank/escrow/total-locked")
-        if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
-        return int(self._json(response)["total"])
+        try:
+            data = await self._gateway.escrow_settle(
+                escrow_id=escrow_id,
+                worker_account_id=worker_account_id,
+                poster_account_id=poster_account_id,
+                worker_tx_id=self._new_tx_id(),
+                poster_tx_id=self._new_tx_id(),
+                resolved_at=self._now(),
+                worker_amount=worker_amount,
+                source_reference=source_reference,
+                operation_id=operation_id,
+            )
+        except ServiceError as exc:
+            self._raise_preserved_money_error(exc)
+            if exc.status_code == 404:
+                if exc.error == "account_not_found":
+                    raise ServiceError("account_not_found", "Account not found", 404, {}) from exc
+                raise ServiceError("escrow_not_found", "Escrow not found", 404, {}) from exc
+            if exc.status_code == 409:
+                raise ServiceError(
+                    "escrow_already_resolved", "Escrow has already been resolved", 409, {}
+                ) from exc
+            raise self._as_gateway_runtime_error(exc) from exc
 
-    def close(self) -> None:
-        self._client.close()
+        result = parse_settlement_envelope(
+            data,
+            operation_id,
+            {
+                "escrow_id": escrow_id,
+                "worker_account_id": worker_account_id,
+                "poster_account_id": poster_account_id,
+                "worker_amount": worker_amount,
+                "source_reference": source_reference,
+            },
+        )
+        _logger.info(
+            "audit",
+            extra={
+                "operation": "escrow_settle",
+                "escrow_id": escrow_id,
+                "worker_account_id": worker_account_id,
+                "poster_account_id": poster_account_id,
+                "worker_amount": worker_amount,
+                "source_reference": source_reference,
+                "operation_id": operation_id,
+            },
+        )
+        return result
+
+    async def count_accounts(self) -> int:
+        try:
+            return await self._gateway.count_accounts()
+        except ServiceError as exc:
+            raise self._as_gateway_runtime_error(exc) from exc
+
+    async def total_escrowed(self) -> int:
+        try:
+            return await self._gateway.total_escrowed()
+        except ServiceError as exc:
+            raise self._as_gateway_runtime_error(exc) from exc
+
+    async def close(self) -> None:
+        await self._gateway.close()
 
 
 __all__ = ["LedgerDbClient"]

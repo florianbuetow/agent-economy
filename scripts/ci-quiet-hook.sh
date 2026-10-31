@@ -10,7 +10,7 @@
 set -euo pipefail
 
 INPUT=$(cat)
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
+COMMAND=$(echo "$INPUT" | jq -r '.input.command // .tool_input.command // empty')
 
 # Only intercept git commit commands
 if ! echo "$COMMAND" | grep -qE 'git commit'; then

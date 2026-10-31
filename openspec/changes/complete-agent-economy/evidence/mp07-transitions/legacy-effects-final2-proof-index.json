@@ -1,0 +1,28 @@
+{
+  "baseline_commit": "a6af0bed5e0475f63b271329bb7f8ea683da9bc3",
+  "parent_session": 32472,
+  "exit_code": 1,
+  "missing_migration_capability_assertions": 1,
+  "audited_source_history_controls_passed": 3,
+  "validator_controls_passed": 3,
+  "migration_classification_assertions_executed": false,
+  "review": "APPROVED; no remaining findings",
+  "supersedes": "legacy-effects-proof-index.json assertion contract only; historical evidence retained",
+  "files": [
+    {
+      "file": "legacy-effects-final2.py.txt",
+      "source": "/Users/flo/Developer/github/agent-economy/services/db-gateway/tests/unit/test_mp07_legacy_effect_migration.py",
+      "sha256": "2661de74f053f5df8e05104577fd52325b40831979b24a5cc3ebf00479249498"
+    },
+    {
+      "file": "legacy-effects-parent-red-final.log",
+      "source": "/private/tmp/agent-economy-mp07-legacy-effects-parent-red-final.log",
+      "sha256": "1361527f99e4572a76b8eacab1dc71f0adf1ee06ca4055f411161303164883f5"
+    },
+    {
+      "file": "legacy-effects-author-red-final2.log",
+      "source": "/private/tmp/agent-economy-mp07-legacy-effects-red-final2.log",
+      "sha256": "06ab0364310f946931f77445582c23972746168b39090bce8734e9689225a45b"
+    }
+  ]
+}

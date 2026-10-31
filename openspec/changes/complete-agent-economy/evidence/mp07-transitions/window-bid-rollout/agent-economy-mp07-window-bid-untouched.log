@@ -1,0 +1,311 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 17 items
+
+tests/integration/test_mp07_acceptance_window.py FFFFFFFFFFFFF           [ 76%]
+tests/integration/test_mp07_bid_admission_races.py FFF                   [ 94%]
+tests/integration/test_mp07_accept_expiry_race.py F                      [100%]
+
+=================================== FAILURES ===================================
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[missing] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:311: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    _install_domain_clock(monkeypatch)
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[null] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:311: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    _install_domain_clock(monkeypatch)
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[zero] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:311: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    _install_domain_clock(monkeypatch)
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[negative] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:311: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    _install_domain_clock(monkeypatch)
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[bool] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:311: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    _install_domain_clock(monkeypatch)
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[float] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:311: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    _install_domain_clock(monkeypatch)
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+_ test_create_rejects_missing_or_invalid_acceptance_window_before_writes[string] _
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:311: in test_create_rejects_missing_or_invalid_acceptance_window_before_writes
+    _install_domain_clock(monkeypatch)
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+____ test_two_selected_windows_are_preserved_and_expose_distinct_deadlines _____
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:356: in test_two_selected_windows_are_preserved_and_expose_distinct_deadlines
+    _install_domain_clock(monkeypatch)
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+_____________________ test_early_acceptance_remains_legal ______________________
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:398: in test_early_acceptance_remains_legal
+    _install_domain_clock(monkeypatch)
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+______________ test_zero_bid_task_expires_at_exact_bidding_cutoff ______________
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:423: in test_zero_bid_task_expires_at_exact_bidding_cutoff
+    clock = _install_domain_clock(monkeypatch)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+___ test_new_bid_after_bidding_cutoff_rejects_without_closing_task_with_bid ____
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:455: in test_new_bid_after_bidding_cutoff_rejects_without_closing_task_with_bid
+    clock = _install_domain_clock(monkeypatch)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+_______ test_poster_can_accept_at_selected_cutoff_minus_one_microsecond ________
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:524: in test_poster_can_accept_at_selected_cutoff_minus_one_microsecond
+    clock = _install_domain_clock(monkeypatch)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+______ test_task_with_bid_expires_at_selected_acceptance_cutoff_equality _______
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_acceptance_window.py:572: in test_task_with_bid_expires_at_selected_acceptance_cutoff_equality
+    clock = _install_domain_clock(monkeypatch)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_acceptance_window.py:95: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+_______ test_bid_validated_before_acceptance_cannot_mutate_accepted_task _______
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_bid_admission_races.py:491: in test_bid_validated_before_acceptance_cannot_mutate_accepted_task
+    _install_domain_clock(monkeypatch)
+tests/integration/test_mp07_bid_admission_races.py:204: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+__________ test_bid_validated_before_cutoff_cannot_commit_at_equality __________
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_bid_admission_races.py:610: in test_bid_validated_before_cutoff_cannot_commit_at_equality
+    clock = _install_domain_clock(monkeypatch)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_bid_admission_races.py:204: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+____________________ test_two_independent_bids_both_succeed ____________________
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_bid_admission_races.py:721: in test_two_independent_bids_both_succeed
+    clock = _install_domain_clock(monkeypatch)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_bid_admission_races.py:204: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+________ test_stale_validated_accept_cannot_overwrite_acceptance_expiry ________
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:92: in annotated_getattr
+    obj = getattr(obj, name)
+          ^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'task_board_service.services.task_bidding' has no attribute 'datetime'
+
+The above exception was the direct cause of the following exception:
+tests/integration/test_mp07_accept_expiry_race.py:424: in test_stale_validated_accept_cannot_overwrite_acceptance_expiry
+    clock = _install_domain_clock(monkeypatch)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_mp07_accept_expiry_race.py:176: in _install_domain_clock
+    monkeypatch.setattr(f"{module_name}.datetime", _ClockDateTime)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:106: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+.venv/lib/python3.13/site-packages/_pytest/monkeypatch.py:94: in annotated_getattr
+    raise AttributeError(
+E   AttributeError: 'module' object at task_board_service.services.task_bidding has no attribute 'datetime'
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[missing]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[null]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[zero]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[negative]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[bool]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[float]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_create_rejects_missing_or_invalid_acceptance_window_before_writes[string]
+FAILED tests/integration/test_mp07_acceptance_window.py::test_two_selected_windows_are_preserved_and_expose_distinct_deadlines
+FAILED tests/integration/test_mp07_acceptance_window.py::test_early_acceptance_remains_legal
+FAILED tests/integration/test_mp07_acceptance_window.py::test_zero_bid_task_expires_at_exact_bidding_cutoff
+FAILED tests/integration/test_mp07_acceptance_window.py::test_new_bid_after_bidding_cutoff_rejects_without_closing_task_with_bid
+FAILED tests/integration/test_mp07_acceptance_window.py::test_poster_can_accept_at_selected_cutoff_minus_one_microsecond
+FAILED tests/integration/test_mp07_acceptance_window.py::test_task_with_bid_expires_at_selected_acceptance_cutoff_equality
+FAILED tests/integration/test_mp07_bid_admission_races.py::test_bid_validated_before_acceptance_cannot_mutate_accepted_task
+FAILED tests/integration/test_mp07_bid_admission_races.py::test_bid_validated_before_cutoff_cannot_commit_at_equality
+FAILED tests/integration/test_mp07_bid_admission_races.py::test_two_independent_bids_both_succeed
+FAILED tests/integration/test_mp07_accept_expiry_race.py::test_stale_validated_accept_cannot_overwrite_acceptance_expiry
+============================= 17 failed in 17.84s ==============================

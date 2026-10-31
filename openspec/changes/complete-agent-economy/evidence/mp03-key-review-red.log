@@ -1,0 +1,38 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 23 items
+
+. ...................FFFF                                                [100%]
+
+=================================== FAILURES ===================================
+_________ test_publication_fsyncs_public_before_private_commit_marker __________
+/tmp/test_mp03_key_provisioning.py:370: in test_publication_fsyncs_public_before_private_commit_marker
+    assert events[:4] == ["link:.pub", "fsync:dir", "link:.key", "fsync:dir"]
+E   AssertionError: assert ['link:.pub',..., 'fsync:dir'] == ['link:.pub',..., 'fsync:dir']
+E     
+E     At index 1 diff: 'link:.key' != 'fsync:dir'
+E     Right contains one more item: 'fsync:dir'
+E     Use -v to get more diff
+_______ test_missing_lock_reader_never_observes_publication_in_progress ________
+/tmp/test_mp03_key_provisioning.py:404: in test_missing_lock_reader_never_observes_publication_in_progress
+    assert reader_outcome[1:] in {("key_error", "absent_pair"), writer_outcome[1:]}
+E   AssertionError: assert ('key_error', 'incomplete_pair') in {('key_error', 'absent_pair'), ('ok', '00ee625999f61df95db7c6cf1646fdbcb2974d170fb79a25674aeeb3ec865d4c')}
+___ test_lock_acquisition_failure_closes_descriptor_and_preserves_diagnostic ___
+/tmp/test_mp03_key_provisioning.py:450: in test_lock_acquisition_failure_closes_descriptor_and_preserves_diagnostic
+    assert descriptor_closed
+E   assert False
+___ test_unlock_failure_does_not_mask_body_failure_and_descriptor_is_closed ____
+/tmp/test_mp03_key_provisioning.py:483: in test_unlock_failure_does_not_mask_body_failure_and_descriptor_is_closed
+    assert "body failure" in str(caught)
+E   AssertionError: assert 'body failure' in 'injected unlock failure'
+E    +  where 'injected unlock failure' = str(OSError('injected unlock failure'))
+=========================== short test summary info ============================
+FAILED ::test_publication_fsyncs_public_before_private_commit_marker - Assert...
+FAILED ::test_missing_lock_reader_never_observes_publication_in_progress - As...
+FAILED ::test_lock_acquisition_failure_closes_descriptor_and_preserves_diagnostic
+FAILED ::test_unlock_failure_does_not_mask_body_failure_and_descriptor_is_closed
+========================= 4 failed, 19 passed in 0.63s =========================

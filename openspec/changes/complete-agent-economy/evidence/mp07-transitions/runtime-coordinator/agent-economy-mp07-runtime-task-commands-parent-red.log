@@ -1,0 +1,207 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 32 items
+
+tests/unit/test_runtime_task_commands.py FEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE [ 96%]
+E                                                                        [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_execute_dispatches_exact_frozen_public_sdk_arguments[submit_bid] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_execute_dispatches_exact_frozen_public_sdk_arguments[accept_bid] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_execute_dispatches_exact_frozen_public_sdk_arguments[submit_deliverable] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_execute_dispatches_exact_frozen_public_sdk_arguments[approve_task] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_execute_dispatches_exact_frozen_public_sdk_arguments[dispute_task] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_fresh_intent_is_durable_before_sdk_transport_and_reopens_completed _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+__ ERROR at setup of test_existing_intent_load_precedes_and_bypasses_prepare ___
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+__ ERROR at setup of test_prepare_failure_prevents_journal_and_sdk_transport ___
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_constructor_rejects_agent_binding_that_differs_from_store_owner[registered-agent] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_constructor_rejects_agent_binding_that_differs_from_store_owner[public-key] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_constructor_rejects_agent_binding_that_differs_from_store_owner[service-url] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_binding_changed_while_prepare_awaits_is_rejected_before_transport _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_binding_changed_before_replay_is_rejected_before_transport _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_same_slot_concurrent_execute_has_one_prepare_and_transport _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_____ ERROR at setup of test_independent_slots_do_not_share_one_async_lock _____
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_request_error_returns_original_record_without_revision_or_byte_change[ReadTimeout] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_request_error_returns_original_record_without_revision_or_byte_change[ConnectError] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_http_status_error_records_actual_status_and_typed_body _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_command_contract_error_records_actual_status_with_no_invented_body _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_unforeseen_sdk_error_propagates_without_journal_observation _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+__ ERROR at setup of test_local_journal_error_propagates_before_sdk_transport __
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_terminal_or_attention_state_never_calls_sdk_or_prepare[completed] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_terminal_or_attention_state_never_calls_sdk_or_prepare[definitive_rejection] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_terminal_or_attention_state_never_calls_sdk_or_prepare[attention_required] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_blocked_intent_gets_one_exact_attempt_per_replay_pass _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_replay_uses_sorted_known_work_without_remote_discovery _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_replay_request_loss_does_not_starve_later_known_work __
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_runtime_owner_binds_exact_identity_public_key_and_five_urls _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_runtime_owner_requires_registered_agent_without_network_or_gateway _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_runtime_owner_rejects_malformed_public_key_boundary[malformed-encoding] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+_ ERROR at setup of test_runtime_owner_rejects_malformed_public_key_boundary[wrong-raw-length] _
+tests/unit/test_runtime_task_commands.py:388: in _required_runtime_command_interface
+    assert _commands is not None, (
+E   AssertionError: Blocked by absent T-181 interface: base_agent.runtime_task_commands is required
+E   assert None is not None
+=================================== FAILURES ===================================
+_______________ test_runtime_task_command_interface_is_available _______________
+tests/unit/test_runtime_task_commands.py:397: in test_runtime_task_command_interface_is_available
+    assert _commands is not None, (
+E   AssertionError: T-181 capability missing: base_agent.runtime_task_commands has not been implemented
+E   assert None is not None
+=========================== short test summary info ============================
+FAILED tests/unit/test_runtime_task_commands.py::test_runtime_task_command_interface_is_available
+ERROR tests/unit/test_runtime_task_commands.py::test_execute_dispatches_exact_frozen_public_sdk_arguments[submit_bid]
+ERROR tests/unit/test_runtime_task_commands.py::test_execute_dispatches_exact_frozen_public_sdk_arguments[accept_bid]
+ERROR tests/unit/test_runtime_task_commands.py::test_execute_dispatches_exact_frozen_public_sdk_arguments[submit_deliverable]
+ERROR tests/unit/test_runtime_task_commands.py::test_execute_dispatches_exact_frozen_public_sdk_arguments[approve_task]
+ERROR tests/unit/test_runtime_task_commands.py::test_execute_dispatches_exact_frozen_public_sdk_arguments[dispute_task]
+ERROR tests/unit/test_runtime_task_commands.py::test_fresh_intent_is_durable_before_sdk_transport_and_reopens_completed
+ERROR tests/unit/test_runtime_task_commands.py::test_existing_intent_load_precedes_and_bypasses_prepare
+ERROR tests/unit/test_runtime_task_commands.py::test_prepare_failure_prevents_journal_and_sdk_transport
+ERROR tests/unit/test_runtime_task_commands.py::test_constructor_rejects_agent_binding_that_differs_from_store_owner[registered-agent]
+ERROR tests/unit/test_runtime_task_commands.py::test_constructor_rejects_agent_binding_that_differs_from_store_owner[public-key]
+ERROR tests/unit/test_runtime_task_commands.py::test_constructor_rejects_agent_binding_that_differs_from_store_owner[service-url]
+ERROR tests/unit/test_runtime_task_commands.py::test_binding_changed_while_prepare_awaits_is_rejected_before_transport
+ERROR tests/unit/test_runtime_task_commands.py::test_binding_changed_before_replay_is_rejected_before_transport
+ERROR tests/unit/test_runtime_task_commands.py::test_same_slot_concurrent_execute_has_one_prepare_and_transport
+ERROR tests/unit/test_runtime_task_commands.py::test_independent_slots_do_not_share_one_async_lock
+ERROR tests/unit/test_runtime_task_commands.py::test_request_error_returns_original_record_without_revision_or_byte_change[ReadTimeout]
+ERROR tests/unit/test_runtime_task_commands.py::test_request_error_returns_original_record_without_revision_or_byte_change[ConnectError]
+ERROR tests/unit/test_runtime_task_commands.py::test_http_status_error_records_actual_status_and_typed_body
+ERROR tests/unit/test_runtime_task_commands.py::test_command_contract_error_records_actual_status_with_no_invented_body
+ERROR tests/unit/test_runtime_task_commands.py::test_unforeseen_sdk_error_propagates_without_journal_observation
+ERROR tests/unit/test_runtime_task_commands.py::test_local_journal_error_propagates_before_sdk_transport
+ERROR tests/unit/test_runtime_task_commands.py::test_terminal_or_attention_state_never_calls_sdk_or_prepare[completed]
+ERROR tests/unit/test_runtime_task_commands.py::test_terminal_or_attention_state_never_calls_sdk_or_prepare[definitive_rejection]
+ERROR tests/unit/test_runtime_task_commands.py::test_terminal_or_attention_state_never_calls_sdk_or_prepare[attention_required]
+ERROR tests/unit/test_runtime_task_commands.py::test_blocked_intent_gets_one_exact_attempt_per_replay_pass
+ERROR tests/unit/test_runtime_task_commands.py::test_replay_uses_sorted_known_work_without_remote_discovery
+ERROR tests/unit/test_runtime_task_commands.py::test_replay_request_loss_does_not_starve_later_known_work
+ERROR tests/unit/test_runtime_task_commands.py::test_runtime_owner_binds_exact_identity_public_key_and_five_urls
+ERROR tests/unit/test_runtime_task_commands.py::test_runtime_owner_requires_registered_agent_without_network_or_gateway
+ERROR tests/unit/test_runtime_task_commands.py::test_runtime_owner_rejects_malformed_public_key_boundary[malformed-encoding]
+ERROR tests/unit/test_runtime_task_commands.py::test_runtime_owner_rejects_malformed_public_key_boundary[wrong-raw-length]
+========================= 1 failed, 31 errors in 0.22s =========================

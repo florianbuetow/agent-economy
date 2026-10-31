@@ -90,7 +90,6 @@ async def test_list_agent_stats_structure(client):
         "total_spent",
         "spec_quality",
         "delivery_quality",
-        "current_streak",
     }
     assert set(stats["spec_quality"].keys()) == {
         "extremely_satisfied",
@@ -242,3 +241,59 @@ async def test_earnings_staleness(client, write_db):
     after = await client.get("/api/agents/a-bob/earnings")
     assert after.status_code == 200
     assert after.json()["total_earned"] == before_total + 100
+
+
+async def test_feed_role_filter_as_poster_only_posted_tasks(client):
+    response = await client.get("/api/agents/a-alice/feed?role=AS_POSTER&limit=200")
+    assert response.status_code == 200
+    events = response.json()["events"]
+    assert events
+    assert all(event["poster_id"] == "a-alice" for event in events)
+
+
+async def test_feed_role_filter_as_worker_only_worked_tasks(client):
+    response = await client.get("/api/agents/a-bob/feed?role=AS_WORKER&limit=200")
+    assert response.status_code == 200
+    events = response.json()["events"]
+    assert events
+    assert all(event["worker_id"] == "a-bob" for event in events)
+
+
+async def test_feed_type_filter_bid(client):
+    response = await client.get("/api/agents/a-alice/feed?type=BID&limit=200")
+    assert response.status_code == 200
+    events = response.json()["events"]
+    assert all(event["badge"] == "BID" for event in events)
+
+
+async def test_feed_type_filter_dispute_and_ruling(client, write_db):
+    for event_id, event_type in ((101, "task.disputed"), (102, "task.ruled")):
+        await write_db.execute(
+            "INSERT INTO events "
+            "(event_id, event_source, event_type, timestamp, task_id, agent_id, summary, payload) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                event_id,
+                "board",
+                event_type,
+                "2026-03-02T07:00:00Z",
+                "t-task1",
+                "a-alice",
+                event_type,
+                "{}",
+            ),
+        )
+    await write_db.commit()
+
+    disputes = await client.get("/api/agents/a-alice/feed?type=DISPUTE&limit=200")
+    rulings = await client.get("/api/agents/a-alice/feed?type=RULING&limit=200")
+    assert [e["event_type"] for e in disputes.json()["events"]] == ["task.disputed"]
+    assert [e["event_type"] for e in rulings.json()["events"]] == ["task.ruled"]
+
+
+async def test_profile_feedback_includes_author_agent_id(client):
+    response = await client.get("/api/agents/a-bob")
+    assert response.status_code == 200
+    feedback = response.json()["recent_feedback"]
+    assert feedback
+    assert all(item["from_agent_id"] for item in feedback)

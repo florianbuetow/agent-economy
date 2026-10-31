@@ -1,0 +1,56 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 452 items
+
+tests/unit/routers/test_action_aliases.py ..                             [  0%]
+tests/unit/routers/test_assets.py .................                      [  4%]
+tests/unit/routers/test_auth.py ........................................ [ 13%]
+.                                                                        [ 13%]
+tests/unit/routers/test_bid_count_after_accept.py .                      [ 13%]
+tests/unit/routers/test_bids.py ....................................     [ 21%]
+tests/unit/routers/test_court_resilience.py ......                       [ 22%]
+tests/unit/routers/test_dispute_court_handoff.py .                       [ 23%]
+tests/unit/routers/test_disputes.py ...........................          [ 28%]
+tests/unit/routers/test_expiry_with_bids.py .....                        [ 30%]
+tests/unit/routers/test_health.py ....                                   [ 30%]
+tests/unit/routers/test_lifecycle.py ............                        [ 33%]
+tests/unit/routers/test_rebuttal_dispute_binding.py .....                [ 34%]
+tests/unit/routers/test_rebuttal_middleware.py ...                       [ 35%]
+tests/unit/routers/test_rebuttals.py ..                                  [ 35%]
+tests/unit/routers/test_security.py ...................................  [ 43%]
+tests/unit/routers/test_submission.py ..................                 [ 47%]
+tests/unit/routers/test_t072_assets_gaps.py .                            [ 47%]
+tests/unit/routers/test_t072_bids_gaps.py .....                          [ 48%]
+tests/unit/routers/test_t072_disputes_gaps.py ...                        [ 49%]
+tests/unit/routers/test_t072_health_gaps.py .                            [ 49%]
+tests/unit/routers/test_t072_submission_gaps.py ......                   [ 51%]
+tests/unit/routers/test_t072_tasks_gaps.py ............                  [ 53%]
+tests/unit/routers/test_tasks.py ....................................... [ 62%]
+.....................................                                    [ 70%]
+tests/unit/routers/test_two_tier_ruling.py ..                            [ 71%]
+tests/unit/routers/test_validation.py ................                   [ 74%]
+tests/unit/routers/test_wp06_record_ruling_idempotent.py ..              [ 75%]
+tests/unit/test_asset_manager.py .............                           [ 77%]
+tests/unit/test_config.py ....                                           [ 78%]
+tests/unit/test_deadline_evaluation_config.py ...                        [ 79%]
+tests/unit/test_deadline_evaluator.py ..........                         [ 81%]
+tests/unit/test_deadline_sweep.py .....                                  [ 82%]
+tests/unit/test_escrow_coordinator.py .............                      [ 85%]
+tests/unit/test_lifecycle_events.py .........                            [ 87%]
+tests/unit/test_mp03_platform_agent_startup.py ...                       [ 88%]
+tests/unit/test_mp03_receiver_context.py .......                         [ 89%]
+tests/unit/test_mp07_deadline_precision.py .....                         [ 90%]
+tests/unit/test_no_base_agent_imports.py .                               [ 91%]
+tests/unit/test_placeholder.py .                                         [ 91%]
+tests/unit/test_response_contracts.py .....                              [ 92%]
+tests/unit/test_state.py ......                                          [ 93%]
+tests/unit/test_task_db_client_normalization.py ....                     [ 94%]
+tests/unit/test_task_store.py ....                                       [ 95%]
+tests/unit/test_token_validator.py ...............                       [ 98%]
+tests/unit/test_wp06_ruling_trigger.py .....                             [100%]
+
+============================= 452 passed in 34.05s =============================

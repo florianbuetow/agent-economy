@@ -1,0 +1,105 @@
+{
+  "scope": "feeder-window",
+  "status": "independent review APPROVE; combined parent config/window93 pass and scoped type checks pass; no ticket closure",
+  "boundary": "Not root CI, live stack, end-to-end recovery or complete runtime integration evidence.",
+  "artifacts": [
+    {
+      "path": "agent-economy-mp07-feeder-window-controls.log",
+      "sha256": "b7b922fd1f75fd4a0453dbf72d2753bffd696a311bc1089346c22377bcfe97b5"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-fixtures/test_acceptance_config.py",
+      "sha256": "f3f5e7926a5a9ec47ec394b6b3825f1212452c4a5060f2cd1b444baf352e7baa"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-fixtures/test_config.py",
+      "sha256": "eda4121b2e85ddf197cd0e650c56881fc20efa19f7bc0de078d54207b04118c9"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-fixtures/test_loop.py",
+      "sha256": "990fbbc35959b0f7cd6e7ea58bb8badfe01410293a07112a289b940092b36360"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-fixtures/test_loop_statuses.py",
+      "sha256": "1b5a90a2a43554a521344def28b8a727a711c891f498b357a13979ba0b45feb8"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-fixtures/test_unattended_economy.py",
+      "sha256": "16a587295518aaa7919c5bf5214856c0e4dc9aeece583984d8b022411f672236"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-forwarding-red.log",
+      "sha256": "55c8dc82260e78f5f0261d4beedf1898cfb4df19a5dc64c33779ebc3cb432c05"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-green.log",
+      "sha256": "e0d96e6c29567f79db2f0dabbbcfba4003609b1caa3def83c1979171134ab1cf"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-mypy.log",
+      "sha256": "f9b031e5c45aa702cd4fef028d465551cb20a2c4698e0913c7b00766b20ac4d8"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-old-fixtures.log",
+      "sha256": "25fbcbb1e88bc33b28be60e46ca1f8d60837a41986d8c020159629d06d7e82f1"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-pyright-baseline.log",
+      "sha256": "06051ec95774d8c2f145611a410cd429c30b3ec5d0e8b769a852bc352d52c01e"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-pyright.log",
+      "sha256": "d74de57c8914567633d29dc49316e2b6635194975d4a4e8ee4222a47f3b6a32a"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-red-source.py",
+      "sha256": "6ad625bed11caf1fb2e0b76b337a262ff38f6384ada53bd38fb0d8de5011c144"
+    },
+    {
+      "path": "agent-economy-mp07-feeder-window-red.log",
+      "sha256": "3639524941ab20290d8d4b98b481ebb7c6a5ead968e15cab62cde13bcd0417f7"
+    }
+  ],
+  "sources": [
+    {
+      "path": "agents/src/task_feeder/config.py",
+      "sha256": "d67200ea66d4461c040ea1ac38e5851a450d38cb010c7089f6c7e9da724c94ed"
+    },
+    {
+      "path": "agents/src/task_feeder/loop.py",
+      "sha256": "3fa4a3863bb75a9c902a5cf7fac70bb338fa342a1cc0c239a8839092d43f96eb"
+    },
+    {
+      "path": "agents/config.yaml",
+      "sha256": "bf102b0e198b5a0c400eacdeddc679a4fceceefb58106446d6df2969816d2e1d"
+    },
+    {
+      "path": "agents/tests/unit/task_feeder/test_mp07_acceptance_window.py",
+      "sha256": "6ad625bed11caf1fb2e0b76b337a262ff38f6384ada53bd38fb0d8de5011c144"
+    },
+    {
+      "path": "agents/tests/unit/task_feeder/test_config.py",
+      "sha256": "dbc8de9c11ba96a8ecad6b1723791972b0b8e485c2a8ca26663c58c83b6e0694"
+    },
+    {
+      "path": "agents/tests/unit/task_feeder/test_loop.py",
+      "sha256": "ad66be4840b8f329c6d7a89f35dff7e1d1a746a7713ddfa0e294d18e00ce4c00"
+    },
+    {
+      "path": "agents/tests/unit/task_feeder/test_loop_statuses.py",
+      "sha256": "82e4518de84f1e36fd4c74cca18c14cb9fd6dcc3b18fc6efc0ebebc6a1ffbfde"
+    },
+    {
+      "path": "agents/tests/unit/task_feeder/test_acceptance_config.py",
+      "sha256": "038873802a7d4799a13dec0453323402927ff1cc1b645d841ff24f839ab3c41a"
+    },
+    {
+      "path": "agents/tests/e2e/test_unattended_economy.py",
+      "sha256": "84ec81ca5360f818492711100c84189726f226d53169f54dfac809e9e230f9c3"
+    },
+    {
+      "path": "docs/plans/2026-10-18-mp07-feeder-window-reconciliation.md",
+      "sha256": "77b875eeff82db700c1c599909bee6d8baea9c883076011dbc214ac272524325"
+    }
+  ]
+}

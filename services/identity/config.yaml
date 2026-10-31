@@ -6,7 +6,7 @@ service:
   version: "0.1.0"
 
 server:
-  host: "127.0.0.1"
+  host: "0.0.0.0"
   port: 8001
   log_level: "info"
 
@@ -14,11 +14,7 @@ logging:
   level: "INFO"
   directory: "data/logs"
 
-database:
-  path: "data/identity.db"
-
 crypto:
-  algorithm: "ed25519"
   public_key_prefix: "ed25519:"
   public_key_bytes: 32
   signature_bytes: 64
@@ -26,6 +22,29 @@ crypto:
 request:
   max_body_size: 1572864
 
+token_validation:
+  max_lifetime_seconds: 300
+  clock_skew_seconds: 30
+
+registration:
+  # Display names (case-insensitive, trimmed) that only a pinned key may register.
+  reserved_names: ["platform", "operator", "ui operator"]
+  # PEM public keys (relative to this file) allowed to register reserved names.
+  trusted_key_files:
+    - "../../data/keys/platform.pub"
+    - "../../data/keys/operator.pub"
+
 db_gateway:
   url: "http://127.0.0.1:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-identity"
+    private_key_path: "../../data/keys/gateway-identity.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
+
+telemetry:
+  enabled: true
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"

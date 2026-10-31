@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from service_commons.exceptions import ServiceError
 
 from ui_service.config import get_settings
 from ui_service.core.state import get_app_state
@@ -205,3 +206,44 @@ async def test_sse_retry_directive(client):
     first = await anext(stream)
     await stream.aclose()
     assert first == {"retry": 3000}
+
+
+async def _collect_stream_event_ids(response, count: int) -> list[int]:
+    ids: list[int] = []
+    iterator = response.body_iterator
+    try:
+        while len(ids) < count:
+            item = await anext(iterator)
+            if isinstance(item, dict):
+                if item.get("event") == "economy_event":
+                    ids.append(int(json.loads(str(item["data"]))["event_id"]))
+                continue
+            text = item.decode() if isinstance(item, bytes) else str(item)
+            for line in text.splitlines():
+                if line.startswith("id:"):
+                    ids.append(int(line.split(":", 1)[1].strip()))
+    finally:
+        await iterator.aclose()
+    return ids
+
+
+async def test_sse_reconnect_with_last_event_id_does_not_replay(client):
+    _ = client
+    # Browser reconnect: original URL cursor is 0, header carries last delivered id.
+    response = await events_router.stream_events(last_event_id=0, last_event_id_header="23")
+    ids = await _collect_stream_event_ids(response, 2)
+    assert ids == [24, 25]
+
+
+async def test_sse_last_event_id_header_never_rewinds_cursor(client):
+    _ = client
+    response = await events_router.stream_events(last_event_id=23, last_event_id_header="5")
+    ids = await _collect_stream_event_ids(response, 2)
+    assert ids == [24, 25]
+
+
+async def test_sse_invalid_last_event_id_header_rejected(client):
+    _ = client
+    with pytest.raises(ServiceError) as excinfo:
+        await events_router.stream_events(last_event_id=0, last_event_id_header="abc")
+    assert excinfo.value.status_code == 400

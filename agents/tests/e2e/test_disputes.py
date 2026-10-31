@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from .native_task_contract import lifecycle_version, new_operation_id, publish_task
+
 if TYPE_CHECKING:
     from base_agent.agent import BaseAgent
     from base_agent.platform import PlatformAgent
@@ -15,21 +17,53 @@ async def _close_agents(agents_to_close: list[BaseAgent]) -> None:
 
 
 async def _create_disputed_task(poster: BaseAgent, worker: BaseAgent) -> tuple[dict[str, Any], str]:
-    task = await poster.post_task(
+    task = await publish_task(
+        poster,
         title="Court dispute task",
         spec="Do something",
         reward=500,
         bidding_deadline_seconds=3600,
+        acceptance_window_seconds=3600,
         execution_deadline_seconds=7200,
         review_deadline_seconds=3600,
     )
-    bid = await worker.submit_bid(task_id=task["task_id"], amount=400)
-    await poster.accept_bid(task_id=task["task_id"], bid_id=bid["bid_id"])
+    bid_response = await worker.submit_bid(
+        task_id=task["task_id"],
+        amount=400,
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(task),
+    )
+    assert bid_response.status_code == 201
+    bid = bid_response.body
+    accept_response = await poster.accept_bid(
+        task_id=task["task_id"],
+        bid_id=bid["bid_id"],
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(task),
+    )
+    assert accept_response.status_code == 200
+    accepted_task = accept_response.body
+    assert accepted_task["status"] == "accepted"
     await worker.upload_asset(task["task_id"], "result.txt", b"Hello World")
-    await worker.submit_deliverable(task["task_id"])
+    submit_response = await worker.submit_deliverable(
+        task["task_id"],
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(accepted_task),
+    )
+    assert submit_response.status_code == 200
+    submitted_task = submit_response.body
+    assert submitted_task["status"] == "submitted"
 
     dispute_reason = "Deliverable does not meet spec"
-    await poster.dispute_task(task_id=task["task_id"], reason=dispute_reason)
+    dispute_response = await poster.dispute_task(
+        task_id=task["task_id"],
+        reason=dispute_reason,
+        operation_id=new_operation_id(),
+        expected_lifecycle_version=lifecycle_version(submitted_task),
+    )
+    assert dispute_response.status_code == 200
+    disputed_command_task = dispute_response.body
+    assert disputed_command_task["status"] == "disputed"
 
     disputed_task = await poster.get_task(task["task_id"])
     assert disputed_task["status"] == "disputed"
@@ -61,7 +95,9 @@ async def _resolve_dispute_id(
             "respondent_id": worker.agent_id,
             "claim": dispute_reason,
             "escrow_id": disputed_task["escrow_id"],
-        }
+        },
+        audience="court",
+        resource="POST /disputes/file",
     )
     file_response = await platform_agent._request_raw(
         "POST",
@@ -92,7 +128,9 @@ async def _submit_rebuttal(platform_agent: PlatformAgent, dispute_id: str) -> in
             "action": "submit_rebuttal",
             "dispute_id": dispute_id,
             "rebuttal": "Work meets the agreed specification.",
-        }
+        },
+        audience="court",
+        resource=f"POST /disputes/{dispute_id}/rebuttal",
     )
     rebuttal_response = await platform_agent._request_raw(
         "POST",
@@ -109,7 +147,9 @@ async def _trigger_ruling(
         {
             "action": "trigger_ruling",
             "dispute_id": dispute_id,
-        }
+        },
+        audience="court",
+        resource=f"POST /disputes/{dispute_id}/rule",
     )
     ruling_response = await platform_agent._request_raw(
         "POST",

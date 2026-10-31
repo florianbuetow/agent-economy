@@ -4,27 +4,78 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import random
-from dataclasses import dataclass
+import stat
+from pathlib import Path
 from typing import TYPE_CHECKING
+
+from service_auth.posting_journal import (
+    RawTask,
+    TaskSourceEntry,
+    TaskSourceSnapshot,
+    parse_source_bytes,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "RawTask",
+    "TaskSourceEntry",
+    "TaskSourceSnapshot",
+    "iterate_tasks",
+    "load_task_snapshot",
+    "load_tasks",
+]
 
-@dataclass(frozen=True)
-class RawTask:
-    """One task entry read from the JSONL file."""
 
-    title: str
-    spec: str
-    solutions: list[str]
-    level: int
-    problem_type: str
-    solution_note: str | None
+def _source_path(value: object) -> Path:
+    if not isinstance(value, Path) or not value.is_absolute():
+        raise ValueError("Tasks source path must be explicit and absolute")
+    return value.parent.resolve(strict=True) / value.name
+
+
+def load_task_snapshot(path: Path, *, max_bytes: int) -> TaskSourceSnapshot:
+    """Read one bounded stable source file before constructing immutable evidence."""
+    source_path = _source_path(path)
+    if type(max_bytes) is not int or max_bytes < 1:
+        raise ValueError("Source byte limit must be a positive integer")
+    descriptor = os.open(source_path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise ValueError("Tasks source must be a regular file")
+        if before.st_size > max_bytes:
+            raise ValueError("Tasks source exceeds the configured byte limit")
+        chunks: list[bytes] = []
+        remaining = max_bytes + 1
+        while remaining:
+            chunk = os.read(descriptor, min(65_536, remaining))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        source_bytes = b"".join(chunks)
+        if len(source_bytes) > max_bytes:
+            raise ValueError("Tasks source exceeds the configured byte limit")
+        after = os.fstat(descriptor)
+        try:
+            current = source_path.stat(follow_symlinks=False)
+        except OSError as exc:
+            raise ValueError("Tasks source changed while reading") from exc
+        fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+        if len(source_bytes) != before.st_size or any(
+            getattr(before, field) != getattr(after, field)
+            or getattr(after, field) != getattr(current, field)
+            for field in fields
+        ):
+            raise ValueError("Tasks source changed while reading")
+    finally:
+        os.close(descriptor)
+    return parse_source_bytes(source_bytes, source_path=source_path, max_bytes=max_bytes)
 
 
 def load_tasks(path: Path) -> list[RawTask]:
@@ -62,7 +113,7 @@ def load_tasks(path: Path) -> list[RawTask]:
                 RawTask(
                     title=obj["title"],
                     spec=obj["spec"],
-                    solutions=obj["solutions"],
+                    solutions=tuple(obj["solutions"]),
                     level=obj["level"],
                     problem_type=obj["problem_type"],
                     solution_note=obj.get("solution_note"),

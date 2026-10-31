@@ -6,12 +6,14 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import sys
 import time
 from datetime import UTC, datetime
 from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
 from typing import Any
+
+from service_commons.telemetry import current_trace_ids
 
 
 class JSONFormatter(logging.Formatter):
@@ -21,7 +23,7 @@ class JSONFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON string."""
-        timestamp = datetime.fromtimestamp(record.created, tz=UTC).strftime("%Y-%m-%d %H:%M")
+        timestamp = datetime.fromtimestamp(record.created, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
 
         log_data: dict[str, Any] = {
             "timestamp": timestamp,
@@ -32,6 +34,10 @@ class JSONFormatter(logging.Formatter):
 
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
+
+        trace_ids = current_trace_ids()
+        if trace_ids is not None:
+            log_data["trace_id"], log_data["span_id"] = trace_ids
 
         standard_attrs = {
             "name",
@@ -79,13 +85,13 @@ class DailyRotatingFileHandler(TimedRotatingFileHandler):
 
     def _make_filename(self) -> str:
         today = datetime.now(tz=UTC).strftime("%Y-%m-%d")
-        return os.path.join(self._log_directory, f"{today}.log")
+        return str(Path(self._log_directory) / f"{today}.log")
 
-    def doRollover(self) -> None:  # noqa: N802
+    def doRollover(self) -> None:
         if self.stream:
             self.stream.close()
-            self.stream = None  # type: ignore[assignment]
-        self.baseFilename = os.path.abspath(self._make_filename())
+            self.stream = None
+        self.baseFilename = str(Path(self._make_filename()).resolve())
         if not self.delay:
             self.stream = self._open()
         current_time = int(time.time())
@@ -127,7 +133,7 @@ def setup_logging(level: str, service_name: str, log_directory: str) -> logging.
     stdout_handler.setFormatter(formatter)
     logger.addHandler(stdout_handler)
 
-    os.makedirs(log_directory, exist_ok=True)
+    Path(log_directory).mkdir(parents=True, exist_ok=True)
     file_handler = DailyRotatingFileHandler(directory=log_directory)
     file_handler.setLevel(numeric_level)
     file_handler.setFormatter(formatter)

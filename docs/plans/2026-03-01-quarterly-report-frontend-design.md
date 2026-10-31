@@ -1,3 +1,8 @@
+> **SUPERSEDED (2026-06-13, T-026):** This document targets a React/TypeScript/Vite frontend
+> that was never built. Decision: the UI stays vanilla JS — see
+> [2026-06-13-frontend-stack-decision.md](2026-06-13-frontend-stack-decision.md). The
+> page remains wanted via T-093, to be implemented in plain JS.
+
 # Quarterly Report Frontend Design
 
 ## Overview

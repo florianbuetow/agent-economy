@@ -1,0 +1,40 @@
+{
+  "claims": {
+    "baseline": "24fail18pass",
+    "publication_stage": "8fail34pass",
+    "author_final": 42,
+    "parent": {
+      "handle": 89750,
+      "exit_code": 0,
+      "combined_native_control_passed": 66
+    },
+    "limits": "Only explicitfixture histories and documented rebuttal admission precedence; no product/source changes"
+  },
+  "review": "APPROVE by /root/mp07_board_rollout_review after current-vs-archived-source comparison; originalobservables preserved, nativecontract supersessions explicitlymapped, no fabricatedoperationprovenance.",
+  "shared_helper_sha256": "290f136b3e186c1609309d933cec2aa6fcb646ac29b8339d43d57eaad291d133",
+  "sources": {
+    "services/db-gateway/tests/unit/routers/test_court.py": "61d92035db0c7ff3cab5c07d6be843975f0f5f0f3431740ca36dab81e6d95374",
+    "services/db-gateway/tests/unit/routers/test_court_reads.py": "b143a78099e1b6be50b925b442e0dfc70fa64c3339ec846cef16f68f6e16b173",
+    "services/db-gateway/tests/unit/routers/test_t072_court_reads_gaps.py": "57ea40c43217d0147697eb0a447888e73cdb68c237ca61cda49743639e9e8d14",
+    "docs/plans/2026-10-18-mp07-gateway-court-router-fixtures.md": "878142fc320d3b63381ff276e73a1a4a5dc12ba6a9a40a883e7fd8b9e73f141f"
+  },
+  "artifacts": {
+    "agent-economy-mp07-gateway-court-router-after.sha256": "bfa0772c29dfd4372ee1253956dfaba47dbc113bb4f72991f4824e4eedacdfc3",
+    "agent-economy-mp07-gateway-court-router-baseline.log": "570339b83a1206097e9aff128d95c6fd8f6e7b58cb9e0f1adeed82cbd539a293",
+    "agent-economy-mp07-gateway-court-router-before.sha256": "b8d63c877d7e629c2e3b42789659205ed28de0be6ba7fd5e47a468b20c9243d3",
+    "agent-economy-mp07-gateway-court-router-final-format.log": "eee76f865de5a9f2456950f710ae5d5f9b5bd0ea02aa54f614c5eed6642a0bfd",
+    "agent-economy-mp07-gateway-court-router-final-formatted.log": "4a552e8d39252ba4f09fc49177acd105d6b8328e96dee04eae7fac2a8173e693",
+    "agent-economy-mp07-gateway-court-router-final-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-gateway-court-router-final.log": "8faea47b1d07a37b5bad55298f5982616647c03cd4b72f98a5d19be6f60d3d68",
+    "agent-economy-mp07-gateway-court-router-format.log": "6229dec861270baebbf55fcb229c914dbd956d8caa5a4e298012665a51c9b7aa",
+    "agent-economy-mp07-gateway-court-router-native-controls.log": "d2357ad7fcba7b48b50978e75b6fe307470291121c5137e6394f6493a6184af4",
+    "agent-economy-mp07-gateway-court-router-parent.log": "4d120f6dd273779f0d617f03ca3fea6e162e20a925803edca3eface17a66e810",
+    "agent-economy-mp07-gateway-court-router-ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "agent-economy-mp07-gateway-court-router-stage1.log": "8c218d60f0c416cfa0a7a3f33781e0b5d9c321f780b683995a9ad0efae35bf75",
+    "agent-economy-mp07-gateway-court-router-stage2-court.log": "1386ac4a95afbc794b7bb733a509a64d3fe58d975994c2fe6a38eb516402519c",
+    "agent-economy-mp07-gateway-court-router-stage2-reads.log": "c067f76e737b0eec8a9be3a91fd27f936d247d5f5af2a1e64f304bba0fbf82e4",
+    "baseline/test_court.py": "3e76e1c6c7c1368d018f9d74d5cf74e8763be4c539afb61531f45a8ec64add2c",
+    "baseline/test_court_reads.py": "0535583910de6a48fb2397fff5239c3aa3864c689d71c56ec8340e216f447d9b",
+    "baseline/test_t072_court_reads_gaps.py": "14eeb67dfd2aeed3f58366251bdba346eb8f458c06edf8058b303159adcfae34"
+  }
+}

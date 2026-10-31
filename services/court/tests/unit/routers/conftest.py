@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import MagicMock
 
 import pytest
 from cryptography.exceptions import InvalidSignature
 from httpx import ASGITransport, AsyncClient
+from service_auth.jws import JwsProtectedHeader, VerifiedJws
+from service_auth.platform import PlatformAgent
+from service_auth.signing import generate_keypair
 
 from court_service.app import create_app
 from court_service.config import clear_settings_cache
@@ -18,6 +22,7 @@ from tests.helpers import (
     make_jws_token,
     make_mock_judge,
     make_mock_platform_agent,
+    make_ruling_acknowledgment,
     make_task_data,
     new_escrow_id,
     new_task_id,
@@ -25,6 +30,7 @@ from tests.helpers import (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    from pathlib import Path
 
     from fastapi import FastAPI
 
@@ -34,10 +40,53 @@ CLAIMANT_ID = "a-claimant-test-id"
 RESPONDENT_ID = "a-respondent-test-id"
 
 
-def _valid_config(tmp_path: Any, db_path: str | None = None) -> str:
+async def _register_platform_agent(agent: PlatformAgent) -> None:
+    """Register a fixture platform identity without an external Identity service."""
+    agent.agent_id = PLATFORM_AGENT_ID
+
+
+def _write_agent_config(tmp_path: Path) -> Path:
+    """Provision a disposable platform identity for load-only startup."""
+    keys_dir = tmp_path / "keys"
+    generate_keypair("platform", keys_dir)
+    roster_path = tmp_path / "roster.yaml"
+    roster_path.write_text('agents:\n  platform:\n    name: "Platform"\n')
+    config_path = tmp_path / "agents.yaml"
+    config_path.write_text(
+        f"""\
+platform:
+  identity_url: "http://localhost:8001"
+  bank_url: "http://localhost:8002"
+  task_board_url: "http://localhost:8003"
+  reputation_url: "http://localhost:8004"
+  court_url: "http://localhost:8005"
+data:
+  keys_dir: "{keys_dir}"
+  roster_path: "{roster_path}"
+signing:
+  token_ttl_seconds: 60
+  max_lifetime_seconds: 60
+  clock_skew_seconds: 0
+""",
+    )
+    return config_path
+
+
+class _NoDeliverableFetcher:
+    """Default deliverable fetcher for router tests: no on-platform assets."""
+
+    async def fetch(self, task_id: str) -> list[str]:
+        _ = task_id
+        return []
+
+    async def close(self) -> None:
+        """Match the production fetcher lifecycle interface."""
+
+
+def _valid_config(tmp_path: Any) -> str:
     """Write a valid court config.yaml and return its path."""
-    if db_path is None:
-        db_path = str(tmp_path / "test.db")
+    agent_config_path = _write_agent_config(tmp_path)
+    generate_keypair("gateway-court", tmp_path)
     config_content = f"""\
 service:
   name: "court"
@@ -46,21 +95,38 @@ server:
   host: "127.0.0.1"
   port: 8005
   log_level: "info"
+telemetry:
+  enabled: false
+  otlp_endpoint: "http://127.0.0.1:4318"
+  sample_ratio: 1.0
+  excluded_urls: "health"
 logging:
   level: "WARNING"
-  directory: "data/logs"
-database:
-  path: "{db_path}"
+  directory: "{tmp_path / "logs" / "court"}"
 platform:
   agent_id: "{PLATFORM_AGENT_ID}"
+  agent_config_path: "{agent_config_path}"
 request:
   max_body_size: 1048576
 disputes:
   rebuttal_deadline_seconds: 86400
   max_claim_length: 10000
   max_rebuttal_length: 10000
+  feedback_extremely_satisfied_cutoff: 80
+  feedback_satisfied_cutoff: 40
+  feedback_comment_max_length: 256
+  judging_lease_seconds: 60
+  reclaim_interval_seconds: 3600
+evidence:
+  max_total_bytes: 262144
+  max_file_bytes: 65536
+  allowed_extensions: [".txt", ".py", ".json", ".csv", ".md"]
+  allowed_content_types: ["text/plain", "application/json", "text/csv"]
 judges:
   panel_size: 1
+  mock_worker_pct: 50
+  mock_spec_quality: satisfied
+  mock_delivery_quality: satisfied
   judges:
     - id: "judge-0"
       provider: "mock"
@@ -68,6 +134,11 @@ judges:
 db_gateway:
   url: "http://localhost:8007"
   timeout_seconds: 10
+  signing:
+    kid: "gateway-court"
+    private_key_path: "gateway-court.key"
+    audience: "db-gateway"
+    token_ttl_seconds: 300
 """
     config_path = tmp_path / "config.yaml"
     config_path.write_text(config_content)
@@ -75,27 +146,49 @@ db_gateway:
 
 
 @pytest.fixture
-async def app(tmp_path: Any) -> AsyncIterator[FastAPI]:
+async def app(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[FastAPI]:
     """Create a test app with mocked external services."""
     config_path = _valid_config(tmp_path)
     os.environ["CONFIG_PATH"] = config_path
 
     clear_settings_cache()
     reset_app_state()
+    monkeypatch.setattr(PlatformAgent, "register", _register_platform_agent)
 
     test_app = create_app()
     async with test_app.router.lifespan_context(test_app):
         state = get_app_state()
+        await state.platform_agent.close()
         fake_store = InMemoryDisputeStore(db_path=str(tmp_path / "test.db"))
         state.store = fake_store
         if state.dispute_service is not None:
             state.dispute_service._store = fake_store
             state.dispute_service._orchestrator._store = fake_store
+        task_response = make_task_data()
         state.platform_agent = make_mock_platform_agent(
             agent_id=PLATFORM_AGENT_ID,
-            task_response=make_task_data(),
+            task_response=task_response,
         )
+
+        async def _record_ruling(
+            _task_id: str,
+            payload: dict[str, object],
+        ) -> dict[str, Any]:
+            dispute = fake_store.get_dispute(str(payload["ruling_id"]))
+            if dispute is None:
+                raise AssertionError("Ruling fixture requires a stored dispute")
+            return make_ruling_acknowledgment(
+                payload,
+                poster_id=str(dispute["claimant_id"]),
+                worker_id=str(dispute["respondent_id"]),
+                escrow_id=str(dispute["escrow_id"]),
+                reward=int(task_response["reward"]),
+                event_id=1,
+            )
+
+        state.platform_agent.record_ruling.side_effect = _record_ruling
         state.judges = [make_mock_judge()]
+        state.deliverable_fetcher = _NoDeliverableFetcher()
         yield test_app
 
     reset_app_state()
@@ -106,7 +199,7 @@ async def app(tmp_path: Any) -> AsyncIterator[FastAPI]:
 async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
     """Create an async HTTP client for the test app."""
     async with AsyncClient(
-        transport=ASGITransport(app=app),
+        transport=ASGITransport(app=app, raise_app_exceptions=False),
         base_url="http://test",
     ) as c:
         yield c
@@ -158,15 +251,22 @@ def ruling_payload(dispute_id: str, **overrides: Any) -> dict[str, Any]:
     return base
 
 
-def token_body(payload: dict[str, Any], kid: str = PLATFORM_AGENT_ID) -> dict[str, str]:
+def token_body(
+    payload: dict[str, Any],
+    kid: str = PLATFORM_AGENT_ID,
+    *,
+    resource: str | None = None,
+) -> dict[str, str]:
     """Wrap a payload into a {token: ...} body."""
-    return {"token": make_jws_token(payload, kid=kid)}
+    return {"token": make_jws_token(payload, kid=kid, resource=resource)}
 
 
 def inject_identity_verify(
     agent_id: str,
     payload: dict[str, Any],
     valid: bool = True,
+    *,
+    resource: str | None = None,
 ) -> None:
     """Configure the mock platform agent for token verification.
 
@@ -178,7 +278,27 @@ def inject_identity_verify(
     if agent_id != PLATFORM_AGENT_ID or not valid:
         state.platform_agent.validate_certificate = MagicMock(side_effect=InvalidSignature())
     else:
-        state.platform_agent.validate_certificate = MagicMock(return_value=payload)
+        state.platform_agent.validate_certificate = MagicMock(
+            return_value=VerifiedJws(
+                header=JwsProtectedHeader(
+                    alg="EdDSA",
+                    typ="JWT",
+                    kid=agent_id,
+                    iat=1,
+                    exp=2,
+                    aud="court",
+                    resource=resource
+                    or (
+                        f"POST /disputes/{payload['dispute_id']}/rebuttal"
+                        if payload.get("action") == "submit_rebuttal"
+                        else f"POST /disputes/{payload['dispute_id']}/rule"
+                        if payload.get("action") == "trigger_ruling"
+                        else "POST /disputes/file"
+                    ),
+                ),
+                payload=payload,
+            )
+        )
 
 
 def inject_identity_error(error: Exception) -> None:
@@ -211,6 +331,17 @@ def inject_judge(
     state.judges = [
         make_mock_judge(worker_pct=worker_pct, reasoning=reasoning, side_effect=side_effect)
     ]
+
+
+def expire_rebuttal_window(dispute_id: str) -> None:
+    """Test-infra setup helper (GAP-A8, T-039): backdate a dispute's rebuttal
+    deadline into the past, so ruling preconditions treat the window as closed
+    without a real rebuttal having been submitted and without waiting on a clock.
+    """
+    state = get_app_state()
+    store = cast("InMemoryDisputeStore", state.store)
+    past = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
+    store.set_rebuttal_deadline(dispute_id, past)
 
 
 def inject_central_bank_error(error: Exception) -> None:

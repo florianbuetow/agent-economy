@@ -5,7 +5,7 @@ description: >
   Demonstrates the full task lifecycle with three agents.
   Act 1: Register agents and fund accounts.
   Act 2: Happy path — post task, bid, accept, submit, approve.
-  Act 3: Dispute path — post task, bid, accept, submit, dispute.
+  Act 3: Dispute path — post task, bid, accept, submit, dispute, rebuttal, ruling.
 default_delay: 2.0
 
 agents:
@@ -33,16 +33,19 @@ steps:
   - action: fund
     agent: alice
     amount: 5000
+    reference: "demo:quick:fund:alice"
     delay: 1.5
 
   - action: fund
     agent: bob
     amount: 1000
+    reference: "demo:quick:fund:bob"
     delay: 1.0
 
   - action: fund
     agent: carol
     amount: 1000
+    reference: "demo:quick:fund:carol"
     delay: 1.5
 
   # ── Act 2: Happy path ────────────────────────────────────
@@ -52,6 +55,10 @@ steps:
     title: "Implement login page"
     spec: "Build a responsive login form with email and password fields, client-side validation, error states, and a forgot-password link. Must be accessible (WCAG 2.1 AA)."
     reward: 200
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 3.0
 
   - action: bid
@@ -109,6 +116,10 @@ steps:
     title: "Design REST API specification"
     spec: "Design a complete RESTful API spec for a todo application. Must include all CRUD endpoints (GET, POST, PUT, PATCH, DELETE), pagination, error responses, and authentication headers."
     reward: 150
+    bidding_deadline_seconds: 3600
+    acceptance_window_seconds: 300
+    execution_deadline_seconds: 7200
+    review_deadline_seconds: 3600
     delay: 3.0
 
   - action: bid
@@ -147,3 +158,14 @@ steps:
     poster: alice
     task_ref: api_task
     reason: "Specification is incomplete: missing PUT and PATCH endpoints for updating todos, no error response schemas defined, and no pagination parameters documented."
+
+  - action: submit_rebuttal
+    worker: carol
+    task_ref: api_task
+    rebuttal: "The submitted API specification covers the core workflow; omitted update/error details were not fully constrained by the task."
+    delay: 2.0
+
+  - action: trigger_ruling
+    agent: alice
+    task_ref: api_task
+    delay: 2.0

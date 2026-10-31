@@ -39,7 +39,7 @@ def gen_chain_arithmetic(rng: random.Random) -> MathTask:
                 total = total // val
                 steps.append(f"Divide by {val} (integer division, round toward zero).")
 
-    steps_text = "\n".join(f"  {i+1}. {s}" for i, s in enumerate(steps))
+    steps_text = "\n".join(f"  {i + 1}. {s}" for i, s in enumerate(steps))
     return MathTask(
         title="Chain arithmetic operations",
         spec=f"""TASK: Perform the following operations in sequence, keeping a running total:
@@ -81,7 +81,7 @@ def gen_chain_percentage(rng: random.Random) -> MathTask:
                 f"integer division, then subtract it)."
             )
 
-    steps_text = "\n".join(f"  {i+1}. {s}" for i, s in enumerate(steps))
+    steps_text = "\n".join(f"  {i + 1}. {s}" for i, s in enumerate(steps))
     return MathTask(
         title="Chain percentage operations",
         spec=f"""TASK: Perform the following percentage operations in sequence:
@@ -123,7 +123,7 @@ def gen_chain_remainder(rng: random.Random) -> MathTask:
             total = total + val
             steps.append(f"Add {val}.")
 
-    steps_text = "\n".join(f"  {i+1}. {s}" for i, s in enumerate(steps))
+    steps_text = "\n".join(f"  {i + 1}. {s}" for i, s in enumerate(steps))
     return MathTask(
         title="Chain arithmetic with modulo",
         spec=f"""TASK: Perform the following operations in sequence:

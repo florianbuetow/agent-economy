@@ -1,0 +1,234 @@
+"""T-122: migrate valid v2 task terms without fabricating native operation history.
+
+The current baseline lacks the explicit v2-to-v3 entry point. That is one missing
+capability proof, not proof that the post-migration assertions have run already.
+The separate fixture control proves the source is valid v2 with audited money.
+"""
+
+from __future__ import annotations
+
+import sqlite3
+from typing import TYPE_CHECKING
+
+import pytest
+
+from db_gateway_service import migration, recovery
+from db_gateway_service.money_audit import audit_money
+from db_gateway_service.receipt_audit import audit_receipt_ownership
+from db_gateway_service.schema import SchemaState, classify_schema
+from tests.unit import test_mp06_migration as old_migration
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from service_commons.recovery_contract import RecoveryInventoryV1
+
+pytestmark = pytest.mark.unit
+
+
+def _prepared_v2(tmp_path: Path) -> tuple[RecoveryInventoryV1, Path, Path, Path]:
+    inventory, backup_root, work_root, database = old_migration._prepared_v0(tmp_path)
+    old_migration._migrate(inventory, backup_root, work_root)
+    connection = sqlite3.connect(database)
+    try:
+        # Repair historical fixture placeholders BEFORE the v2 ownership cutover.
+        # These are fixture inputs, never edits to an ordinary economy database.
+        connection.execute(
+            "UPDATE board_tasks SET created_at='2026-10-17T12:00:00.125000Z', "
+            "bidding_deadline='2026-10-17T12:00:01.125000Z', "
+            "accepted_bid_id='bid-1', accepted_at='2026-10-17T12:00:00.500000Z', "
+            "execution_deadline='2026-10-17T12:00:01.500000Z', "
+            "submitted_at='2026-10-17T12:00:01Z', review_deadline='2026-10-17T12:00:02Z', "
+            "disputed_at='2026-10-17T12:00:01.500000Z', bid_count=1, "
+            "rebuttal_deadline='2026-10-17T12:00:11.500000Z', "
+            "rebuttal_submitted_at='2026-10-17T12:00:03Z' WHERE task_id='t-1'"
+        )
+        connection.execute(
+            "UPDATE board_bids SET amount=40, submitted_at='2026-10-17T12:00:00.250000Z'"
+        )
+        connection.execute(
+            "UPDATE court_claims SET status='rebuttal_submitted', "
+            "filed_at='2026-10-17T12:00:01.500000Z', "
+            "rebuttal_deadline='2026-10-17T12:00:11.500000Z'"
+        )
+        connection.execute("UPDATE court_rebuttals SET submitted_at='2026-10-17T12:00:03Z'")
+        connection.execute(
+            "UPDATE board_assets SET uploader_id='a-worker', "
+            "uploaded_at='2026-10-17T12:00:00.750000Z'"
+        )
+        connection.execute(
+            "INSERT INTO board_tasks (task_id, poster_id, title, spec, reward, status, "
+            "bidding_deadline_seconds, deadline_seconds, review_deadline_seconds, "
+            "bidding_deadline, escrow_id, created_at) VALUES "
+            "('t-bank-only', 'a-external', 'Open task', 'Preserve its original cutoff', "
+            "50, 'open', 1, 1, 1, '2026-10-17T12:00:01.125000Z', 'esc-bank-only', "
+            "'2026-10-17T12:00:00.125000Z')"
+        )
+        connection.commit()
+    finally:
+        connection.close()
+    recovery.create_backup(
+        inventory, backup_root=backup_root, backup_id="valid-task-v1", work_root=work_root
+    )
+    result = migration.migrate_v1_to_v2(
+        inventory,
+        backup_root=backup_root,
+        backup_id="valid-task-v1",
+        work_root=work_root,
+        busy_timeout_ms=5000,
+    )
+    assert result.observation == "committed_v2_verified"
+    recovery.create_backup(
+        inventory, backup_root=backup_root, backup_id="before-mp07", work_root=work_root
+    )
+    return inventory, backup_root, work_root, database
+
+
+def _snapshot(database: Path) -> dict[str, object]:
+    """Independently snapshot every v2 table, including WITHOUT ROWID receipts."""
+    connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    try:
+        objects = connection.execute(
+            "SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' "
+            "AND name != 'schema_metadata' ORDER BY type, name"
+        ).fetchall()
+        rows: dict[str, object] = {}
+        for _schema, table, kind, _columns, without_rowid, _strict in connection.execute(
+            "PRAGMA table_list"
+        ).fetchall():
+            if kind != "table" or table.startswith("sqlite_") or table == "schema_metadata":
+                continue
+            columns = connection.execute(f'PRAGMA table_xinfo("{table}")').fetchall()
+            projection = ", ".join(f'typeof("{c[1]}"), "{c[1]}"' for c in columns)
+            if without_rowid:
+                keys = sorted((c[5], c[1]) for c in columns if c[5])
+                order = ", ".join(f'"{name}"' for _position, name in keys)
+            else:
+                projection = f"rowid, {projection}"
+                order = "rowid"
+            rows[table] = connection.execute(
+                f'SELECT {projection} FROM "{table}" ORDER BY {order}'
+            ).fetchall()
+        return {
+            "objects": objects,
+            "rows": rows,
+            "sequence": connection.execute(
+                "SELECT name, seq FROM sqlite_sequence ORDER BY name"
+            ).fetchall(),
+        }
+    finally:
+        connection.close()
+
+
+def _storage_snapshot(source_root: Path) -> dict[str, bytes]:
+    """Capture existing live artifacts and keys independently of the DB backup."""
+    files = {
+        str(path.relative_to(source_root)): path.read_bytes()
+        for directory in (source_root / "assets", source_root / "keys")
+        for path in sorted(directory.rglob("*"))
+        if path.is_file()
+    }
+    assert any(name.startswith("assets/") for name in files)
+    assert any(name.startswith("keys/") and name.endswith(".key") for name in files)
+    assert any(name.startswith("keys/") and name.endswith(".pub") for name in files)
+    return files
+
+
+def test_v2_transition_migration_fixture_has_valid_timing_and_financial_ownership(
+    tmp_path: Path,
+) -> None:
+    _inventory, _backups, _work, database = _prepared_v2(tmp_path)
+    connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    try:
+        assert classify_schema(connection).state is SchemaState.CURRENT_V2
+        assert audit_money(connection).financially_clean
+        assert audit_receipt_ownership(connection).ownership_clean
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert connection.execute(
+            "SELECT t.task_id, t.reward, b.amount, t.worker_id, b.bidder_id, "
+            "c.claimant_id, c.respondent_id, c.reason, t.dispute_reason "
+            "FROM board_tasks t JOIN board_bids b ON b.bid_id=t.accepted_bid_id "
+            "AND b.task_id=t.task_id JOIN court_claims c ON c.claim_id=t.dispute_id "
+            "AND c.task_id=t.task_id"
+        ).fetchall() == [
+            ("t-1", 50, 40, "a-worker", "a-worker", "a-external", "a-worker", "reason", "reason")
+        ]
+        assert connection.execute("SELECT COUNT(*) FROM board_tasks").fetchone() == (2,)
+        assert (
+            connection.execute(
+                "SELECT bidding_deadline FROM board_tasks ORDER BY task_id"
+            ).fetchall()
+            == [("2026-10-17T12:00:01.125000Z",)] * 2
+        )
+    finally:
+        connection.close()
+
+
+def test_explicit_v2_to_v3_preserves_existing_tasks_and_receipt_ownership(tmp_path: Path) -> None:
+    inventory, backup_root, work_root, database = _prepared_v2(tmp_path)
+    before = _snapshot(database)
+    storage_before = _storage_snapshot(inventory.source_root)
+    assert (backup_root / "before-mp07" / "COMPLETE").is_file()
+    backup_digest = old_migration._tree_digest(backup_root / "before-mp07")
+    migrate = getattr(migration, "migrate_v2_to_v3", None)
+    assert callable(migrate), "Missing explicit backup-bound v2-to-v3 task migration"
+    result = migrate(
+        inventory,
+        backup_root=backup_root,
+        backup_id="before-mp07",
+        work_root=work_root,
+        busy_timeout_ms=5000,
+    )
+    assert result.applied and result.schema_version == 3
+    assert result.observation == "committed_v3_verified"
+    after = _snapshot(database)
+    before_rows = before["rows"]
+    after_rows = after["rows"]
+    assert isinstance(before_rows, dict) and isinstance(after_rows, dict)
+    assert {name: after_rows[name] for name in before_rows} == before_rows
+    assert after["sequence"] == before["sequence"]
+    before_objects = before["objects"]
+    after_objects = after["objects"]
+    assert isinstance(before_objects, list) and isinstance(after_objects, list)
+    assert all(item in after_objects for item in before_objects)
+    assert old_migration._tree_digest(backup_root / "before-mp07") == backup_digest
+    assert _storage_snapshot(inventory.source_root) == storage_before
+
+    connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    try:
+        assert classify_schema(connection).state.value == "current_v3"
+        assert audit_receipt_ownership(connection).ownership_clean
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert connection.execute(
+            "SELECT task_id, lifecycle_version, timing_contract_version, "
+            "acceptance_window_seconds, bidding_cutoff_us, acceptance_cutoff_us, "
+            "execution_cutoff_us, review_cutoff_us, accepted_reward, accepted_bid_amount "
+            "FROM board_task_contracts ORDER BY task_id"
+        ).fetchall() == [
+            (
+                "t-1",
+                0,
+                1,
+                None,
+                1792238401125000,
+                1792238401125000,
+                1792238401500000,
+                1792238402000000,
+                50,
+                40,
+            ),
+            ("t-bank-only", 0, 1, None, 1792238401125000, 1792238401125000, None, None, None, None),
+        ]
+        assert connection.execute("SELECT COUNT(*) FROM board_task_operations").fetchone() == (0,)
+        assert connection.execute(
+            "SELECT COUNT(*) FROM board_legacy_effect_observations"
+        ).fetchone() == (0,)
+        assert connection.execute("SELECT * FROM schema_metadata").fetchone() == (
+            1,
+            3,
+            2,
+            "before-mp07",
+            result.manifest_sha256,
+        )
+    finally:
+        connection.close()

@@ -1,0 +1,62 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 5 items
+
+tests/integration/test_mp07_native_ruling_handoff.py FFFFF               [100%]
+
+=================================== FAILURES ===================================
+_ test_public_ruling_uses_native_claim_and_actual_receipt[0-escrow_release-released] _
+tests/integration/test_mp07_native_ruling_handoff.py:386: in test_public_ruling_uses_native_claim_and_actual_receipt
+    assert response.status_code == replay.status_code == 200
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:33:20", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-4af471b0-2cbc-44f2-a2ed-c7fba3468f3a"}}
+{"timestamp": "2026-10-17 23:33:20", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "central_bank_unavailable", "status_code": 502, "path": "/tasks/t-4af471b0-2cbc-44f2-a2ed-c7fba3468f3a/ruling"}}
+{"timestamp": "2026-10-17 23:33:20", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "central_bank_unavailable", "status_code": 502, "path": "/tasks/t-4af471b0-2cbc-44f2-a2ed-c7fba3468f3a/ruling"}}
+_ test_public_ruling_uses_native_claim_and_actual_receipt[50-escrow_split-split] _
+tests/integration/test_mp07_native_ruling_handoff.py:386: in test_public_ruling_uses_native_claim_and_actual_receipt
+    assert response.status_code == replay.status_code == 200
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:33:21", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-f138e872-8d29-4fe3-8239-b7f9023af3de"}}
+{"timestamp": "2026-10-17 23:33:21", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "central_bank_unavailable", "status_code": 502, "path": "/tasks/t-f138e872-8d29-4fe3-8239-b7f9023af3de/ruling"}}
+{"timestamp": "2026-10-17 23:33:21", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "central_bank_unavailable", "status_code": 502, "path": "/tasks/t-f138e872-8d29-4fe3-8239-b7f9023af3de/ruling"}}
+_ test_public_ruling_uses_native_claim_and_actual_receipt[100-escrow_release-released] _
+tests/integration/test_mp07_native_ruling_handoff.py:386: in test_public_ruling_uses_native_claim_and_actual_receipt
+    assert response.status_code == replay.status_code == 200
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:33:21", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-b358f4ef-24cb-4fdd-9777-b6b2969ae9ee"}}
+{"timestamp": "2026-10-17 23:33:21", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "central_bank_unavailable", "status_code": 502, "path": "/tasks/t-b358f4ef-24cb-4fdd-9777-b6b2969ae9ee/ruling"}}
+{"timestamp": "2026-10-17 23:33:21", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "central_bank_unavailable", "status_code": 502, "path": "/tasks/t-b358f4ef-24cb-4fdd-9777-b6b2969ae9ee/ruling"}}
+____________ test_changed_ruling_terms_reuse_conflicts_before_bank _____________
+tests/integration/test_mp07_native_ruling_handoff.py:463: in test_changed_ruling_terms_reuse_conflicts_before_bank
+    assert completed.status_code == 200, completed.text
+E   AssertionError: {"error":"central_bank_unavailable","message":"Central Bank escrow split failed","details":{}}
+E   assert 502 == 200
+E    +  where 502 = <Response [502 Bad Gateway]>.status_code
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:33:22", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-1ca7cd85-c5b8-45ce-8b31-8948de31aaa0"}}
+{"timestamp": "2026-10-17 23:33:22", "level": "WARNING", "logger": "task-board.task_board_service.core.exceptions", "message": "Service error", "extra": {"error_code": "central_bank_unavailable", "status_code": 502, "path": "/tasks/t-1ca7cd85-c5b8-45ce-8b31-8948de31aaa0/ruling"}}
+__________ test_foreign_ruling_identity_rejects_before_bank_or_claim ___________
+tests/integration/test_mp07_native_ruling_handoff.py:512: in test_foreign_ruling_identity_rejects_before_bank_or_claim
+    assert release.await_count == split.await_count == 0
+E   AssertionError: assert 1 == 0
+E    +  where 1 = <AsyncMock name='mock.escrow_release' id='4453588608'>.await_count
+E    +  and   0 = <AsyncMock name='mock.escrow_split' id='4453582896'>.await_count
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:33:23", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-9ea33532-e173-4d15-adba-fd078e7dc59d"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_native_ruling_handoff.py::test_public_ruling_uses_native_claim_and_actual_receipt[0-escrow_release-released]
+FAILED tests/integration/test_mp07_native_ruling_handoff.py::test_public_ruling_uses_native_claim_and_actual_receipt[50-escrow_split-split]
+FAILED tests/integration/test_mp07_native_ruling_handoff.py::test_public_ruling_uses_native_claim_and_actual_receipt[100-escrow_release-released]
+FAILED tests/integration/test_mp07_native_ruling_handoff.py::test_changed_ruling_terms_reuse_conflicts_before_bank
+FAILED tests/integration/test_mp07_native_ruling_handoff.py::test_foreign_ruling_identity_rejects_before_bank_or_claim
+============================== 5 failed in 3.10s ===============================

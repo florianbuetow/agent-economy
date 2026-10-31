@@ -95,13 +95,27 @@ class TestCreateJws:
 
     def test_produces_three_part_token(self, tmp_keys_dir: Path) -> None:
         private_key, _ = generate_keypair("jws", tmp_keys_dir)
-        token = create_jws({"action": "test"}, private_key)
+        token = create_jws(
+            {"action": "test"},
+            private_key,
+            kid="a-test",
+            audience="test",
+            resource="POST /test",
+            token_ttl_seconds=60,
+        )
         parts = token.split(".")
         assert len(parts) == 3
 
     def test_header_contains_eddsa(self, tmp_keys_dir: Path) -> None:
         private_key, _ = generate_keypair("jwshdr", tmp_keys_dir)
-        token = create_jws({"action": "test"}, private_key)
+        token = create_jws(
+            {"action": "test"},
+            private_key,
+            kid="a-test",
+            audience="test",
+            resource="POST /test",
+            token_ttl_seconds=60,
+        )
         header_b64 = token.split(".")[0]
         padding = "=" * (4 - len(header_b64) % 4)
         header = json.loads(base64.urlsafe_b64decode(header_b64 + padding))
@@ -110,7 +124,14 @@ class TestCreateJws:
     def test_payload_is_encoded(self, tmp_keys_dir: Path) -> None:
         private_key, _ = generate_keypair("jwspld", tmp_keys_dir)
         payload = {"action": "register", "agent_id": "a-123"}
-        token = create_jws(payload, private_key)
+        token = create_jws(
+            payload,
+            private_key,
+            kid="a-test",
+            audience="test",
+            resource="POST /test",
+            token_ttl_seconds=60,
+        )
         payload_b64 = token.split(".")[1]
         padding = "=" * (4 - len(payload_b64) % 4)
         decoded = json.loads(base64.urlsafe_b64decode(payload_b64 + padding))
@@ -118,7 +139,14 @@ class TestCreateJws:
 
     def test_signature_verifies(self, tmp_keys_dir: Path) -> None:
         private_key, public_key = generate_keypair("jwsver", tmp_keys_dir)
-        token = create_jws({"action": "verify"}, private_key)
+        token = create_jws(
+            {"action": "verify"},
+            private_key,
+            kid="a-test",
+            audience="test",
+            resource="POST /test",
+            token_ttl_seconds=60,
+        )
         parts = token.split(".")
         signing_input = f"{parts[0]}.{parts[1]}".encode("ascii")
         sig_padding = "=" * (4 - len(parts[2]) % 4)

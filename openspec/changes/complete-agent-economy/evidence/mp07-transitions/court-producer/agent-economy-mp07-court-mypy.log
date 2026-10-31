@@ -1,0 +1,2 @@
+src/court_service/services/ruling_acknowledgment.py:223: error: Argument 2 to "ServiceError" has incompatible type "Any | None"; expected "str"  [arg-type]
+Found 1 error in 1 file (checked 25 source files)

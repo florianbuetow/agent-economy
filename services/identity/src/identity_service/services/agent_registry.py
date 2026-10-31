@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import base64
-import json
 from typing import TYPE_CHECKING
 
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from joserfc import jws as jws_module
-from joserfc.errors import BadSignatureError
-from joserfc.jwk import OKPKey
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from service_auth.jws import JwsAdmissionError, TokenPolicy, parse_jws, verify_jws
 from service_commons.exceptions import ServiceError
 
 from identity_service.services.errors import DuplicateAgentError
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from identity_service.services.protocol import IdentityStorageInterface
 
 
@@ -27,16 +28,20 @@ class AgentRegistry:
     def __init__(
         self,
         store: IdentityStorageInterface,
-        algorithm: str,
         public_key_prefix: str,
         public_key_bytes: int,
         signature_bytes: int,
+        token_policy: TokenPolicy,
+        reserved_names: frozenset[str],
+        trusted_key_files: tuple[Path, ...],
     ) -> None:
         self._store = store
-        self._algorithm = algorithm
         self._public_key_prefix = public_key_prefix
         self._public_key_bytes = public_key_bytes
         self._signature_bytes = signature_bytes
+        self._token_policy = token_policy
+        self._reserved_names = reserved_names
+        self._trusted_key_files = trusted_key_files
 
     async def register_agent(self, name: str, public_key: str) -> dict[str, str]:
         """
@@ -49,10 +54,11 @@ class AgentRegistry:
             ServiceError: INVALID_NAME, INVALID_PUBLIC_KEY, or PUBLIC_KEY_EXISTS
         """
         self._validate_name(name)
-        self._validate_public_key(public_key)
+        canonical_public_key = self._validate_public_key(public_key)
+        self._check_reserved_name(name, canonical_public_key)
 
         try:
-            return await self._store.insert(name, public_key)
+            return await self._store.insert(name, canonical_public_key)
         except DuplicateAgentError as exc:
             raise ServiceError(
                 "public_key_exists",
@@ -60,68 +66,6 @@ class AgentRegistry:
                 409,
                 {},
             ) from exc
-
-    async def verify_signature(
-        self,
-        agent_id: str,
-        payload_b64: str,
-        signature_b64: str,
-    ) -> dict[str, object]:
-        """
-        Verify an Ed25519 signature for a given agent.
-
-        Returns {"valid": True, "agent_id": ...} or {"valid": False, "reason": ...}.
-
-        Raises:
-            ServiceError: AGENT_NOT_FOUND, INVALID_BASE64, INVALID_SIGNATURE_LENGTH
-        """
-        agent = await self.get_agent(agent_id)
-        if agent is None:
-            raise ServiceError("agent_not_found", "Agent not found", 404, {})
-
-        # Decode base64 payload
-        try:
-            payload_bytes = base64.b64decode(payload_b64, validate=True)
-        except Exception as exc:
-            raise ServiceError(
-                "invalid_base64",
-                "payload is not valid base64",
-                400,
-                {},
-            ) from exc
-
-        # Decode base64 signature
-        try:
-            sig_bytes = base64.b64decode(signature_b64, validate=True)
-        except Exception as exc:
-            raise ServiceError(
-                "invalid_base64",
-                "signature is not valid base64",
-                400,
-                {},
-            ) from exc
-
-        # Validate signature length
-        if len(sig_bytes) != self._signature_bytes:
-            raise ServiceError(
-                "invalid_signature_length",
-                f"Signature must be exactly {self._signature_bytes} bytes",
-                400,
-                {},
-            )
-
-        # Extract raw public key bytes from stored key
-        public_key_str: str = agent["public_key"]
-        key_b64 = public_key_str.split(":", 1)[1]
-        key_bytes = base64.b64decode(key_b64)
-
-        # Verify Ed25519 signature
-        try:
-            public_key_obj = Ed25519PublicKey.from_public_bytes(key_bytes)
-            public_key_obj.verify(sig_bytes, payload_bytes)
-            return {"valid": True, "agent_id": agent_id}
-        except InvalidSignature:
-            return {"valid": False, "reason": "signature mismatch"}
 
     async def verify_jws(self, token: str) -> dict[str, object]:
         """
@@ -138,56 +82,13 @@ class AgentRegistry:
                 wrong algorithm, or payload is not valid JSON.
             ServiceError: AGENT_NOT_FOUND if kid references unknown agent.
         """
-        # Parse the JWS header without verifying signature yet
         try:
-            parts = token.split(".")
-            if len(parts) != 3:
-                raise ServiceError(
-                    "invalid_jws",
-                    "Token is not a valid JWS compact serialization",
-                    400,
-                    {},
-                )
-
-            # Decode protected header
-            # Add padding
-            header_b64 = parts[0]
-            padding = 4 - len(header_b64) % 4
-            if padding != 4:
-                header_b64 += "=" * padding
-            header_bytes = base64.urlsafe_b64decode(header_b64)
-            header = json.loads(header_bytes)
-        except ServiceError:
-            raise
-        except Exception as exc:
-            raise ServiceError(
-                "invalid_jws",
-                "Token is not a valid JWS compact serialization",
-                400,
-                {},
-            ) from exc
-
-        # Validate header fields
-        alg = header.get("alg")
-        if alg != "EdDSA":
-            raise ServiceError(
-                "invalid_jws",
-                "Only EdDSA algorithm is supported",
-                400,
-                {},
-            )
-
-        kid = header.get("kid")
-        if not kid or not isinstance(kid, str):
-            raise ServiceError(
-                "invalid_jws",
-                "JWS header must contain a 'kid' field with the agent_id",
-                400,
-                {},
-            )
+            parsed = parse_jws(token)
+        except JwsAdmissionError as exc:
+            raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
 
         # Look up agent
-        agent = await self.get_agent(kid)
+        agent = await self.get_agent(parsed.header.kid)
         if agent is None:
             raise ServiceError("agent_not_found", "Agent not found", 404, {})
 
@@ -196,47 +97,23 @@ class AgentRegistry:
         key_b64 = public_key_str.split(":", 1)[1]
         raw_public = base64.b64decode(key_b64)
 
-        # Build OKP JWK for joserfc
-        jwk_dict: dict[str, str | list[str]] = {
-            "kty": "OKP",
-            "crv": "Ed25519",
-            "x": base64.urlsafe_b64encode(raw_public).rstrip(b"=").decode(),
-        }
-        public_jwk = OKPKey.import_key(jwk_dict)
-
-        # Verify signature
         try:
-            obj = jws_module.deserialize_compact(token, public_jwk, algorithms=["EdDSA"])
-        except BadSignatureError:
-            return {"valid": False, "reason": "signature mismatch"}
-        except Exception as exc:
-            raise ServiceError(
-                "invalid_jws",
-                "Token verification failed",
-                400,
-                {},
-            ) from exc
-
-        # Decode payload as JSON
-        try:
-            payload = json.loads(obj.payload)
-        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise ServiceError(
-                "invalid_jws",
-                "JWS payload is not valid JSON",
-                400,
-                {},
-            ) from exc
-
-        if not isinstance(payload, dict):
-            raise ServiceError(
-                "invalid_jws",
-                "JWS payload must be a JSON object",
-                400,
-                {},
+            verified = verify_jws(
+                token,
+                Ed25519PublicKey.from_public_bytes(raw_public),
+                policy=self._token_policy,
             )
+        except InvalidSignature:
+            return {"valid": False, "reason": "signature mismatch"}
+        except JwsAdmissionError as exc:
+            raise ServiceError(exc.error_code, str(exc), exc.status_code, {}) from exc
 
-        return {"valid": True, "agent_id": kid, "payload": payload}
+        return {
+            "valid": True,
+            "agent_id": verified.header.kid,
+            "protected_header": vars(verified.header),
+            "payload": verified.payload,
+        }
 
     async def get_agent(self, agent_id: str) -> dict[str, str] | None:
         """
@@ -262,6 +139,33 @@ class AgentRegistry:
         """Close the database connection."""
         await self._store.close()
 
+    def _check_reserved_name(self, name: str, canonical_public_key: str) -> None:
+        """Reject reserved display names unless the key is a pinned platform key."""
+        if name.strip().casefold() not in self._reserved_names:
+            return
+        if canonical_public_key in self._trusted_public_keys():
+            return
+        raise ServiceError(
+            "reserved_name",
+            "This display name is reserved",
+            409,
+            {},
+        )
+
+    def _trusted_public_keys(self) -> set[str]:
+        """Read the pinned PEM public keys; unreadable or absent files pin nothing."""
+        keys: set[str] = set()
+        for path in self._trusted_key_files:
+            try:
+                loaded = serialization.load_pem_public_key(path.read_bytes())
+            except (OSError, ValueError):
+                continue
+            if not isinstance(loaded, Ed25519PublicKey):
+                continue
+            raw = loaded.public_bytes(Encoding.Raw, PublicFormat.Raw)
+            keys.add(f"{self._public_key_prefix}{base64.b64encode(raw).decode()}")
+        return keys
+
     def _validate_name(self, name: str) -> None:
         """Validate agent display name."""
         if not name or not name.strip():
@@ -272,7 +176,7 @@ class AgentRegistry:
                 {},
             )
 
-    def _validate_public_key(self, public_key: str) -> None:
+    def _validate_public_key(self, public_key: str) -> str:
         """
         Validate Ed25519 public key format and content.
 
@@ -325,3 +229,6 @@ class AgentRegistry:
                 400,
                 {},
             ) from exc
+
+        canonical_payload = base64.b64encode(key_bytes).decode("ascii")
+        return f"{self._public_key_prefix}{canonical_payload}"

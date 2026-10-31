@@ -2,11 +2,26 @@
 
 from __future__ import annotations
 
+import re
+from typing import TYPE_CHECKING, cast
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from service_commons.exceptions import ServiceError
 
+from db_gateway_service import task_time
+from db_gateway_service.asset_admission import parse_asset_admission
+from db_gateway_service.board_authority import BoardAuthority
 from db_gateway_service.core.state import get_app_state
+from db_gateway_service.effect_delivery_requests import (
+    DELIVERY_STATES,
+    parse_effect_operation_id,
+    parse_empty_body,
+    parse_failure_request,
+    parse_generation,
+    parse_lease_request,
+    parse_observation_id,
+)
 from db_gateway_service.routers.helpers import (
     parse_json_body,
     validate_constraints,
@@ -15,8 +30,281 @@ from db_gateway_service.routers.helpers import (
     validate_positive_integer,
     validate_required_fields,
 )
+from db_gateway_service.services.artifact_runtime import (
+    archive_candidates,
+    artifact_recovery_listing,
+    finalize_archive,
+    finalize_artifact_upload,
+    get_artifact_upload,
+    list_task_artifacts,
+    orphan_artifact_upload,
+    renew_artifact_upload,
+    reserve_artifact_upload,
+    task_artifact_context,
+)
+from db_gateway_service.task_operation_requests import parse_task_operation_request
+from db_gateway_service.task_publication_requests import parse_task_publication_request
+
+if TYPE_CHECKING:
+    import sqlite3
+
+    from db_gateway_service.services.db_writer import DbWriter
 
 router = APIRouter(prefix="/board", tags=["Board"])
+
+
+def _publication_response(result: dict[str, object]) -> JSONResponse:
+    status = 201 if result["publication_state"] == "published" else 202
+    return JSONResponse(status_code=status, content=result)
+
+
+def _legacy_posting_response(result: dict[str, object]) -> JSONResponse:
+    status = 200 if result["observation_state"] == "refunded" else 202
+    return JSONResponse(status_code=status, content=result)
+
+
+def _delivery_status(result: dict[str, object]) -> int:
+    delivery = result.get("delivery")
+    if not isinstance(delivery, dict):
+        raise ServiceError("invalid_gateway_result", "Delivery result is invalid", 500, {})
+    return 200 if delivery.get("delivery_state") == "completed" else 202
+
+
+def _operation_context(request: Request) -> tuple[DbWriter, str, BoardAuthority]:
+    """Obtain identities from verified request and receiver configuration only."""
+    caller_kid: object = getattr(request.state, "gateway_caller_kid", None)
+    if not isinstance(caller_kid, str) or not caller_kid:
+        raise ServiceError("forbidden", "Authenticated Gateway caller is required", 403, {})
+    authority: object = getattr(request.app.state, "board_authority", None)
+    writer = get_app_state().db_writer
+    if writer is None or not isinstance(authority, BoardAuthority):
+        raise ServiceError("service_not_ready", "Task operation authority is not ready", 503, {})
+    return writer, caller_kid, authority
+
+
+@router.post("/task-publications")
+async def admit_task_publication(request: Request) -> JSONResponse:
+    """Reserve the complete posting identity before any external effect."""
+    command = parse_task_publication_request(parse_json_body(await request.body()))
+    writer, caller_kid, _authority = _operation_context(request)
+    return _publication_response(writer.admit_task_publication(command, caller_kid))
+
+
+@router.post("/task-publications/{operation_id}/reconcile")
+async def reconcile_task_publication(operation_id: str, request: Request) -> JSONResponse:
+    """Reconcile only from stored evidence, without accepting forwarded receipts."""
+    if parse_json_body(await request.body()) != {}:
+        raise ServiceError(
+            "invalid_payload", "Reconciliation body must be an empty object", 400, {}
+        )
+    writer, caller_kid, _authority = _operation_context(request)
+    return _publication_response(writer.reconcile_task_publication(operation_id, caller_kid))
+
+
+@router.get("/task-publications/{operation_id}")
+async def get_task_publication(operation_id: str, request: Request) -> JSONResponse:
+    """Read publication state using the authenticated writer capability."""
+    query = request.query_params
+    if set(query) - {"poster_id"} or len(query.getlist("poster_id")) > 1:
+        raise ServiceError("invalid_payload", "Only one optional poster_id is supported", 400, {})
+    expected_actor_id = query.get("poster_id")
+    if expected_actor_id == "":
+        raise ServiceError("invalid_payload", "poster_id must be a nonempty string", 400, {})
+    writer, caller_kid, _authority = _operation_context(request)
+    return JSONResponse(
+        status_code=200,
+        content=writer.get_task_publication(
+            operation_id, caller_kid, expected_actor_id=expected_actor_id
+        ),
+    )
+
+
+@router.get("/posting-recovery")
+async def list_posting_recovery(request: Request) -> JSONResponse:
+    """Read an explicit bounded cursor page without broad Board read authority."""
+    query = request.query_params
+    if set(query) != {"after", "limit"} or any(
+        len(query.getlist(name)) != 1 for name in ("after", "limit")
+    ):
+        raise ServiceError("invalid_payload", "Exactly one after and limit are required", 400, {})
+    limit_text = query["limit"]
+    if re.fullmatch(r"[1-9][0-9]{0,3}", limit_text) is None:
+        raise ServiceError("invalid_payload", "limit must be an integer in 1..1000", 400, {})
+    writer, caller_kid, _authority = _operation_context(request)
+    result = writer.list_posting_recovery(query["after"], int(limit_text), caller_kid)
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.get("/legacy-posting-observations/{observation_id}")
+async def get_legacy_posting_observation(observation_id: str, request: Request) -> JSONResponse:
+    """Read one verified caller's persisted refund status without effects."""
+    writer, caller_kid, _authority = _operation_context(request)
+    return JSONResponse(
+        status_code=200,
+        content=writer.get_legacy_posting_observation(observation_id, caller_kid),
+    )
+
+
+@router.post("/legacy-posting-observations/{observation_id}/reconcile")
+async def reconcile_legacy_posting_observation(
+    observation_id: str, request: Request
+) -> JSONResponse:
+    """Finalize one migrated orphan refund from persisted evidence only."""
+    if parse_json_body(await request.body()) != {}:
+        raise ServiceError(
+            "invalid_payload", "Reconciliation body must be an empty object", 400, {}
+        )
+    writer, caller_kid, _authority = _operation_context(request)
+    return _legacy_posting_response(
+        writer.reconcile_legacy_posting_observation(observation_id, caller_kid)
+    )
+
+
+@router.post("/task-operations")
+async def claim_task_operation(request: Request) -> JSONResponse:
+    """Atomically execute or claim a versioned task command."""
+    command = parse_task_operation_request(parse_json_body(await request.body()))
+    writer, caller_kid, authority = _operation_context(request)
+    result = writer.claim_task_operation(command, caller_kid, authority)
+    status = 200 if result["operation_state"] == "completed" else 202
+    return JSONResponse(status_code=status, content=result)
+
+
+@router.post("/task-operations/{operation_id}/finalize")
+async def finalize_task_operation(operation_id: str, request: Request) -> JSONResponse:
+    """Finalize using Gateway evidence; no forwarded result or actor is accepted."""
+    if parse_json_body(await request.body()) != {}:
+        raise ServiceError("invalid_payload", "Finalization body must be an empty object", 400, {})
+    writer, caller_kid, authority = _operation_context(request)
+    result = writer.finalize_task_operation(operation_id, caller_kid, authority)
+    status = 200 if result["operation_state"] == "completed" else 202
+    return JSONResponse(status_code=status, content=result)
+
+
+@router.post("/task-effect-deliveries/lease")
+async def lease_task_effect_delivery(request: Request) -> JSONResponse:
+    """Lease one due financial effect after the bounded evidence scan."""
+    command = parse_lease_request(parse_json_body(await request.body()))
+    writer, caller_kid, authority = _operation_context(request)
+    result = writer.lease_effect_delivery(
+        command.worker_id,
+        caller_kid,
+        authority,
+        get_app_state().board_effect_recovery,
+    )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.get("/task-effect-deliveries/{operation_id}")
+async def get_task_effect_delivery(operation_id: str, request: Request) -> JSONResponse:
+    """Return one safe caller-owned delivery diagnostic."""
+    parsed = parse_effect_operation_id(operation_id)
+    writer, caller_kid, authority = _operation_context(request)
+    result = writer.get_effect_delivery(parsed, caller_kid, authority)
+    return JSONResponse(status_code=200, content={"protocol_version": 1, "delivery": result})
+
+
+@router.get("/task-effect-deliveries")
+async def list_task_effect_deliveries(request: Request) -> JSONResponse:
+    """Return one exact bounded lexical diagnostic page."""
+    query = request.query_params
+    if set(query) != {"state", "after", "limit"} or any(
+        len(query.getlist(name)) != 1 for name in ("state", "after", "limit")
+    ):
+        raise ServiceError(
+            "invalid_payload",
+            "Exactly one state, after and limit are required",
+            400,
+            {},
+        )
+    state = query["state"]
+    if state != "all" and state not in DELIVERY_STATES:
+        raise ServiceError("invalid_payload", "state is not supported", 400, {})
+    after = query["after"]
+    if after:
+        after = parse_effect_operation_id(after)
+    limit_text = query["limit"]
+    if re.fullmatch(r"[1-9][0-9]{0,3}", limit_text) is None:
+        raise ServiceError("invalid_payload", "limit must be an integer in 1..1000", 400, {})
+    limit = int(limit_text)
+    if limit > 1000:
+        raise ServiceError("invalid_payload", "limit must be an integer in 1..1000", 400, {})
+    writer, caller_kid, authority = _operation_context(request)
+    return JSONResponse(
+        status_code=200,
+        content=writer.list_effect_deliveries(
+            state=state,
+            after=after,
+            limit=limit,
+            caller_kid=caller_kid,
+            authority=authority,
+        ),
+    )
+
+
+@router.post("/task-effect-deliveries/{operation_id}/attempts/{generation}/fail")
+async def fail_task_effect_delivery(
+    operation_id: str,
+    generation: str,
+    request: Request,
+) -> JSONResponse:
+    """Record one exact fenced recovery failure."""
+    parsed_operation = parse_effect_operation_id(operation_id)
+    parsed_generation = parse_generation(generation)
+    command = parse_failure_request(parse_json_body(await request.body()))
+    writer, caller_kid, authority = _operation_context(request)
+    return JSONResponse(
+        status_code=200,
+        content=writer.fail_effect_delivery(
+            parsed_operation,
+            parsed_generation,
+            command.worker_id,
+            command.error_code,
+            caller_kid,
+            authority,
+            get_app_state().board_effect_recovery,
+        ),
+    )
+
+
+@router.post("/task-effect-deliveries/{operation_id}/retry")
+async def retry_task_effect_delivery(operation_id: str, request: Request) -> JSONResponse:
+    """Requeue one caller-owned dead letter."""
+    parsed = parse_effect_operation_id(operation_id)
+    parse_empty_body(parse_json_body(await request.body()))
+    writer, caller_kid, authority = _operation_context(request)
+    return JSONResponse(
+        status_code=200,
+        content=writer.retry_effect_delivery(
+            parsed,
+            caller_kid,
+            authority,
+            get_app_state().board_effect_recovery,
+        ),
+    )
+
+
+@router.post("/task-effect-deliveries/{operation_id}/finalize")
+async def finalize_task_effect_delivery(operation_id: str, request: Request) -> JSONResponse:
+    """Adopt a native financial receipt and task projection atomically."""
+    parsed = parse_effect_operation_id(operation_id)
+    parse_empty_body(parse_json_body(await request.body()))
+    writer, caller_kid, authority = _operation_context(request)
+    result = writer.finalize_effect_delivery(parsed, caller_kid, authority)
+    return JSONResponse(status_code=_delivery_status(result), content=result)
+
+
+@router.post("/legacy-effect-observations/{observation_id}/finalize")
+async def finalize_legacy_effect_observation(
+    observation_id: str,
+    request: Request,
+) -> JSONResponse:
+    """Adopt one supported migrated settlement observation."""
+    parsed = parse_observation_id(observation_id)
+    parse_empty_body(parse_json_body(await request.body()))
+    writer, caller_kid, _authority = _operation_context(request)
+    result = writer.finalize_legacy_effect_observation(parsed, caller_kid)
+    return JSONResponse(status_code=_delivery_status(result), content=result)
 
 
 @router.post("/tasks", status_code=201)
@@ -157,6 +445,7 @@ async def record_asset(request: Request) -> JSONResponse:
             "uploaded_at",
         ],
     )
+    parse_asset_admission(data.get("admission"))
     constraints = validate_constraints(data)
     validate_event(data)
 
@@ -211,9 +500,9 @@ async def list_tasks(request: Request) -> JSONResponse:
     state = get_app_state()
     if state.db_reader is None:
         raise ServiceError(
-            error="method_not_allowed",
-            message="Method not allowed",
-            status_code=405,
+            error="service_not_ready",
+            message="DbReader not initialized",
+            status_code=503,
             details={},
         )
 
@@ -223,8 +512,21 @@ async def list_tasks(request: Request) -> JSONResponse:
     worker_id = params.get("worker_id")
     limit_str = params.get("limit")
     offset_str = params.get("offset")
-    limit = int(limit_str) if limit_str is not None else None
-    offset = int(offset_str) if offset_str is not None else None
+
+    limit: int | None = None
+    if limit_str is not None:
+        try:
+            limit = int(limit_str)
+        except ValueError as exc:
+            raise ServiceError("invalid_payload", "limit must be an integer", 400, {}) from exc
+
+    offset: int | None = None
+    if offset_str is not None:
+        try:
+            offset = int(offset_str)
+        except ValueError as exc:
+            raise ServiceError("invalid_payload", "offset must be an integer", 400, {}) from exc
+
     tasks = state.db_reader.list_tasks(status, poster_id, worker_id, limit, offset)
     return JSONResponse(status_code=200, content={"tasks": tasks})
 
@@ -346,3 +648,152 @@ async def get_asset(asset_id: str, request: Request) -> JSONResponse:
             details={},
         )
     return JSONResponse(status_code=200, content=asset)
+
+
+# ---------------------------------------------------------------------------
+# V6 artifact uploads, manifests, crash recovery and archive (lane T)
+# ---------------------------------------------------------------------------
+
+
+def _artifact_context(request: Request) -> tuple[sqlite3.Connection, str, str]:
+    caller_kid: object = getattr(request.state, "gateway_caller_kid", None)
+    if not isinstance(caller_kid, str) or not caller_kid:
+        raise ServiceError("forbidden", "Authenticated Gateway caller is required", 403, {})
+    writer = get_app_state().db_writer
+    if writer is None:
+        raise ServiceError("service_not_ready", "DbWriter not initialized", 503, {})
+    current = get_app_state().board_effect_recovery.current_task_board_caller_kid
+    return writer.connection, caller_kid, current
+
+
+async def _json_object(request: Request) -> dict[str, object]:
+    data: object = parse_json_body(await request.body())
+    if not isinstance(data, dict):
+        raise ServiceError("invalid_payload", "JSON object body is required", 400, {})
+    return cast("dict[str, object]", data)
+
+
+def _positive_query_int(request: Request, name: str) -> int:
+    raw = request.query_params.get(name)
+    if raw is None or not raw.isdigit() or int(raw) < 1:
+        raise ServiceError(
+            "invalid_payload", f"Query parameter '{name}' must be a positive integer", 400, {}
+        )
+    return int(raw)
+
+
+@router.get("/tasks/{task_id}/artifact-context")
+async def get_task_artifact_context(task_id: str, request: Request) -> JSONResponse:
+    """Report artifact governance and the binding an upload or submit must carry."""
+    connection, _caller, _current = _artifact_context(request)
+    return JSONResponse(status_code=200, content=task_artifact_context(connection, task_id))
+
+
+@router.get("/tasks/{task_id}/artifacts")
+async def get_task_artifacts(task_id: str, request: Request) -> JSONResponse:
+    """List ready/archived artifacts and the task's manifests."""
+    connection, _caller, _current = _artifact_context(request)
+    return JSONResponse(status_code=200, content=list_task_artifacts(connection, task_id))
+
+
+@router.post("/artifact-uploads/reserve")
+async def reserve_upload(request: Request) -> JSONResponse:
+    """Reserve, replay or take over one upload operation before any bytes are published."""
+    connection, caller, current = _artifact_context(request)
+    result = reserve_artifact_upload(
+        connection,
+        await _json_object(request),
+        caller_kid=caller,
+        clock_us=task_time.utc_now_us,
+        current_task_board_caller_kid=current,
+    )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.get("/artifact-uploads/{upload_operation_id}")
+async def read_upload(upload_operation_id: str, request: Request) -> JSONResponse:
+    """Read one caller-owned upload's durable state."""
+    connection, caller, _current = _artifact_context(request)
+    return JSONResponse(
+        status_code=200,
+        content=get_artifact_upload(connection, upload_operation_id, caller_kid=caller),
+    )
+
+
+@router.post("/artifact-uploads/{upload_operation_id}/finalize")
+async def finalize_upload(upload_operation_id: str, request: Request) -> JSONResponse:
+    """Mark exact observed bytes ready under the current attempt fence."""
+    connection, caller, current = _artifact_context(request)
+    result = finalize_artifact_upload(
+        connection,
+        upload_operation_id,
+        await _json_object(request),
+        caller_kid=caller,
+        clock_us=task_time.utc_now_us,
+        current_task_board_caller_kid=current,
+    )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/artifact-uploads/{upload_operation_id}/renew")
+async def renew_upload(upload_operation_id: str, request: Request) -> JSONResponse:
+    """Extend the current attempt lease."""
+    connection, caller, current = _artifact_context(request)
+    result = renew_artifact_upload(
+        connection,
+        upload_operation_id,
+        await _json_object(request),
+        caller_kid=caller,
+        clock_us=task_time.utc_now_us,
+        current_task_board_caller_kid=current,
+    )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/artifact-uploads/{upload_operation_id}/orphan")
+async def orphan_upload(upload_operation_id: str, request: Request) -> JSONResponse:
+    """Durably abandon the current attempt."""
+    connection, caller, current = _artifact_context(request)
+    result = orphan_artifact_upload(
+        connection,
+        upload_operation_id,
+        await _json_object(request),
+        caller_kid=caller,
+        clock_us=task_time.utc_now_us,
+        current_task_board_caller_kid=current,
+    )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.get("/artifact-recovery")
+async def read_artifact_recovery(request: Request) -> JSONResponse:
+    """List stale reservations and every storage key that must survive a sweep."""
+    connection, caller, _current = _artifact_context(request)
+    return JSONResponse(
+        status_code=200, content=artifact_recovery_listing(connection, caller_kid=caller)
+    )
+
+
+@router.get("/artifact-archive/candidates")
+async def read_archive_candidates(request: Request) -> JSONResponse:
+    """List live bytes of tasks terminal for longer than the caller's configured age."""
+    connection, _caller, _current = _artifact_context(request)
+    after = _positive_query_int(request, "archive_after_seconds")
+    limit = _positive_query_int(request, "limit")
+    result = archive_candidates(
+        connection,
+        archive_after_seconds=after,
+        limit=limit,
+        now_us=task_time.utc_now_us(),
+    )
+    return JSONResponse(status_code=200, content=result)
+
+
+@router.post("/artifact-archive/finalize")
+async def finalize_artifact_archive(request: Request) -> JSONResponse:
+    """Point one artifact at its already-written archive copy."""
+    connection, _caller, _current = _artifact_context(request)
+    result = finalize_archive(
+        connection, await _json_object(request), clock_us=task_time.utc_now_us
+    )
+    return JSONResponse(status_code=200, content=result)

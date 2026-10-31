@@ -67,14 +67,6 @@
   ::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
 
   /* ── Animations ──────────────────────────────────────── */
-  @keyframes pulse-glow {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .55; }
-  }
-  @keyframes ticker-scroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
   @keyframes fade-in-up {
     from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -167,25 +159,8 @@
 
 /* Additional shared animations and nav/ticker variants */
   /* ── Animations ──────────────────────────── */
-  @keyframes pulse-glow {
-    0%,100% { opacity: 1; } 50% { opacity: .45; }
-  }
-  @keyframes flash-green {
-    0% { background: var(--green-dim); } 100% { background: transparent; }
-  }
-  @keyframes flash-red {
-    0% { background: var(--red-dim); } 100% { background: transparent; }
-  }
-  @keyframes slide-in {
-    from { opacity: 0; transform: translateY(-6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
   @keyframes bar-grow {
     from { width: 0; } to { width: var(--target-w); }
-  }
-  @keyframes ticker-scroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
   }
 
   /* ── Animations ──────────────────────────── */
@@ -220,6 +195,9 @@
     font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim);
     cursor: pointer; transition: color .15s; padding: 2px 0;
   }
+  a.topnav-link, a.topnav-brand, a.nav-btn { text-decoration: none; }
+  a.nav-btn { display: inline-block; }
+  .topnav-link:focus-visible, a.nav-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
   .topnav-link:hover { color: var(--text-mid); }
   .topnav-link.active { color: var(--cyan); border-bottom: 1px solid var(--cyan); }
   .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse-glow 2s infinite; }
@@ -307,6 +285,7 @@
   .badge-ruling   { border-color: #6a4a80; color: #8a6aa0; background: #6a4a8011; }
   .badge-cancel   { border-color: #7a7a7a; color: #9a9a9a; background: #7a7a7a11; }
   .badge-agent    { border-color: #6a6a6a; color: #8a8a8a; background: #6a6a6a11; }
+  .badge-review   { border-color: #7a6a3a; color: #9a8a5a; background: #7a6a3a11; }
 
 
 /* Shared feed/badge and ticker styles */
@@ -343,23 +322,7 @@
   .feed-text .hl-violet { color: var(--violet); }
   .feed-time { font-size: 10px; color: var(--text-dim); flex-shrink: 0; }
 
-  .badge-task     { border-color: #4a6fa5; color: #6a8fc5; background: #4a6fa511; }
-  .badge-bid      { border-color: #a06080; color: #c080a0; background: #a0608011; }
-  .badge-escrow   { border-color: #a07040; color: #c09060; background: #a0704011; }
-  .badge-contract { border-color: #6a5a8c; color: #8a7aac; background: #6a5a8c11; }
-  .badge-submit   { border-color: #4a7a80; color: #6a9aa0; background: #4a7a8011; }
-  .badge-payout   { border-color: #4a8c5c; color: #6aac7c; background: #4a8c5c11; }
-  .badge-dispute  { border-color: #8c4a4a; color: #ac6a6a; background: #8c4a4a11; }
-  .badge-ruling   { border-color: #6a4a80; color: #8a6aa0; background: #6a4a8011; }
-  .badge-rep      { border-color: #8a7a3a; color: #aa9a5a; background: #8a7a3a11; }
-  .badge-review   { border-color: #7a6a3a; color: #9a8a5a; background: #7a6a3a11; }
-
   /* ── Bottom Ticker ───────────────────────── */
-  .bottom-ticker {
-    height: 28px; flex-shrink: 0; background: var(--bg-row);
-    border-top: 1px solid var(--border-hi);
-    overflow: hidden; display: flex; align-items: center; position: relative;
-  }
   .ticker-track {
     display: inline-flex; gap: 24px; white-space: nowrap; padding-left: 100%;
     animation: ticker-scroll 40s linear infinite;
@@ -379,14 +342,15 @@
 
 
   /* ── Bottom Ticker ──────────────────────── */
-  .bottom-ticker {
-    height: 30px; flex-shrink: 0; background: var(--bg-row);
-    border-top: 1px solid var(--border-hi);
-    overflow: hidden; display: flex; align-items: center; position: relative;
-  }
   .bottom-ticker-track {
     display: inline-flex; gap: 24px; white-space: nowrap; padding-left: 100%;
     animation: ticker-scroll 60s linear infinite;
+  }
+  .bottom-ticker:hover .bottom-ticker-track,
+  .bottom-ticker:focus-within .bottom-ticker-track,
+  .bottom-ticker:hover .ticker-track,
+  .bottom-ticker:focus-within .ticker-track {
+    animation-play-state: paused;
   }
   .bt-item {
     display: inline-flex; align-items: center; gap: 6px;
@@ -408,7 +372,7 @@
 
   /* ── Bottom Ticker ───────────────────────────────────── */
   .bottom-ticker {
-    height: 30px; background: #070a0f; border-top: 1px solid var(--border);
+    height: 30px; flex-shrink: 0; background: #070a0f; border-top: 1px solid var(--border);
     overflow: hidden; display: flex; align-items: center; position: relative;
     zoom: var(--scale);
   }

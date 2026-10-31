@@ -5,14 +5,12 @@ _default:
     @just help
 
 # === Service Configuration (derived from directory and config.yaml) ===
-DIR_NAME := `basename "$(pwd)"`
 SERVICE_NAME := `basename "$(pwd)" | tr '-' '_'` + "_service"
 PORT := `grep -A3 '^server:' config.yaml | grep 'port:' | awk '{print $2}'`
 DISPLAY_NAME := `basename "$(pwd)" | tr '-' ' ' | awk '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1)) substr($i,2)}}1'`
 
 # Show help information
 help:
-    @clear
     @echo ""
     @printf "\033[0;34m=== {{DISPLAY_NAME}} Service (port {{PORT}}) ===\033[0m\n"
     @echo ""
@@ -26,20 +24,12 @@ help:
     @printf "  \033[0;37mjust kill             \033[0;34m Stop the locally running service\033[0m\n"
     @printf "  \033[0;37mjust status           \033[0;34m Check health status\033[0m\n"
     @echo ""
-    @printf "\033[1;33mDocker\033[0m\n"
-    @printf "  \033[0;37mjust docker-up        \033[0;34m Start in Docker (production)\033[0m\n"
-    @printf "  \033[0;37mjust docker-up-dev    \033[0;34m Start in Docker (dev with hot reload)\033[0m\n"
-    @printf "  \033[0;37mjust docker-down      \033[0;34m Stop Docker container\033[0m\n"
-    @printf "  \033[0;37mjust docker-logs      \033[0;34m View Docker logs\033[0m\n"
-    @printf "  \033[0;37mjust docker-build     \033[0;34m Build Docker image\033[0m\n"
-    @echo ""
     @printf "\033[1;33mTesting\033[0m\n"
     @printf "  \033[0;37mjust test             \033[0;34m Run all tests (unit + integration)\033[0m\n"
     @printf "  \033[0;37mjust test-unit        \033[0;34m Run unit tests only\033[0m\n"
     @printf "  \033[0;37mjust test-architecture\033[0;34m Run architecture tests only\033[0m\n"
     @printf "  \033[0;37mjust test-integration \033[0;34m Run integration tests only\033[0m\n"
     @printf "  \033[0;37mjust test-coverage    \033[0;34m Run tests with coverage report\033[0m\n"
-    @printf "  \033[0;37mjust test-performance \033[0;34m Run performance tests\033[0m\n"
     @echo ""
     @printf "\033[1;33mCode Quality\033[0m\n"
     @printf "  \033[0;37mjust code-format      \033[0;34m Auto-fix formatting\033[0m\n"
@@ -83,8 +73,6 @@ check:
     }
 
     check_tool "uv"     uv     "--version"
-    check_tool "python"  python3 "--version"
-    check_tool "docker"  docker  "--version"
     check_tool "curl"    curl    "--version"
     check_tool "jq"      jq      "--version"
     check_tool "lsof"    lsof    "-v"
@@ -102,21 +90,16 @@ check:
 
 # Initialize the development environment
 init:
-    #!/usr/bin/env bash
-    echo ""
-    printf "\033[0;34m=== Initializing Development Environment ===\033[0m\n"
-    mkdir -p reports/coverage
-    mkdir -p reports/security
-    mkdir -p reports/pyright
-    mkdir -p reports/deptry
-    if [ -f .env.template ] && [ ! -f .env ]; then
-        cp .env.template .env
-        printf "\033[0;33m→ Created .env from .env.template\033[0m\n"
-    fi
-    echo "Installing Python dependencies..."
-    uv sync --all-extras
-    printf "\033[0;32m✓ Development environment ready\033[0m\n"
-    echo ""
+    @echo ""
+    @printf "\033[0;34m=== Initializing Development Environment ===\033[0m\n"
+    @mkdir -p reports/coverage
+    @mkdir -p reports/security
+    @mkdir -p reports/pyright
+    @mkdir -p reports/deptry
+    @echo "Installing Python dependencies..."
+    @uv sync --all-extras
+    @printf "\033[0;32m✓ Development environment ready\033[0m\n"
+    @echo ""
 
 # Destroy the virtual environment
 destroy:
@@ -129,11 +112,11 @@ destroy:
 
 # === Run Service (Local) ===
 
-# Run the service locally (no Docker) with hot reload
+# Run the service locally with hot reload
 run:
     @echo ""
     @printf "\033[0;34m=== Running {{DISPLAY_NAME}} Service Locally on port {{PORT}} ===\033[0m\n"
-    @uv run uvicorn {{SERVICE_NAME}}.app:create_app --factory --reload --host 127.0.0.1 --port {{PORT}}
+    @uv run uvicorn {{SERVICE_NAME}}.app:create_app --factory --reload --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{PORT}}
 
 # Stop the locally running service
 kill:
@@ -142,67 +125,23 @@ kill:
     printf "\033[0;34m=== Stopping {{DISPLAY_NAME}} Service (Local) ===\033[0m\n"
     printf "\n"
 
-    pid=$(lsof -ti :{{PORT}} -sTCP:LISTEN 2>/dev/null)
+    timeout_seconds=5
+    repo_root=$(cd ../.. && pwd -P)
+    service_root=$PWD
+    service_config=${CONFIG_PATH:-"$service_root/config.yaml"}
 
-    if [ -n "$pid" ]; then
-        printf "Service is running (PID: %s). Stopping...\n" "$pid"
-        kill $pid 2>/dev/null
-        sleep 1
-
-        if lsof -ti :{{PORT}} -sTCP:LISTEN > /dev/null 2>&1; then
-            printf "\033[0;31m✗ Service still running. Forcing kill...\033[0m\n"
-            kill -9 $(lsof -ti :{{PORT}} -sTCP:LISTEN) 2>/dev/null
-            sleep 1
-        fi
-
-        if lsof -ti :{{PORT}} -sTCP:LISTEN > /dev/null 2>&1; then
-            printf "\033[0;31m✗ Failed to stop service\033[0m\n"
-            exit 1
-        else
-            printf "\033[0;32m✓ Service stopped\033[0m\n"
-        fi
-    else
-        printf "Service is not running\n"
+    if ! uv run ../../scripts/stop_agent.py \
+        --repo-root "$repo_root" \
+        --service-root "$service_root" \
+        --config "$service_config" \
+        --service-entrypoint "{{SERVICE_NAME}}.app:create_app" \
+        --port {{PORT}} \
+        --timeout-seconds "$timeout_seconds"; then
+        printf "\033[0;31m✗ Service stop refused or did not complete safely\033[0m\n"
+        exit 1
     fi
+    printf "\033[0;32m✓ Service stop completed safely\033[0m\n"
     printf "\n"
-
-# === Docker ===
-
-# Run service in Docker (production mode, detached)
-docker-up:
-    @echo ""
-    @printf "\033[0;34m=== Starting {{DISPLAY_NAME}} Service in Docker ===\033[0m\n"
-    @cd ../.. && docker compose up -d {{DIR_NAME}}
-    @echo ""
-    @printf "\033[0;32m✓ Service running at http://localhost:{{PORT}}\033[0m\n"
-    @echo "  View logs: just docker-logs"
-    @echo ""
-
-# Run service in Docker (development mode with hot reload)
-docker-up-dev:
-    @echo ""
-    @printf "\033[0;34m=== Starting {{DISPLAY_NAME}} Service in Docker (Dev Mode) ===\033[0m\n"
-    @cd ../.. && docker compose -f docker-compose.yml -f docker-compose.dev.yml up {{DIR_NAME}}
-
-# Stop service in Docker
-docker-down:
-    @echo ""
-    @printf "\033[0;34m=== Stopping {{DISPLAY_NAME}} Service ===\033[0m\n"
-    @cd ../.. && docker compose stop {{DIR_NAME}}
-    @printf "\033[0;32m✓ Service stopped\033[0m\n"
-    @echo ""
-
-# View Docker logs for this service
-docker-logs:
-    @cd ../.. && docker compose logs -f {{DIR_NAME}}
-
-# Build Docker image for this service
-docker-build:
-    @echo ""
-    @printf "\033[0;34m=== Building {{DISPLAY_NAME}} Docker Image ===\033[0m\n"
-    @cd ../.. && docker compose build {{DIR_NAME}}
-    @printf "\033[0;32m✓ Image built\033[0m\n"
-    @echo ""
 
 # Check health status of this service
 status:
@@ -210,19 +149,32 @@ status:
     printf "\n"
     printf "\033[0;34m=== {{DISPLAY_NAME}} Service Status ===\033[0m\n"
     printf "\n"
-    if health_response=$(curl -s --connect-timeout 2 "http://localhost:{{PORT}}/health" 2>/dev/null); then
-        status=$(echo "$health_response" | jq -r '.status // empty' 2>/dev/null)
-        if [ "$status" = "ok" ]; then
-            uptime=$(echo "$health_response" | jq -r '.uptime_seconds // empty' 2>/dev/null)
-            printf "\033[0;32m✓ {{DISPLAY_NAME}}\033[0m (port {{PORT}}) - ok"
-            [ -n "$uptime" ] && printf " (uptime: %ss)" "$uptime"
-            printf "\n"
-        else
-            printf "\033[0;33m⚠ {{DISPLAY_NAME}}\033[0m (port {{PORT}}) - %s\n" "${status:-unknown}"
-        fi
-    else
+    timeout_seconds=2
+    if ! raw_response=$(curl --silent --show-error --connect-timeout "$timeout_seconds" --max-time "$timeout_seconds" --write-out $'\n%{http_code}' "http://localhost:{{PORT}}/health" 2>/dev/null); then
         printf "\033[0;31m✗ {{DISPLAY_NAME}}\033[0m (port {{PORT}}) - not responding\n"
+        exit 1
     fi
+
+    http_status=${raw_response##*$'\n'}
+    health_response=${raw_response%$'\n'*}
+    if [ "$http_status" != "200" ]; then
+        printf "\033[0;31m✗ {{DISPLAY_NAME}}\033[0m (port {{PORT}}) - HTTP %s\n" "$http_status"
+        exit 1
+    fi
+
+    if ! status=$(printf "%s" "$health_response" | jq -er '.status | select(type == "string")' 2>/dev/null); then
+        printf "\033[0;31m✗ {{DISPLAY_NAME}}\033[0m (port {{PORT}}) - malformed health response\n"
+        exit 1
+    fi
+
+    if [ "$status" != "ok" ]; then
+        printf "\033[0;31m✗ {{DISPLAY_NAME}}\033[0m (port {{PORT}}) - %s\n" "$status"
+        exit 1
+    fi
+
+    uptime=$(printf "%s" "$health_response" | jq -r '.uptime_seconds // empty')
+    printf "\033[0;32m✓ {{DISPLAY_NAME}}\033[0m (port {{PORT}}) - ok"
+    [ -n "$uptime" ] && printf " (uptime: %ss)" "$uptime"
     printf "\n"
 
 # === Code Quality ===
@@ -315,7 +267,10 @@ code-spell:
 code-audit:
     @echo ""
     @printf "\033[0;34m=== Scanning Dependencies for Vulnerabilities ===\033[0m\n"
-    @uv run pip-audit
+    @# PYSEC-2026-2132 (click 8.1.8): fix is click>=8.3.3, unreachable while semgrep
+    @# pins click~=8.1.8 (verified vs semgrep 1.169.0). Dev-only tool; tracked as T-108 —
+    @# remove the ignore when semgrep unpins.
+    @uv run pip-audit --cache-dir "${TMPDIR:?TMPDIR must name writable verification storage}/pip-audit-cache" --ignore-vuln PYSEC-2026-2132
     @echo ""
     @printf "\033[0;32m✓ No known vulnerabilities found\033[0m\n"
     @echo ""
@@ -341,8 +296,12 @@ test:
     @printf "\033[0;32m✓ All tests passed\033[0m\n"
     @echo ""
 
+# Check service-specific test prerequisites without installing anything
+test-prerequisites:
+    @if [ "{{SERVICE_NAME}}" = "ui_service" ]; then uv run python ../../scripts/check_ui_browser.py --timeout-ms 30000; fi
+
 # Run unit tests only (fast, isolated)
-test-unit:
+test-unit: test-prerequisites
     @echo ""
     @printf "\033[0;34m=== Running Unit Tests ===\033[0m\n"
     @uv run pytest tests/unit -m unit -v
@@ -357,20 +316,17 @@ test-architecture:
     if [ $rc -eq 5 ]; then printf "\033[0;33m⚠ No architecture tests collected (skipped)\033[0m\n"; exit 0; fi
     exit $rc
 
-# Run integration tests only (starts service if not already running)
+# Run integration tests only
 test-integration:
     #!/usr/bin/env bash
     echo ""
     printf "\033[0;34m=== Running Integration Tests ===\033[0m\n"
-    source ../../scripts/service-helpers.sh
-    ensure_service_running {{SERVICE_NAME}} {{PORT}}
-    trap stop_service_if_started EXIT
     uv run pytest tests/integration -m integration -v; rc=$?
     if [ $rc -eq 5 ]; then printf "\033[0;33m⚠ No integration tests collected (skipped)\033[0m\n"; exit 0; fi
     exit $rc
 
 # Run unit tests with coverage report and threshold check
-test-coverage: init
+test-coverage: init test-prerequisites
     @echo ""
     @printf "\033[0;34m=== Running Unit Tests with Coverage ===\033[0m\n"
     @uv run pytest tests/ -v \
@@ -384,13 +340,6 @@ test-coverage: init
     @echo "  HTML: reports/coverage/html/index.html"
     @echo ""
 
-# Run performance tests (slow)
-test-performance:
-    @echo ""
-    @printf "\033[0;34m=== Running Performance Tests ===\033[0m\n"
-    @uv run pytest tests/performance -m performance -v -s
-    @echo ""
-
 # === CI Pipelines ===
 
 # Run ALL validation checks (verbose) - uses unit tests for speed
@@ -401,7 +350,7 @@ ci:
     printf "\033[0;34m=== Running CI Checks for {{DISPLAY_NAME}} Service ===\033[0m\n"
     printf "\n"
     just init
-    just code-format
+    just test-prerequisites
     just code-style
     just code-typecheck
     just code-security
@@ -440,8 +389,8 @@ ci-quiet:
     just init > $TMPFILE 2>&1 || { printf "\033[0;31m✗ Init failed\033[0m\n"; cat $TMPFILE; exit 1; }
     printf "\033[0;32m✓ Init passed\033[0m\n"
 
-    just code-format > $TMPFILE 2>&1 || { printf "\033[0;31m✗ Code-format failed\033[0m\n"; cat $TMPFILE; exit 1; }
-    printf "\033[0;32m✓ Code-format passed\033[0m\n"
+    just test-prerequisites > $TMPFILE 2>&1 || { printf "\033[0;31m✗ Test prerequisites failed\033[0m\n"; cat $TMPFILE; exit 1; }
+    printf "\033[0;32m✓ Test prerequisites passed\033[0m\n"
 
     just code-style > $TMPFILE 2>&1 || { printf "\033[0;31m✗ Code-style failed\033[0m\n"; cat $TMPFILE; exit 1; }
     printf "\033[0;32m✓ Code-style passed\033[0m\n"

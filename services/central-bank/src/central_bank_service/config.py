@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, field_validator
+from service_auth.gateway import GatewaySignerConfig
 from service_commons.config import (
     REDACTION_MARKER,
     create_settings_loader,
@@ -18,6 +19,7 @@ from service_commons.config import (
 from service_commons.config import (
     get_config_path as resolve_config_path,
 )
+from service_commons.telemetry import TelemetryConfig
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -48,37 +50,34 @@ class LoggingConfig(BaseModel):
     directory: str
 
 
-class DatabaseConfig(BaseModel):
-    """Database configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    path: str
-
-
 class IdentityConfig(BaseModel):
     """Identity service connection configuration."""
 
     model_config = ConfigDict(extra="forbid")
     base_url: str
     get_agent_path: str
-    verify_jws_path: str | None = None
+    verify_jws_path: str
+    timeout_seconds: int
 
 
 class PlatformConfig(BaseModel):
-    """Platform agent configuration."""
+    """Platform agent configuration.
+
+    The platform identity is resolved from the registered PlatformAgent
+    (loaded from ``agent_config_path``); there is no configured ``agent_id``.
+    """
 
     model_config = ConfigDict(extra="forbid")
-    agent_id: str
-    agent_config_path: str = ""
+    agent_config_path: str
 
-    @field_validator("agent_id")
+    @field_validator("agent_config_path")
     @classmethod
-    def agent_id_must_not_be_empty(cls, v: str) -> str:
-        """Reject empty platform agent_id at startup."""
-        if not v.strip():
-            msg = "platform.agent_id must not be empty"
+    def agent_config_path_must_not_be_blank(cls, value: str) -> str:
+        """Require the load-only platform credential configuration."""
+        if not value.strip():
+            msg = "platform.agent_config_path must not be blank"
             raise ValueError(msg)
-        return v
+        return value
 
 
 class RequestConfig(BaseModel):
@@ -88,12 +87,17 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
+class GatewaySigningConfig(GatewaySignerConfig):
+    """Central Bank's shared strict Gateway signer configuration."""
+
+
 class DbGatewayConfig(BaseModel):
     """Database gateway configuration."""
 
     model_config = ConfigDict(extra="forbid")
     url: str
     timeout_seconds: int
+    signing: GatewaySigningConfig
 
 
 class Settings(BaseModel):
@@ -108,11 +112,11 @@ class Settings(BaseModel):
     service: ServiceConfig
     server: ServerConfig
     logging: LoggingConfig
-    database: DatabaseConfig
+    telemetry: TelemetryConfig
     identity: IdentityConfig
     platform: PlatformConfig
     request: RequestConfig
-    db_gateway: DbGatewayConfig | None = None
+    db_gateway: DbGatewayConfig
 
 
 def get_config_path() -> Path:

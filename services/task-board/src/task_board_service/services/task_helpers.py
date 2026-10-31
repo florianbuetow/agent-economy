@@ -1,0 +1,121 @@
+"""Shared formatting/validation helpers used by every TaskManager coordinator.
+
+Extracted verbatim from task_manager.py (WP-11, B16 god-class decomposition) —
+pure functions with no dependency on TaskManager or any coordinator, so every
+coordinator module can import them without a circular import.
+"""
+
+from __future__ import annotations
+
+import re
+from datetime import UTC, datetime
+from typing import Any
+
+from task_board_service.task_contract_projection import TaskContractProjection
+
+# Regex for task_id format: t-<uuid4>
+TASK_ID_RE = re.compile(
+    r"^t-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+# Valid task statuses
+VALID_STATUSES = frozenset(
+    {"open", "accepted", "submitted", "approved", "cancelled", "disputed", "ruled", "expired"}
+)
+
+
+def now_iso() -> str:
+    """Return current UTC time as ISO 8601 string with Z suffix."""
+    return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def is_positive_int(value: object) -> bool:
+    """Check if value is a positive integer (not float, not bool)."""
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def is_valid_worker_pct(value: object) -> bool:
+    """Check if value is an integer 0-100 (not float, not bool)."""
+    return isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 100
+
+
+def _contract_projection(row: dict[str, Any]) -> dict[str, Any]:
+    values = {field: row[field] for field in TaskContractProjection.model_fields}
+    return TaskContractProjection.model_validate(values).model_dump()
+
+
+def _cutoff_iso(cutoff_us: int | None) -> str | None:
+    if cutoff_us is None:
+        return None
+    if type(cutoff_us) is not int or cutoff_us < 0:
+        raise ValueError("Task cutoff must be a nonnegative integer")
+    seconds, microseconds = divmod(cutoff_us, 1_000_000)
+    return (
+        datetime.fromtimestamp(seconds, UTC)
+        .replace(microsecond=microseconds)
+        .isoformat(timespec="auto")
+        .replace("+00:00", "Z")
+    )
+
+
+def task_to_response(row: dict[str, Any]) -> dict[str, Any]:
+    """Convert a DB row dict to a full task response dict."""
+    contract = _contract_projection(row)
+    return {
+        "task_id": row["task_id"],
+        "poster_id": row["poster_id"],
+        "title": row["title"],
+        "spec": row["spec"],
+        "reward": row["reward"],
+        "bidding_deadline_seconds": row["bidding_deadline_seconds"],
+        "deadline_seconds": row["deadline_seconds"],
+        "review_deadline_seconds": row["review_deadline_seconds"],
+        "status": row["status"],
+        "escrow_id": row["escrow_id"],
+        "bid_count": row["bid_count"],
+        "worker_id": row["worker_id"],
+        "accepted_bid_id": row["accepted_bid_id"],
+        "created_at": row["created_at"],
+        "accepted_at": row["accepted_at"],
+        "submitted_at": row["submitted_at"],
+        "approved_at": row["approved_at"],
+        "cancelled_at": row["cancelled_at"],
+        "disputed_at": row["disputed_at"],
+        "dispute_reason": row["dispute_reason"],
+        "dispute_id": row["dispute_id"],
+        "rebuttal_deadline": row["rebuttal_deadline"],
+        "rebuttal_submitted_at": row["rebuttal_submitted_at"],
+        "ruling_id": row["ruling_id"],
+        "ruled_at": row["ruled_at"],
+        "worker_pct": row["worker_pct"],
+        "ruling_summary": row["ruling_summary"],
+        "expired_at": row["expired_at"],
+        "escrow_pending": bool(row["escrow_pending"]),
+        "accepted_price": contract["accepted_bid_amount"],
+        **contract,
+        "bidding_deadline": _cutoff_iso(contract["bidding_cutoff_us"]),
+        "acceptance_deadline": _cutoff_iso(contract["acceptance_cutoff_us"]),
+        "execution_deadline": _cutoff_iso(contract["execution_cutoff_us"]),
+        "review_deadline": _cutoff_iso(contract["review_cutoff_us"]),
+    }
+
+
+def task_to_summary(row: dict[str, Any]) -> dict[str, Any]:
+    """Convert a DB row dict to a summary dict for list views."""
+    contract = _contract_projection(row)
+    return {
+        "task_id": row["task_id"],
+        "poster_id": row["poster_id"],
+        "title": row["title"],
+        "reward": row["reward"],
+        "status": row["status"],
+        "bid_count": row["bid_count"],
+        "worker_id": row["worker_id"],
+        "created_at": row["created_at"],
+        **contract,
+        "bidding_deadline": _cutoff_iso(contract["bidding_cutoff_us"]),
+        "acceptance_deadline": _cutoff_iso(contract["acceptance_cutoff_us"]),
+        "execution_deadline": _cutoff_iso(contract["execution_cutoff_us"]),
+        "review_deadline": _cutoff_iso(contract["review_cutoff_us"]),
+    }

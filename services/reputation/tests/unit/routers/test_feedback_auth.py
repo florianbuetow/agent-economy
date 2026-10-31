@@ -20,8 +20,13 @@ from typing import TYPE_CHECKING
 import pytest
 from cryptography.exceptions import InvalidSignature
 
+from reputation_service.core.exceptions import ServiceError
 from reputation_service.core.state import get_app_state
-from tests.helpers import make_jws_token, make_mock_platform_agent
+from tests.helpers import (
+    make_jws_token,
+    make_mock_platform_agent,
+    make_profile_jws_with_unchecked_payload,
+)
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -65,6 +70,14 @@ def _inject_mock_ok(
         payload = _feedback_payload()
     _ = agent_id
     state = get_app_state()
+    if not isinstance(payload.get("action"), str) or not payload.get("action"):
+        state.identity_client.verify_jws.side_effect = ServiceError(
+            "invalid_payload",
+            "Identity rejected malformed payload action",
+            400,
+            {},
+        )
+        return
     state.platform_agent = make_mock_platform_agent(verify_payload=payload)
 
 
@@ -207,7 +220,8 @@ class TestJWSPayloadValidation:
         payload = _feedback_payload()
         del payload["action"]
         _inject_mock_ok(payload)
-        response = await client.post("/feedback", json=_token_body(payload))
+        token = make_profile_jws_with_unchecked_payload(payload, kid=ALICE_ID)
+        response = await client.post("/feedback", json={"token": token})
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
 
@@ -223,7 +237,8 @@ class TestJWSPayloadValidation:
         """AUTH-11: action is null returns 400 invalid_payload."""
         payload = _feedback_payload(action=None)
         _inject_mock_ok(payload)
-        response = await client.post("/feedback", json=_token_body(payload))
+        token = make_profile_jws_with_unchecked_payload(payload, kid=ALICE_ID)
+        response = await client.post("/feedback", json={"token": token})
         assert response.status_code == 400
         assert response.json()["error"] == "invalid_payload"
 
@@ -313,6 +328,7 @@ class TestGetEndpointsPublic:
         payload_ba = _feedback_payload(
             from_agent_id=BOB_ID,
             to_agent_id=ALICE_ID,
+            category="spec_quality",
             task_id="t-task-1",
         )
         _inject_mock_ok(payload_ba, agent_id=BOB_ID)
@@ -333,6 +349,7 @@ class TestGetEndpointsPublic:
         payload_ba = _feedback_payload(
             from_agent_id=BOB_ID,
             to_agent_id=ALICE_ID,
+            category="spec_quality",
             task_id="t-task-1",
         )
         _inject_mock_ok(payload_ba, agent_id=BOB_ID)
@@ -352,6 +369,7 @@ class TestGetEndpointsPublic:
         payload_ba = _feedback_payload(
             from_agent_id=BOB_ID,
             to_agent_id=ALICE_ID,
+            category="spec_quality",
             task_id="t-task-1",
         )
         _inject_mock_ok(payload_ba, agent_id=BOB_ID)
@@ -498,13 +516,19 @@ class TestExistingValidationsThroughJWS:
         assert response.json()["error"] == "comment_too_long"
 
     async def test_vjws_06_duplicate_feedback(self, client: AsyncClient) -> None:
-        """VJWS-06: Duplicate feedback via JWS returns 409 feedback_exists."""
+        """VJWS-06: Changed duplicate feedback via JWS returns 409; exact replay returns 200."""
         payload = _feedback_payload()
         _inject_mock_ok(payload)
         resp1 = await client.post("/feedback", json=_token_body(payload))
         assert resp1.status_code == 201
 
-        resp2 = await client.post("/feedback", json=_token_body(payload))
+        replay = await client.post("/feedback", json=_token_body(payload))
+        assert replay.status_code == 200
+        assert replay.json() == resp1.json()
+
+        changed = _feedback_payload(rating="dissatisfied")
+        _inject_mock_ok(changed)
+        resp2 = await client.post("/feedback", json=_token_body(changed))
         assert resp2.status_code == 409
         assert resp2.json()["error"] == "feedback_exists"
 
@@ -521,6 +545,7 @@ class TestExistingValidationsThroughJWS:
         payload_ba = _feedback_payload(
             from_agent_id=BOB_ID,
             to_agent_id=ALICE_ID,
+            category="spec_quality",
             task_id="t-task-1",
         )
         _inject_mock_ok(payload_ba, agent_id=BOB_ID)
@@ -564,7 +589,8 @@ class TestExistingValidationsThroughJWS:
 
         results = await asyncio.gather(_submit(), _submit())
         status_codes = sorted(results)
-        assert status_codes == [201, 409]
+        # The loser of the insert race is an exact replay of the winner.
+        assert status_codes == [200, 201]
 
 
 # =============================================================================

@@ -49,7 +49,8 @@ class SqliteFeedbackStore:
                     rating         TEXT NOT NULL,
                     comment        TEXT,
                     submitted_at   TEXT NOT NULL,
-                    visible        INTEGER NOT NULL DEFAULT 0
+                    visible        INTEGER NOT NULL DEFAULT 0,
+                    source         TEXT NOT NULL
                 );
 
                 CREATE UNIQUE INDEX IF NOT EXISTS ux_feedback_pair
@@ -76,6 +77,7 @@ class SqliteFeedbackStore:
             comment=str(row["comment"]) if row["comment"] is not None else None,
             submitted_at=str(row["submitted_at"]),
             visible=bool(row["visible"]),
+            source=str(row["source"]),
         )
 
     def insert_feedback(
@@ -88,6 +90,7 @@ class SqliteFeedbackStore:
         comment: str | None,
         *,
         force_visible: bool,
+        source: str,
     ) -> FeedbackRecord:
         """
         Insert a feedback record and handle mutual reveal atomically.
@@ -112,8 +115,8 @@ class SqliteFeedbackStore:
                     """
                     INSERT INTO feedback
                         (feedback_id, task_id, from_agent_id, to_agent_id,
-                         category, rating, comment, submitted_at, visible)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         category, rating, comment, submitted_at, visible, source)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         feedback_id,
@@ -125,6 +128,7 @@ class SqliteFeedbackStore:
                         comment,
                         submitted_at,
                         initial_visible,
+                        source,
                     ),
                 )
 
@@ -171,6 +175,7 @@ class SqliteFeedbackStore:
             comment=comment,
             submitted_at=submitted_at,
             visible=visible,
+            source=source,
         )
 
     def get_by_id(self, feedback_id: str) -> FeedbackRecord | None:
@@ -204,6 +209,25 @@ class SqliteFeedbackStore:
             )
             rows = cursor.fetchall()
         return [self._row_to_record(row) for row in rows]
+
+    def reveal_expired(self, cutoff: str) -> int:
+        """Reveal sealed rows submitted at or before ``cutoff``; return the count."""
+        cutoff_at = datetime.fromisoformat(cutoff)
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT feedback_id, submitted_at FROM feedback WHERE visible = 0"
+            ).fetchall()
+            expired = [
+                str(row["feedback_id"])
+                for row in rows
+                if datetime.fromisoformat(str(row["submitted_at"])) <= cutoff_at
+            ]
+            for feedback_id in expired:
+                self._db.execute(
+                    "UPDATE feedback SET visible = 1 WHERE feedback_id = ?", (feedback_id,)
+                )
+            self._db.commit()
+        return len(expired)
 
     def count(self) -> int:
         """Count total feedback records (including sealed)."""

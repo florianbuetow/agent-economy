@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-import os
-import shutil
-import signal
-import socket
 import sqlite3
-import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 from playwright.sync_api import sync_playwright
+
+E2E_SUPPORT = Path(__file__).resolve().parent
+if str(E2E_SUPPORT) not in sys.path:
+    sys.path.insert(0, str(E2E_SUPPORT))
+
+from _fixture_support import start_controlled_ui_server  # noqa: E402
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -31,34 +31,6 @@ INTEGRATION_HELPERS = Path(__file__).resolve().parents[1] / "integration"
 # Reuse the integration seed helpers
 if str(INTEGRATION_HELPERS) not in sys.path:
     sys.path.insert(0, str(INTEGRATION_HELPERS))
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-def _free_port() -> int:
-    """Find an available TCP port."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
-
-def _wait_for_server(port: int, timeout: float = 15.0) -> None:
-    """Poll GET /health until it returns 200 or timeout."""
-    import httpx  # noqa: PLC0415
-
-    url = f"http://127.0.0.1:{port}/health"
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        try:
-            resp = httpx.get(url, timeout=2.0)
-            if resp.status_code == 200:
-                return
-        except httpx.ConnectError:
-            pass
-        time.sleep(0.3)
-    msg = f"Server on port {port} did not become healthy within {timeout}s"
-    raise TimeoutError(msg)
 
 
 # ---------------------------------------------------------------------------
@@ -85,69 +57,84 @@ def e2e_server(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> Generator[str, None, None]:
     """Start a uvicorn server for the E2E session and yield its base URL."""
-    port = _free_port()
-    work_dir = tmp_path_factory.mktemp("e2e_server")
-
-    # Create minimal web directory with real frontend files
-    web_dir = work_dir / "web"
-    real_web = PROJECT_ROOT / "services" / "ui" / "data" / "web"
-    if real_web.is_dir():
-        shutil.copytree(str(real_web), str(web_dir))
-    else:
-        web_dir.mkdir()
-        (web_dir / "index.html").write_text("<html><body>Test</body></html>")
-
-    log_dir = work_dir / "logs"
-    log_dir.mkdir()
-
-    config_content = (
-        f'service:\n  name: "ui"\n  version: "0.1.0"\n'
-        f'server:\n  host: "127.0.0.1"\n  port: {port}\n  log_level: "warning"\n'
-        f'logging:\n  level: "WARNING"\n  directory: "{log_dir}"\n'
-        f'database:\n  path: "{e2e_db_path}"\n'
-        f"sse:\n  poll_interval_seconds: 1\n  keepalive_interval_seconds: 15\n  batch_size: 50\n"
-        f'frontend:\n  web_root: "{web_dir}"\n'
-        f"request:\n  max_body_size: 1572864\n"
-        f'user_agent:\n  agent_config_path: "../../agents/config.yaml"\n'
-    )
-    config_path = work_dir / "config.yaml"
-    config_path.write_text(config_content)
-
-    env = {**os.environ, "CONFIG_PATH": str(config_path)}
-    proc = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "ui_service.app:create_app",
-            "--factory",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(port),
-        ],
-        cwd=str(PROJECT_ROOT / "services" / "ui"),
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+    yield from start_controlled_ui_server(
+        e2e_db_path,
+        tmp_path_factory,
+        "e2e_server",
+        frozen_clock=False,
     )
 
-    try:
-        _wait_for_server(port)
-    except TimeoutError:
-        proc.kill()
-        raise
 
-    base_url = f"http://127.0.0.1:{port}"
-    yield base_url
+# Tables in child-to-parent FK order, safe to DELETE-then-reinsert every test.
+# (foreign_keys is turned OFF for the delete pass regardless, but keeping the
+# order correct documents the real dependency graph from schema.sql.)
+_MUTABLE_SEED_TABLES = (
+    "events",
+    "court_rulings",
+    "court_rebuttals",
+    "court_claims",
+    "reputation_feedback",
+    "board_assets",
+    "board_bids",
+    "board_task_contracts",
+    "board_tasks",
+    "bank_escrow",
+    "bank_transactions",
+    "bank_accounts",
+    "identity_agents",
+)
 
-    # Teardown
-    proc.send_signal(signal.SIGTERM)
+
+@pytest.fixture(autouse=True)
+def e2e_reset_seed_data(e2e_db_path: Path) -> None:
+    """Reset the shared E2E database to pristine seed state before every test.
+
+    T-107 root cause: ``e2e_db_path``/``e2e_server`` below are session-scoped
+    (one seeded SQLite DB, one uvicorn process, shared across the whole
+    ~270-test session) so we don't pay browser+server startup cost per test.
+    Only the browser context/page are function-scoped. Many tests mutate
+    shared rows through a writable connection (``advance_task_status``,
+    ``add_bid``, ``insert_event``, ``create_escrow``, ``add_feedback``, ad
+    hoc ``board_tasks`` inserts in test_observatory.py) or implicitly assume
+    an untouched seed (exact counts/totals). Without a reset, one test's
+    mutation becomes a later test's "pristine" starting condition:
+    test_landing.py permanently moving t-task-e3 to 'approved' shifted
+    test_observatory.py's O30 GDP bucket counts; the growing event volume
+    from accumulated mutations also widened the window during which
+    task.js's SSE catch-up (``connectTaskSSE`` always replays from
+    ``event_id=0`` — see data/web/assets/task.js) could race a test's
+    manual phase-strip navigation and silently reset it back to the task's
+    current phase, producing the "assert 'Settle' == 'Contract'"-style
+    failures in test_task_lifecycle.py that only appeared in full-suite runs.
+
+    Fix approach (DB reset, not self-isolation): truncate every mutable seed
+    table and re-run the exact same seed functions the session fixtures use,
+    via a *separate* connection to the same WAL-mode DB file the running
+    server already has open read-only. In WAL mode a fresh statement on a
+    separate connection sees the latest committed writer state without
+    restarting the server, so this is safe and — empirically, an
+    add/delete of a few hundred rows — cheap enough to run before all ~270
+    tests without a meaningful runtime hit. This also makes the extended
+    seed data (agents/tasks used by test_landing.py, test_observatory.py,
+    test_task_lifecycle.py, test_infrastructure.py) deterministically
+    present from the very first test, instead of depending on whichever
+    test file's ad hoc ``_ensure_extended_seed_data`` happened to run first
+    alphabetically.
+    """
+    from helpers import insert_seed_data  # noqa: PLC0415
+
+    from .fixtures.seed_db import extend_seed_data  # noqa: PLC0415
+
+    conn = sqlite3.connect(str(e2e_db_path))
     try:
-        proc.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        proc.wait(timeout=5)
+        conn.execute("PRAGMA foreign_keys = OFF")
+        for table in _MUTABLE_SEED_TABLES:
+            conn.execute(f"DELETE FROM {table}")  # nosec B608 - fixed internal table list
+        conn.commit()
+        insert_seed_data(conn)
+        extend_seed_data(conn)
+    finally:
+        conn.close()
 
 
 @pytest.fixture(scope="session")

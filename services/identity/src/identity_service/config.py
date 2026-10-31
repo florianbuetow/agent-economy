@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from service_auth.gateway import GatewaySignerConfig
 from service_commons.config import (
     REDACTION_MARKER,
     create_settings_loader,
@@ -18,6 +19,7 @@ from service_commons.config import (
 from service_commons.config import (
     get_config_path as resolve_config_path,
 )
+from service_commons.telemetry import TelemetryConfig
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -48,18 +50,10 @@ class LoggingConfig(BaseModel):
     directory: str
 
 
-class DatabaseConfig(BaseModel):
-    """Database configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-    path: str
-
-
 class CryptoConfig(BaseModel):
     """Cryptography configuration."""
 
     model_config = ConfigDict(extra="forbid")
-    algorithm: str
     public_key_prefix: str
     public_key_bytes: int
     signature_bytes: int
@@ -72,12 +66,33 @@ class RequestConfig(BaseModel):
     max_body_size: int
 
 
+class TokenValidationConfig(BaseModel):
+    """Strict compact-JWS lifetime admission policy."""
+
+    model_config = ConfigDict(extra="forbid")
+    max_lifetime_seconds: int = Field(strict=True, gt=0)
+    clock_skew_seconds: int = Field(strict=True, ge=0)
+
+
+class GatewaySigningConfig(GatewaySignerConfig):
+    """Identity's shared strict Gateway signer configuration."""
+
+
 class DbGatewayConfig(BaseModel):
     """DB Gateway service configuration."""
 
     model_config = ConfigDict(extra="forbid")
     url: str
     timeout_seconds: int
+    signing: GatewaySigningConfig
+
+
+class RegistrationConfig(BaseModel):
+    """Registration policy: reserved display names and the keys allowed to use them."""
+
+    model_config = ConfigDict(extra="forbid")
+    reserved_names: list[str]
+    trusted_key_files: list[str]
 
 
 class Settings(BaseModel):
@@ -92,9 +107,11 @@ class Settings(BaseModel):
     service: ServiceConfig
     server: ServerConfig
     logging: LoggingConfig
-    database: DatabaseConfig
+    telemetry: TelemetryConfig
     crypto: CryptoConfig
     request: RequestConfig
+    token_validation: TokenValidationConfig
+    registration: RegistrationConfig
     db_gateway: DbGatewayConfig | None = None
 
 

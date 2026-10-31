@@ -84,3 +84,27 @@ class TestHealth:
         assert resp.status_code == 200
         data = resp.json()
         assert data["database_size_bytes"] > 0
+
+
+@pytest.mark.unit
+def test_health_failure_message_hides_database_path(
+    app_with_writer: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """L6: a failing health check returns a fixed message with no absolute path."""
+    from db_gateway_service.core.state import get_app_state
+
+    state = get_app_state()
+    assert state.db_writer is not None
+
+    def _raise_oserror() -> int:
+        raise OSError("/secret/absolute/path/economy.db: Input/output error")
+
+    monkeypatch.setattr(state.db_writer, "get_database_size_bytes", _raise_oserror)
+
+    resp = app_with_writer.get("/health")
+
+    assert resp.status_code == 503
+    body = resp.json()
+    assert body["error"] == "database_unavailable"
+    assert body["message"] == "Database unavailable"
+    assert "/secret" not in resp.text

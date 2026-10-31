@@ -8,13 +8,14 @@ from typing import TYPE_CHECKING, Any
 from service_commons.exceptions import ServiceError
 
 from court_service.services.errors import DuplicateDisputeError
-from court_service.services.ruling_orchestrator import RulingOrchestrator
+from court_service.services.ruling_orchestrator import RulingClaim, RulingOrchestrator
 
 if TYPE_CHECKING:
-    from base_agent.platform import PlatformAgent
+    from service_auth.platform import PlatformAgent
 
     from court_service.judges.base import Judge
     from court_service.services.protocol import DisputeStorageInterface
+    from court_service.services.ruling_orchestrator import TaskLoader
 
 
 class DisputeService:
@@ -39,6 +40,13 @@ class DisputeService:
                 raise TypeError(msg)
             orchestrator_arg = kwargs.pop("orchestrator")
 
+        feedback_extremely_satisfied_cutoff = kwargs.pop(
+            "feedback_extremely_satisfied_cutoff", None
+        )
+        feedback_satisfied_cutoff = kwargs.pop("feedback_satisfied_cutoff", None)
+        feedback_comment_max_length = kwargs.pop("feedback_comment_max_length", None)
+        judging_lease_seconds = kwargs.pop("judging_lease_seconds", None)
+
         if len(kwargs) > 0:
             unknown = ", ".join(sorted(kwargs))
             msg = f"Unexpected keyword argument(s): {unknown}"
@@ -46,7 +54,25 @@ class DisputeService:
 
         self._store = store
         if orchestrator_arg is None:
-            self._orchestrator = RulingOrchestrator(store)
+            if (
+                not isinstance(feedback_extremely_satisfied_cutoff, int)
+                or not isinstance(feedback_satisfied_cutoff, int)
+                or not isinstance(feedback_comment_max_length, int)
+                or not isinstance(judging_lease_seconds, int)
+            ):
+                msg = (
+                    "feedback_extremely_satisfied_cutoff, feedback_satisfied_cutoff, and "
+                    "feedback_comment_max_length and judging_lease_seconds are required when "
+                    "orchestrator is not provided"
+                )
+                raise TypeError(msg)
+            self._orchestrator = RulingOrchestrator(
+                store,
+                feedback_extremely_satisfied_cutoff=feedback_extremely_satisfied_cutoff,
+                feedback_satisfied_cutoff=feedback_satisfied_cutoff,
+                feedback_comment_max_length=feedback_comment_max_length,
+                judging_lease_seconds=judging_lease_seconds,
+            )
         elif isinstance(orchestrator_arg, RulingOrchestrator):
             self._orchestrator = orchestrator_arg
         else:
@@ -85,10 +111,18 @@ class DisputeService:
             ) from exc
 
     def submit_rebuttal(self, dispute_id: str, rebuttal: str) -> dict[str, Any]:
-        """Submit rebuttal for a dispute."""
+        """Submit a rebuttal once; an identical replay returns the stored record.
+
+        A changed rebuttal is a 409 conflict, and a first rebuttal after the
+        rebuttal deadline is rejected (plan item 3.3).
+        """
         dispute = self._store.get_dispute(dispute_id)
         if dispute is None:
             raise ServiceError("dispute_not_found", "Dispute not found", 404, {})
+
+        existing = dispute["rebuttal"]
+        if existing is not None and existing == rebuttal:
+            return dispute
 
         status = str(dispute["status"])
         if status != "rebuttal_pending":
@@ -99,10 +133,18 @@ class DisputeService:
                 {},
             )
 
-        if dispute["rebuttal"] is not None:
+        if existing is not None:
             raise ServiceError(
                 "rebuttal_already_submitted",
                 "Rebuttal has already been submitted",
+                409,
+                {},
+            )
+
+        if self._rebuttal_deadline_passed(dispute):
+            raise ServiceError(
+                "rebuttal_deadline_passed",
+                "The rebuttal deadline has passed",
                 409,
                 {},
             )
@@ -114,6 +156,16 @@ class DisputeService:
             msg = "Failed to load dispute after rebuttal update"
             raise RuntimeError(msg)
         return updated_dispute
+
+    @staticmethod
+    def _rebuttal_deadline_passed(dispute: dict[str, Any]) -> bool:
+        deadline_raw = dispute.get("rebuttal_deadline")
+        if not isinstance(deadline_raw, str) or deadline_raw == "":
+            return False
+        deadline = datetime.fromisoformat(deadline_raw.replace("Z", "+00:00"))
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=UTC)
+        return datetime.now(UTC) >= deadline
 
     async def execute_ruling(
         self,
@@ -129,6 +181,47 @@ class DisputeService:
             task_data=task_data,
             platform_agent=platform_agent,
         )
+
+    def begin_ruling(self, dispute_id: str) -> RulingClaim:
+        """Validate preconditions and take the judging lease before any Task Board
+        call that could reenter this same dispute's ruling trigger."""
+        return self._orchestrator.begin_ruling(dispute_id)
+
+    async def finish_ruling(
+        self,
+        dispute_id: str,
+        claim: RulingClaim,
+        judges: list[Judge],
+        task_data: dict[str, Any] | None,
+        platform_agent: PlatformAgent,
+    ) -> dict[str, Any]:
+        """Judge unless already decided, persist, then deliver the stored decision."""
+        return await self._orchestrator.finish_ruling(
+            dispute_id=dispute_id,
+            claim=claim,
+            judges=judges,
+            task_data=task_data,
+            platform_agent=platform_agent,
+        )
+
+    async def rule(
+        self,
+        dispute_id: str,
+        judges: list[Judge],
+        platform_agent: PlatformAgent,
+        load_task: TaskLoader,
+    ) -> dict[str, Any]:
+        """Run (or resume) one ruling end to end under a judging lease."""
+        return await self._orchestrator.rule(dispute_id, judges, platform_agent, load_task)
+
+    async def reclaim_stalled_rulings(
+        self,
+        judges: list[Judge],
+        platform_agent: PlatformAgent,
+        load_task: TaskLoader,
+    ) -> list[str]:
+        """Resume every ``judging`` dispute whose lease expired or was released."""
+        return await self._orchestrator.reclaim_stalled_rulings(judges, platform_agent, load_task)
 
     def get_dispute(self, dispute_id: str) -> dict[str, Any] | None:
         """Return dispute details with votes, or None."""

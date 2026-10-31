@@ -1,0 +1,1325 @@
+
+[0;34m=== Running Full CI (Quiet Mode) ===[0m
+[0;34m--- Phase 0: Project structure ---[0m
+
+[0;34m=== Checking Project Structure ===[0m
+
+[0;32m✓ services/central-bank/justfile[0m
+[0;32m✓ services/court/justfile[0m
+[0;32m✓ services/db-gateway/justfile[0m
+[0;32m✓ services/reputation/justfile[0m
+[0;32m✓ services/task-board/justfile[0m
+[0;32m✓ services/ui/justfile[0m
+
+[0;32m✓ All service justfiles are identical[0m
+
+[0;34m--- Phase 1: Libs CI ---[0m
+Checking service-commons...
+Checking service-commons...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-commons/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-commons
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 177 items
+
+tests/unit/test_config_bytes.py::test_verified_bytes_parse_like_the_file_loader[service: {name: ui}\n] PASSED [  0%]
+tests/unit/test_config_bytes.py::test_verified_bytes_parse_like_the_file_loader[{"port": 8008}] PASSED [  1%]
+tests/unit/test_config_bytes.py::test_verified_bytes_parse_like_the_file_loader[flag: false\n] PASSED [  1%]
+tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[] PASSED [  2%]
+tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[[]] PASSED [  2%]
+tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[42] PASSED [  3%]
+tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[broken: [] PASSED [  3%]
+tests/unit/test_config_bytes.py::test_byte_parser_rejects_empty_nonmapping_and_invalid_configuration[\xff] PASSED [  4%]
+tests/unit/test_config_bytes.py::test_file_loader_keeps_its_missing_file_error PASSED [  5%]
+tests/unit/test_maintenance_existing_lock.py::test_holds_only_the_recorded_existing_lock_identity PASSED [  5%]
+tests/unit/test_maintenance_existing_lock.py::test_missing_recorded_lock_is_not_created PASSED [  6%]
+tests/unit/test_maintenance_existing_lock.py::test_missing_recorded_lock_parent_is_not_created PASSED [  6%]
+tests/unit/test_maintenance_existing_lock.py::test_unsafe_existing_mode_is_rejected_without_chmod PASSED [  7%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[True-1-TypeError] PASSED [  7%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[0.0-1-TypeError] PASSED [  8%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[0-True-TypeError] PASSED [  9%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[0-1.0-TypeError] PASSED [  9%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[-1-1-ValueError] PASSED [ 10%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[0-0-ValueError] PASSED [ 10%]
+tests/unit/test_maintenance_existing_lock.py::test_expected_identity_requires_strict_kernel_identifiers[0--1-ValueError] PASSED [ 11%]
+tests/unit/test_maintenance_existing_lock.py::test_wrong_recorded_inode_is_rejected_before_any_flock PASSED [ 11%]
+tests/unit/test_maintenance_existing_lock.py::test_recorded_lock_swap_during_flock_is_rejected[True] PASSED [ 12%]
+tests/unit/test_maintenance_existing_lock.py::test_recorded_lock_swap_during_flock_is_rejected[False] PASSED [ 12%]
+tests/unit/test_maintenance_existing_lock.py::test_exception_path_unlocks_closes_and_deactivates_existing_handle PASSED [ 13%]
+tests/unit/test_maintenance_lock.py::test_creates_persistent_regular_lock_with_exact_permissions PASSED [ 14%]
+tests/unit/test_maintenance_lock.py::test_rejects_invalid_runtime_argument_types[shared-False] PASSED [ 14%]
+tests/unit/test_maintenance_lock.py::test_rejects_invalid_runtime_argument_types[shared-1] PASSED [ 15%]
+tests/unit/test_maintenance_lock.py::test_rejects_existing_lock_with_unsafe_permissions_without_changing_it PASSED [ 15%]
+tests/unit/test_maintenance_lock.py::test_rejects_nonregular_lock_paths[symlink] PASSED [ 16%]
+tests/unit/test_maintenance_lock.py::test_rejects_nonregular_lock_paths[directory] PASSED [ 16%]
+tests/unit/test_maintenance_lock.py::test_rejects_missing_parent_without_creating_directories PASSED [ 17%]
+tests/unit/test_maintenance_lock.py::test_rejects_relative_path PASSED   [ 18%]
+tests/unit/test_maintenance_lock.py::test_rejects_lexically_noncanonical_absolute_path PASSED [ 18%]
+tests/unit/test_maintenance_lock.py::test_rejects_symlinked_ancestor_without_touching_target PASSED [ 19%]
+tests/unit/test_maintenance_lock.py::test_releases_lock_when_context_body_raises PASSED [ 19%]
+tests/unit/test_maintenance_lock.py::test_shared_locks_coexist_across_processes PASSED [ 20%]
+tests/unit/test_maintenance_lock.py::test_incompatible_nonblocking_lock_fails_meaningfully_across_processes[shared-exclusive] PASSED [ 20%]
+tests/unit/test_maintenance_lock.py::test_incompatible_nonblocking_lock_fails_meaningfully_across_processes[exclusive-shared] PASSED [ 21%]
+tests/unit/test_maintenance_lock.py::test_incompatible_nonblocking_lock_fails_meaningfully_across_processes[exclusive-exclusive] PASSED [ 22%]
+tests/unit/test_maintenance_lock.py::test_concurrent_first_creators_share_one_persistent_lock PASSED [ 22%]
+tests/unit/test_maintenance_lock.py::test_lock_path_replacement_immediately_after_open_fails_closed PASSED [ 23%]
+tests/unit/test_maintenance_lock.py::test_ancestor_retarget_during_traversal_fails_closed PASSED [ 23%]
+tests/unit/test_maintenance_lock.py::test_lock_path_replacement_during_acquisition_fails_closed_and_closes_descriptor[True] PASSED [ 24%]
+tests/unit/test_maintenance_lock.py::test_lock_path_replacement_during_acquisition_fails_closed_and_closes_descriptor[False] PASSED [ 24%]
+tests/unit/test_maintenance_lock.py::test_release_failures_do_not_mask_context_exception PASSED [ 25%]
+tests/unit/test_maintenance_lock.py::test_release_failure_after_clean_body_is_reported PASSED [ 25%]
+tests/unit/test_maintenance_lock_identity.py::test_held_lock_exposes_immutable_verified_path_identity PASSED [ 26%]
+tests/unit/test_maintenance_lock_identity.py::test_replacing_held_lock_path_is_detected_before_unlock PASSED [ 27%]
+tests/unit/test_maintenance_lock_identity.py::test_retargeting_held_lock_ancestor_is_detected_before_unlock PASSED [ 27%]
+tests/unit/test_maintenance_lock_identity.py::test_changing_held_lock_mode_is_detected_before_unlock PASSED [ 28%]
+tests/unit/test_maintenance_lock_identity.py::test_released_handle_rejects_identity_verification PASSED [ 28%]
+tests/unit/test_maintenance_lock_identity.py::test_identity_failure_during_exception_preserves_primary_error PASSED [ 29%]
+tests/unit/test_recovery_contract.py::test_valid_inventory_round_trips_through_canonical_json PASSED [ 29%]
+tests/unit/test_recovery_contract.py::test_canonical_json_ignores_mapping_insertion_order PASSED [ 30%]
+tests/unit/test_recovery_contract.py::test_unknown_contract_version_is_rejected[RecoveryInventoryV1] PASSED [ 31%]
+tests/unit/test_recovery_contract.py::test_unknown_contract_version_is_rejected[TargetBindingsV1] PASSED [ 31%]
+tests/unit/test_recovery_contract.py::test_contract_version_rejects_values_that_only_compare_equal_to_one[True-RecoveryInventoryV1] PASSED [ 32%]
+tests/unit/test_recovery_contract.py::test_contract_version_rejects_values_that_only_compare_equal_to_one[True-TargetBindingsV1] PASSED [ 32%]
+tests/unit/test_recovery_contract.py::test_contract_version_rejects_values_that_only_compare_equal_to_one[1.0-RecoveryInventoryV1] PASSED [ 33%]
+tests/unit/test_recovery_contract.py::test_contract_version_rejects_values_that_only_compare_equal_to_one[1.0-TargetBindingsV1] PASSED [ 33%]
+tests/unit/test_recovery_contract.py::test_unknown_fields_and_binding_kinds_are_rejected PASSED [ 34%]
+tests/unit/test_recovery_contract.py::test_resource_capture_intent_must_match_filesystem_shape[file-directory_only] PASSED [ 35%]
+tests/unit/test_recovery_contract.py::test_resource_capture_intent_must_match_filesystem_shape[directory-keypair] PASSED [ 35%]
+tests/unit/test_recovery_contract.py::test_resource_capture_intent_must_match_filesystem_shape[directory-config] PASSED [ 36%]
+tests/unit/test_recovery_contract.py::test_resource_capture_intents_cover_copy_key_config_and_directory_only PASSED [ 36%]
+tests/unit/test_recovery_contract.py::test_valid_keypair_inventory_references_canonical_pair_resources PASSED [ 37%]
+tests/unit/test_recovery_contract.py::test_keypair_inventory_rejects_bad_names_capture_kinds_and_references[resources0-keypairs0] PASSED [ 37%]
+tests/unit/test_recovery_contract.py::test_keypair_inventory_rejects_bad_names_capture_kinds_and_references[resources1-keypairs1] PASSED [ 38%]
+tests/unit/test_recovery_contract.py::test_keypair_inventory_rejects_bad_names_capture_kinds_and_references[resources2-keypairs2] PASSED [ 38%]
+tests/unit/test_recovery_contract.py::test_keypair_inventory_rejects_duplicate_handles_or_reused_resources PASSED [ 39%]
+tests/unit/test_recovery_contract.py::test_port_bindings_reject_non_strict_integers[True] PASSED [ 40%]
+tests/unit/test_recovery_contract.py::test_port_bindings_reject_non_strict_integers[8123.0] PASSED [ 40%]
+tests/unit/test_recovery_contract.py::test_port_bindings_reject_non_strict_integers[8123] PASSED [ 41%]
+tests/unit/test_recovery_contract.py::test_binding_kinds_require_their_exact_value_and_path_shape PASSED [ 41%]
+tests/unit/test_recovery_contract.py::test_field_paths_must_be_concrete_segments[field_path0-http://provider.invalid] PASSED [ 42%]
+tests/unit/test_recovery_contract.py::test_field_paths_must_be_concrete_segments[field_path1-http://provider.invalid] PASSED [ 42%]
+tests/unit/test_recovery_contract.py::test_field_paths_must_be_concrete_segments[field_path2-http://provider.invalid] PASSED [ 43%]
+tests/unit/test_recovery_contract.py::test_field_paths_must_be_concrete_segments[field_path3-http://provider.invalid] PASSED [ 44%]
+tests/unit/test_recovery_contract.py::test_inventory_rejects_duplicate_ids_and_config_field_pairs PASSED [ 44%]
+tests/unit/test_recovery_contract.py::test_inventory_rejects_duplicate_or_inconsistent_process_ownership PASSED [ 45%]
+tests/unit/test_recovery_contract.py::test_process_identity_fields_are_strict_positive_and_all_or_none[1-None-1] PASSED [ 45%]
+tests/unit/test_recovery_contract.py::test_process_identity_fields_are_strict_positive_and_all_or_none[0-1-1] PASSED [ 46%]
+tests/unit/test_recovery_contract.py::test_process_identity_fields_are_strict_positive_and_all_or_none[-1-1-1] PASSED [ 46%]
+tests/unit/test_recovery_contract.py::test_process_identity_fields_are_strict_positive_and_all_or_none[True-1-1] PASSED [ 47%]
+tests/unit/test_recovery_contract.py::test_process_state_rejects_inconsistent_runtime_facts[True-True-None] PASSED [ 48%]
+tests/unit/test_recovery_contract.py::test_process_state_rejects_inconsistent_runtime_facts[True-False-0] PASSED [ 48%]
+tests/unit/test_recovery_contract.py::test_process_state_rejects_inconsistent_runtime_facts[False-True-None] PASSED [ 49%]
+tests/unit/test_recovery_contract.py::test_stopped_process_record_preserves_observed_cleanup_facts PASSED [ 49%]
+tests/unit/test_recovery_contract.py::test_inventory_enforces_config_and_resource_references PASSED [ 50%]
+tests/unit/test_recovery_contract.py::test_inventory_rejects_inconsistent_lexical_path_resolution[binding0-configs0] PASSED [ 50%]
+tests/unit/test_recovery_contract.py::test_inventory_rejects_inconsistent_lexical_path_resolution[binding1-configs1] PASSED [ 51%]
+tests/unit/test_recovery_contract.py::test_inventory_rejects_inconsistent_lexical_path_resolution[binding2-configs2] PASSED [ 51%]
+tests/unit/test_recovery_contract.py::test_inventory_uses_captured_config_parent_and_agents_anchor PASSED [ 52%]
+tests/unit/test_recovery_contract.py::test_partial_runtime_inventory_is_structurally_valid PASSED [ 53%]
+tests/unit/test_recovery_contract.py::test_target_resource_paths_must_remain_beneath_target_root PASSED [ 53%]
+tests/unit/test_recovery_contract.py::test_target_code_anchors_may_live_outside_target_root PASSED [ 54%]
+tests/unit/test_recovery_contract.py::test_target_mapping_fields_are_immutable_and_hash_stable[process_cwds-escape-value0] PASSED [ 54%]
+tests/unit/test_recovery_contract.py::test_target_mapping_fields_are_immutable_and_hash_stable[resource_paths-escape-value1] PASSED [ 55%]
+tests/unit/test_recovery_contract.py::test_target_mapping_fields_are_immutable_and_hash_stable[endpoint_values-escape-http://outside.invalid] PASSED [ 55%]
+tests/unit/test_recovery_contract.py::test_target_mapping_fields_are_detached_from_input_aliases PASSED [ 56%]
+tests/unit/test_recovery_contract.py::test_contract_models_have_no_configurable_defaults_and_are_frozen PASSED [ 57%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[.] PASSED [ 57%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[..] PASSED [ 58%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[/absolute] PASSED [ 58%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[nested/resource] PASSED [ 59%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[nested\\resource] PASSED [ 59%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[bad\x00id] PASSED [ 60%]
+tests/unit/test_recovery_contract_review.py::test_resource_logical_ids_are_safe_filesystem_components[bad\nid] PASSED [ 61%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[.] PASSED [ 61%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[..] PASSED [ 62%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[/absolute] PASSED [ 62%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[nested/config] PASSED [ 63%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[nested\\config] PASSED [ 63%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[bad\x00id] PASSED [ 64%]
+tests/unit/test_recovery_contract_review.py::test_config_logical_ids_are_safe_filesystem_components[bad\tid] PASSED [ 64%]
+tests/unit/test_recovery_contract_review.py::test_key_handles_reject_control_characters[bad\x00handle] PASSED [ 65%]
+tests/unit/test_recovery_contract_review.py::test_key_handles_reject_control_characters[bad\rhandle] PASSED [ 66%]
+tests/unit/test_recovery_contract_review.py::test_key_handles_reject_control_characters[bad\x7fhandle] PASSED [ 66%]
+tests/unit/test_recovery_contract_review.py::test_filesystem_component_ids_preserve_dots_and_hyphens[gateway.schema-v1] PASSED [ 67%]
+tests/unit/test_recovery_contract_review.py::test_filesystem_component_ids_preserve_dots_and_hyphens[agent-config.v2] PASSED [ 67%]
+tests/unit/test_recovery_contract_review.py::test_resource_and_config_capture_roots_are_explicit_boundaries PASSED [ 68%]
+tests/unit/test_recovery_contract_review.py::test_resource_capture_path_cannot_escape_its_lexical_root[capture_root0-captured_path0] PASSED [ 68%]
+tests/unit/test_recovery_contract_review.py::test_resource_capture_path_cannot_escape_its_lexical_root[capture_root1-captured_path1] PASSED [ 69%]
+tests/unit/test_recovery_contract_review.py::test_resource_capture_path_cannot_escape_its_lexical_root[capture_root2-captured_path2] PASSED [ 70%]
+tests/unit/test_recovery_contract_review.py::test_config_capture_path_cannot_escape_its_lexical_root[capture_root0-captured_path0] PASSED [ 70%]
+tests/unit/test_recovery_contract_review.py::test_config_capture_path_cannot_escape_its_lexical_root[capture_root1-captured_path1] PASSED [ 71%]
+tests/unit/test_recovery_contract_review.py::test_config_capture_path_cannot_escape_its_lexical_root[capture_root2-captured_path2] PASSED [ 71%]
+tests/unit/test_recovery_contract_review.py::test_directory_capture_path_may_equal_its_capture_root PASSED [ 72%]
+tests/unit/test_recovery_contract_review.py::test_registered_agent_id_cannot_map_to_distinct_fingerprints PASSED [ 72%]
+tests/unit/test_recovery_contract_review.py::test_registered_agent_aliases_with_one_fingerprint_are_valid PASSED [ 73%]
+tests/unit/test_recovery_contract_review.py::test_gateway_fingerprints_are_unique PASSED [ 74%]
+tests/unit/test_recovery_contract_review.py::test_gateway_and_economic_fingerprint_sets_are_disjoint PASSED [ 74%]
+tests/unit/test_recovery_contract_review.py::test_partial_inventory_accepts_zero_or_one_exact_runtime_lock PASSED [ 75%]
+tests/unit/test_recovery_contract_review.py::test_runtime_lock_resource_must_match_inventory_lock_path PASSED [ 75%]
+tests/unit/test_recovery_contract_review.py::test_inventory_rejects_multiple_runtime_lock_resources PASSED [ 76%]
+tests/unit/test_recovery_contract_review.py::test_duplicate_paths_reject_contradictory_resource_shapes[file-absent_file] PASSED [ 76%]
+tests/unit/test_recovery_contract_review.py::test_duplicate_paths_reject_contradictory_resource_shapes[file-runtime_lock] PASSED [ 77%]
+tests/unit/test_recovery_contract_review.py::test_duplicate_paths_reject_contradictory_resource_shapes[directory-copy] PASSED [ 77%]
+tests/unit/test_recovery_contract_review.py::test_duplicate_paths_with_identical_resource_shape_remain_structurally_valid PASSED [ 78%]
+tests/unit/test_recovery_identity_contract.py::test_registered_economic_identity_facts_round_trip_canonically PASSED [ 79%]
+tests/unit/test_recovery_identity_contract.py::test_optional_unregistered_economic_key_is_structurally_valid PASSED [ 79%]
+tests/unit/test_recovery_identity_contract.py::test_gateway_key_must_be_forbidden_from_economic_registration PASSED [ 80%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] PASSED [ 80%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] PASSED [ 81%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA] PASSED [ 81%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg] PASSED [ 82%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[] PASSED [ 83%]
+tests/unit/test_recovery_identity_contract.py::test_public_fingerprint_is_exact_lowercase_sha256[ a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a] PASSED [ 83%]
+tests/unit/test_recovery_identity_contract.py::test_registration_state_and_expected_agent_id_must_agree[required-unregistered-None] PASSED [ 84%]
+tests/unit/test_recovery_identity_contract.py::test_registration_state_and_expected_agent_id_must_agree[optional-registered-None] PASSED [ 84%]
+tests/unit/test_recovery_identity_contract.py::test_registration_state_and_expected_agent_id_must_agree[optional-unregistered-agent-operator] PASSED [ 85%]
+tests/unit/test_recovery_identity_contract.py::test_registration_state_and_expected_agent_id_must_agree[optional-registered-] PASSED [ 85%]
+tests/unit/test_recovery_identity_contract.py::test_registration_state_and_expected_agent_id_must_agree[optional-registered- agent-operator] PASSED [ 86%]
+tests/unit/test_recovery_identity_contract.py::test_registration_policy_is_constrained_by_key_role[economic-forbidden-unregistered-None] PASSED [ 87%]
+tests/unit/test_recovery_identity_contract.py::test_registration_policy_is_constrained_by_key_role[gateway-required-registered-gateway-agent] PASSED [ 87%]
+tests/unit/test_recovery_identity_contract.py::test_registration_policy_is_constrained_by_key_role[gateway-optional-unregistered-None] PASSED [ 88%]
+tests/unit/test_recovery_identity_contract.py::test_registration_policy_is_constrained_by_key_role[gateway-forbidden-registered-gateway-agent] PASSED [ 88%]
+tests/unit/test_recovery_identity_contract.py::test_economic_aliases_with_one_fingerprint_must_agree_on_identity PASSED [ 89%]
+tests/unit/test_recovery_identity_contract.py::test_consistent_economic_aliases_with_one_fingerprint_are_valid PASSED [ 89%]
+tests/unit/test_recovery_identity_contract.py::test_distinct_economic_fingerprints_may_have_distinct_identities PASSED [ 90%]
+tests/unit/test_recovery_identity_contract.py::test_all_identity_fields_are_required PASSED [ 90%]
+tests/unit/test_recovery_identity_contract.py::test_non_payload_file_capture_intents_are_explicit[absent_file] PASSED [ 91%]
+tests/unit/test_recovery_identity_contract.py::test_non_payload_file_capture_intents_are_explicit[runtime_lock] PASSED [ 92%]
+tests/unit/test_recovery_identity_contract.py::test_non_payload_file_capture_intents_reject_directories[absent_file] PASSED [ 92%]
+tests/unit/test_recovery_identity_contract.py::test_non_payload_file_capture_intents_reject_directories[runtime_lock] PASSED [ 93%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[-1-1] PASSED [ 93%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[0-0] PASSED [ 94%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[0--1] PASSED [ 94%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[True-1] PASSED [ 95%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[0-True] PASSED [ 96%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[0.0-1] PASSED [ 96%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_requires_strict_kernel_identifiers[0-1.0] PASSED [ 97%]
+tests/unit/test_recovery_identity_contract.py::test_maintenance_lock_identity_is_required_immutable_source_evidence PASSED [ 97%]
+tests/unit/test_smoke.py::test_package_importable PASSED                 [ 98%]
+tests/unit/test_smoke.py::test_exceptions_module_exports PASSED          [ 98%]
+tests/unit/test_smoke.py::test_logging_module_exports PASSED             [ 99%]
+tests/unit/test_smoke.py::test_config_module_exports PASSED              [100%]
+
+============================= 177 passed in 0.85s ==============================
+[0;32m✓ service-commons CI passed[0m
+Checking service-clients...
+Checking service-clients...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-clients/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-clients
+configfile: pyproject.toml
+plugins: anyio-4.12.1, cov-7.1.0, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 104 items
+
+tests/unit/test_bank_client.py::TestConnectionFailureMapping::test_connect_error_maps_to_502_central_bank_unavailable PASSED [  0%]
+tests/unit/test_bank_client.py::TestConnectionFailureMapping::test_timeout_maps_to_502_central_bank_unavailable PASSED [  1%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_success PASSED      [  2%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_alias_matches_lock_escrow PASSED [  3%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_402_raises_insufficient_funds PASSED [  4%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_404_raises_account_not_found PASSED [  5%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_403_raises_forbidden PASSED [  6%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_409_raises_conflict_from_body PASSED [  7%]
+tests/unit/test_bank_client.py::TestLockEscrow::test_500_raises_502_central_bank_unavailable PASSED [  8%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_success PASSED   [  9%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_alias_matches_release_escrow PASSED [ 10%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_404_raises_not_found PASSED [ 11%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_403_raises_forbidden PASSED [ 12%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_409_raises_conflict PASSED [ 13%]
+tests/unit/test_bank_client.py::TestReleaseEscrow::test_400_raises_bad_request PASSED [ 14%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_success PASSED     [ 15%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_alias_matches_split_escrow PASSED [ 16%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_404_raises_not_found PASSED [ 17%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_403_raises_forbidden PASSED [ 18%]
+tests/unit/test_bank_client.py::TestSplitEscrow::test_no_split_path_configured_raises_502 PASSED [ 19%]
+tests/unit/test_gateway_client.py::TestConnectionFailureMapping::test_connect_error_maps_to_502_db_gateway_unavailable PASSED [ 20%]
+tests/unit/test_gateway_client.py::TestConnectionFailureMapping::test_timeout_maps_to_502_db_gateway_unavailable PASSED [ 21%]
+tests/unit/test_gateway_client.py::TestIdentity::test_register_agent_success PASSED [ 22%]
+tests/unit/test_gateway_client.py::TestIdentity::test_register_agent_conflict PASSED [ 23%]
+tests/unit/test_gateway_client.py::TestIdentity::test_get_agent_not_found_returns_none PASSED [ 24%]
+tests/unit/test_gateway_client.py::TestIdentity::test_list_agents PASSED [ 25%]
+tests/unit/test_gateway_client.py::TestIdentity::test_count_agents PASSED [ 25%]
+tests/unit/test_gateway_client.py::TestBank::test_create_account_success PASSED [ 26%]
+tests/unit/test_gateway_client.py::TestBank::test_create_account_conflict PASSED [ 27%]
+tests/unit/test_gateway_client.py::TestBank::test_get_account_found PASSED [ 28%]
+tests/unit/test_gateway_client.py::TestBank::test_get_account_not_found_returns_none PASSED [ 29%]
+tests/unit/test_gateway_client.py::TestBank::test_get_transactions PASSED [ 30%]
+tests/unit/test_gateway_client.py::TestBank::test_count_accounts PASSED  [ 31%]
+tests/unit/test_gateway_client.py::TestBank::test_total_escrowed PASSED  [ 32%]
+tests/unit/test_gateway_client.py::TestBank::test_get_escrow_not_found_returns_none PASSED [ 33%]
+tests/unit/test_gateway_client.py::TestBank::test_credit_account PASSED  [ 34%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_lock_insufficient_funds PASSED [ 35%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_release_success PASSED [ 36%]
+tests/unit/test_gateway_client.py::TestBank::test_escrow_split_success PASSED [ 37%]
+tests/unit/test_gateway_client.py::TestReputation::test_submit_feedback_success PASSED [ 38%]
+tests/unit/test_gateway_client.py::TestReputation::test_submit_feedback_conflict PASSED [ 39%]
+tests/unit/test_gateway_client.py::TestReputation::test_get_feedback_not_found_returns_none PASSED [ 40%]
+tests/unit/test_gateway_client.py::TestReputation::test_list_feedback_by_task PASSED [ 41%]
+tests/unit/test_gateway_client.py::TestReputation::test_count_feedback PASSED [ 42%]
+tests/unit/test_gateway_client.py::TestCourt::test_file_claim_success PASSED [ 43%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_claim_not_found_returns_none PASSED [ 44%]
+tests/unit/test_gateway_client.py::TestCourt::test_list_claims_with_status_filter PASSED [ 45%]
+tests/unit/test_gateway_client.py::TestCourt::test_update_claim_status_not_found_returns_none PASSED [ 46%]
+tests/unit/test_gateway_client.py::TestCourt::test_update_claim_status_success PASSED [ 47%]
+tests/unit/test_gateway_client.py::TestCourt::test_submit_rebuttal_success PASSED [ 48%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_rebuttal_not_found_returns_none PASSED [ 49%]
+tests/unit/test_gateway_client.py::TestCourt::test_record_ruling_success PASSED [ 50%]
+tests/unit/test_gateway_client.py::TestCourt::test_get_ruling_not_found_returns_none PASSED [ 50%]
+tests/unit/test_gateway_client.py::TestCourt::test_delete_ruling_success PASSED [ 51%]
+tests/unit/test_gateway_client.py::TestCourt::test_delete_ruling_not_found_returns_none PASSED [ 52%]
+tests/unit/test_gateway_client.py::TestCourt::test_count_claims PASSED   [ 53%]
+tests/unit/test_gateway_client.py::TestCourt::test_count_active_claims PASSED [ 54%]
+tests/unit/test_gateway_client.py::TestBoardRead::test_get_task_found PASSED [ 55%]
+tests/unit/test_gateway_client.py::TestBoardRead::test_get_task_not_found_returns_none PASSED [ 56%]
+tests/unit/test_identity_client.py::test_verify_jws_returns_complete_typed_result PASSED [ 57%]
+tests/unit/test_identity_client.py::test_verify_jws_invalid_result_raises_raw_invalid_signature PASSED [ 58%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_missing_header] PASSED [ 59%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_kid_mismatch] PASSED [ 60%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_bool_to_int] PASSED [ 61%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_bool_to_float] PASSED [ 62%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_wrong_valid_type] PASSED [ 63%]
+tests/unit/test_identity_client.py::test_malformed_claimed_success_maps_to_identity_unavailable[_wrong_payload_type] PASSED [ 64%]
+tests/unit/test_identity_client.py::test_claimed_success_for_invalid_requested_token_maps_to_identity_unavailable PASSED [ 65%]
+tests/unit/test_identity_client.py::test_identity_http_errors_are_preserved[400-invalid_jws] PASSED [ 66%]
+tests/unit/test_identity_client.py::test_identity_http_errors_are_preserved[401-token_expired] PASSED [ 67%]
+tests/unit/test_identity_client.py::test_identity_http_errors_are_preserved[404-agent_not_found] PASSED [ 68%]
+tests/unit/test_identity_client.py::test_get_agent_contract_is_unchanged PASSED [ 69%]
+tests/unit/test_identity_client.py::test_unparseable_deep_identity_success_is_unavailable PASSED [ 70%]
+tests/unit/test_identity_client.py::test_internal_transport_recursion_is_not_an_upstream_contract_error PASSED [ 71%]
+tests/unit/test_mp02_gateway_signing.py::test_write_signs_final_serialized_request_before_transport PASSED [ 72%]
+tests/unit/test_mp02_gateway_signing.py::test_read_signs_final_encoded_query_before_transport PASSED [ 73%]
+tests/unit/test_mp02_gateway_signing.py::test_constructor_requires_a_gateway_signer PASSED [ 74%]
+tests/unit/test_mp02_gateway_signing.py::test_real_signature_binds_gateway_client_final_body_and_query PASSED [ 75%]
+tests/unit/test_mp03_bank_context.py::test_release_and_split_use_concrete_bank_resources PASSED [ 75%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_retry_signs_the_same_caller_identity_and_returns_original_receipt[release_escrow] PASSED [ 76%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_retry_signs_the_same_caller_identity_and_returns_original_receipt[escrow_release] PASSED [ 77%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_retry_signs_the_same_caller_identity_and_returns_original_receipt[split_escrow] PASSED [ 78%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_retry_signs_the_same_caller_identity_and_returns_original_receipt[escrow_split] PASSED [ 79%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_conflict_preserves_the_winning_operation_identity[release_escrow] PASSED [ 80%]
+tests/unit/test_mp04_bank_operation_identity.py::test_settlement_conflict_preserves_the_winning_operation_identity[split_escrow] PASSED [ 81%]
+tests/unit/test_mp04_bank_operation_identity.py::test_lock_preserves_the_bank_operation_identity_validation_error PASSED [ 82%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_accepts_truthful_receipts[lock_escrow-body0-201] PASSED [ 83%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_accepts_truthful_receipts[release_escrow-body1-200] PASSED [ 84%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_accepts_truthful_receipts[split_escrow-body2-200] PASSED [ 85%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[lock_escrow-body0-201] PASSED [ 86%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[escrow_lock-body1-201] PASSED [ 87%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[release_escrow-body2-200] PASSED [ 88%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[escrow_release-body3-200] PASSED [ 89%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[split_escrow-body4-200] PASSED [ 90%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_bank_client_rejects_corrupt_receipts_for_primary_methods_and_aliases[escrow_split-body5-200] PASSED [ 91%]
+tests/unit/test_mp04_bank_receipt_validation.py::test_success_status_with_unparseable_lock_token_is_dependency_error PASSED [ 92%]
+tests/unit/test_mp04_legacy_bank_client.py::test_claimed_valid_legacy_lock_returns_exact_observation PASSED [ 93%]
+tests/unit/test_mp04_legacy_bank_client.py::test_mismatched_legacy_lock_is_a_typed_dependency_failure[attempt_id] PASSED [ 94%]
+tests/unit/test_mp04_legacy_bank_client.py::test_mismatched_legacy_lock_is_a_typed_dependency_failure[hash] PASSED [ 95%]
+tests/unit/test_mp04_legacy_bank_client.py::test_mismatched_legacy_lock_is_a_typed_dependency_failure[payer] PASSED [ 96%]
+tests/unit/test_mp04_legacy_bank_client.py::test_mismatched_legacy_lock_is_a_typed_dependency_failure[task] PASSED [ 97%]
+tests/unit/test_mp04_legacy_bank_client.py::test_mismatched_legacy_lock_is_a_typed_dependency_failure[amount] PASSED [ 98%]
+tests/unit/test_mp04_legacy_bank_client.py::test_malformed_success_is_a_typed_dependency_failure PASSED [ 99%]
+tests/unit/test_mp04_legacy_bank_client.py::test_non_success_mapping_precedes_financial_response_parsing PASSED [100%]
+
+============================= 104 passed in 1.31s ==============================
+[0;32m✓ service-clients CI passed[0m
+Checking service-auth...
+Checking service-auth...
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/libs/service-auth/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/libs/service-auth
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 379 items
+
+tests/unit/test_financial_identity.py::test_operation_id_uses_the_versioned_url_uuid5_protocol PASSED [  0%]
+tests/unit/test_financial_identity.py::test_operation_id_is_stable_and_sensitive_to_ordered_identity PASSED [  0%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_empty_or_non_utf8_protocol_parts[-identity_parts0] PASSED [  0%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_empty_or_non_utf8_protocol_parts[task-settlement-identity_parts1] PASSED [  1%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_empty_or_non_utf8_protocol_parts[task-settlement-identity_parts2] PASSED [  1%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_empty_or_non_utf8_protocol_parts[\ud800-identity_parts3] PASSED [  1%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_empty_or_non_utf8_protocol_parts[task-settlement-identity_parts4] PASSED [  1%]
+tests/unit/test_financial_identity.py::test_operation_id_rejects_non_string_identity_parts PASSED [  2%]
+tests/unit/test_gateway.py::test_signs_final_httpx_body_query_and_encoded_path PASSED [  2%]
+tests/unit/test_gateway.py::test_rejects_tampered_body_or_query PASSED   [  2%]
+tests/unit/test_gateway.py::test_rejects_existing_authorization_and_unread_stream PASSED [  2%]
+tests/unit/test_gateway.py::test_config_rejects_invalid_required_values[kid- ] PASSED [  3%]
+tests/unit/test_gateway.py::test_config_rejects_invalid_required_values[audience-] PASSED [  3%]
+tests/unit/test_gateway.py::test_config_rejects_invalid_required_values[token_ttl_seconds-0] PASSED [  3%]
+tests/unit/test_gateway.py::test_signer_config_rejects_coercible_ttl_types[True] PASSED [  3%]
+tests/unit/test_gateway.py::test_signer_config_rejects_coercible_ttl_types[30] PASSED [  4%]
+tests/unit/test_gateway.py::test_signer_config_rejects_coercible_ttl_types[30.0] PASSED [  4%]
+tests/unit/test_gateway.py::test_signer_config_rejects_extra_fields PASSED [  4%]
+tests/unit/test_gateway.py::test_trust_config_accepts_yaml_paths_without_scalar_coercion PASSED [  5%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[max_lifetime_seconds-True] PASSED [  5%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[max_lifetime_seconds-30] PASSED [  5%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[max_lifetime_seconds-30.0] PASSED [  5%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[clock_skew_seconds-False] PASSED [  6%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[clock_skew_seconds-0] PASSED [  6%]
+tests/unit/test_gateway.py::test_trust_config_rejects_coercible_policy_types[clock_skew_seconds-0.0] PASSED [  6%]
+tests/unit/test_gateway.py::test_trust_config_rejects_non_path_and_extra_fields PASSED [  6%]
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_hardens_valid_legacy_pair_without_rewriting_bytes PASSED [  7%]
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_refuses_invalid_material_without_modification[private-only] PASSED [  7%]
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_refuses_invalid_material_without_modification[corrupt] PASSED [  7%]
+tests/unit/test_key_bootstrap.py::test_explicit_adoption_refuses_invalid_material_without_modification[mismatch] PASSED [  7%]
+tests/unit/test_key_bootstrap.py::test_factory_explicit_bootstrap_is_idempotent_and_check_is_load_only PASSED [  8%]
+tests/unit/test_key_bootstrap.py::test_factory_check_reports_absent_pair_without_creating_key_directory PASSED [  8%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[create_agent] PASSED [  8%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[platform_agent] PASSED [  8%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[user_agent] PASSED [  9%]
+tests/unit/test_key_loading.py::test_missing_keys_fail_without_implicit_generation[load_agent_config] PASSED [  9%]
+tests/unit/test_key_loading.py::test_preprovisioned_keys_load_for_every_supported_consumer PASSED [  9%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[mismatch-factory] PASSED [ 10%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[mismatch-config] PASSED [ 10%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[insecure-factory] PASSED [ 10%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[insecure-config] PASSED [ 10%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[symlink-factory] PASSED [ 11%]
+tests/unit/test_key_loading.py::test_damaged_keys_fail_before_agent_http_initialization[symlink-config] PASSED [ 11%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_is_idempotent_and_never_replaces_existing_pair PASSED [ 11%]
+tests/unit/test_key_provisioning.py::test_cold_concurrent_generate_keypair_converges_across_processes PASSED [ 11%]
+tests/unit/test_key_provisioning.py::test_partial_pair_is_refused_without_changing_surviving_bytes[private] PASSED [ 12%]
+tests/unit/test_key_provisioning.py::test_partial_pair_is_refused_without_changing_surviving_bytes[public] PASSED [ 12%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[private] PASSED [ 12%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[public] PASSED [ 12%]
+tests/unit/test_key_provisioning.py::test_corrupt_pair_is_refused_without_replacement[both] PASSED [ 13%]
+tests/unit/test_key_provisioning.py::test_mismatched_pair_is_refused_without_replacement PASSED [ 13%]
+tests/unit/test_key_provisioning.py::test_load_keypair_rejects_mismatched_pair_without_rewrite PASSED [ 13%]
+tests/unit/test_key_provisioning.py::test_fresh_private_key_mode_is_exactly_0600_under_permissive_umask PASSED [ 13%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[] PASSED [ 14%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[.] PASSED [ 14%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[..] PASSED [ 14%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[nested/agent] PASSED [ 15%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_unsafe_handle_without_writing[nested\\agent] PASSED [ 15%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[private] PASSED [ 15%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[public] PASSED [ 15%]
+tests/unit/test_key_provisioning.py::test_generate_keypair_rejects_symlinked_key_store_entries[lock] PASSED [ 16%]
+tests/unit/test_key_provisioning.py::test_interrupted_public_first_publication_remains_partial_and_is_not_replaced PASSED [ 16%]
+tests/unit/test_key_provisioning.py::test_publication_fsyncs_public_before_private_commit_marker PASSED [ 16%]
+tests/unit/test_key_provisioning.py::test_missing_lock_reader_never_observes_publication_in_progress PASSED [ 16%]
+tests/unit/test_key_provisioning.py::test_lock_acquisition_failure_closes_descriptor_and_preserves_diagnostic PASSED [ 17%]
+tests/unit/test_key_provisioning.py::test_unlock_failure_does_not_mask_body_failure_and_descriptor_is_closed PASSED [ 17%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_validates_strict_pair_without_key_mutation PASSED [ 17%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_explicitly_accepts_legacy_mode_without_chmod PASSED [ 17%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_strict_mode_rejects_legacy_permissions PASSED [ 18%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_absent_pair_does_not_create_directory PASSED [ 18%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_partial_pair_is_not_repaired PASSED [ 18%]
+tests/unit/test_keypair_fingerprint.py::test_keypair_fingerprint_may_establish_only_lock_metadata PASSED [ 18%]
+tests/unit/test_keypair_fingerprint.py::test_factory_exposes_sorted_public_targets_without_provisioning PASSED [ 19%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_preserves_raw_bytes_modes_and_fingerprints PASSED [ 19%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_requires_an_explicit_boolean_blocking_mode[None] PASSED [ 19%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_requires_an_explicit_boolean_blocking_mode[0] PASSED [ 20%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_requires_an_explicit_boolean_blocking_mode[1] PASSED [ 20%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_requires_an_explicit_boolean_blocking_mode[false] PASSED [ 20%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_noncanonical_targets_before_lock_creation[-.pub] PASSED [ 20%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_noncanonical_targets_before_lock_creation[../alpha-alpha.pub] PASSED [ 21%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_noncanonical_targets_before_lock_creation[alpha-renamed.pub] PASSED [ 21%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_noncanonical_targets_before_lock_creation[alpha-alpha.key] PASSED [ 21%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_duplicate_paths_before_lock_creation PASSED [ 21%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_establishes_only_missing_legacy_lock_metadata PASSED [ 22%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_absent_pair_may_create_only_coordination_lock PASSED [ 22%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_invalid_pairs_without_mutating_bytes[missing] PASSED [ 22%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_invalid_pairs_without_mutating_bytes[partial] PASSED [ 22%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_invalid_pairs_without_mutating_bytes[private-mode] PASSED [ 23%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_invalid_pairs_without_mutating_bytes[mismatch] PASSED [ 23%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_symlinked_parent_before_lock_creation PASSED [ 23%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_nonblocking_fails_under_process_contention PASSED [ 24%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_blocking_waits_for_exclusive_transition_before_validation PASSED [ 24%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_nonblocking_reports_contention_before_mutable_pair_state PASSED [ 24%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_rechecks_inode_collisions_under_the_complete_lock_set PASSED [ 24%]
+tests/unit/test_keypair_snapshot.py::test_later_lock_contention_releases_every_earlier_snapshot_lock PASSED [ 25%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_holds_every_lock_until_all_pairs_are_read PASSED [ 25%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_exception_releases_all_acquired_locks PASSED [ 25%]
+tests/unit/test_keypair_snapshot.py::test_snapshot_keypairs_rejects_lock_path_replacement_after_flock PASSED [ 25%]
+tests/unit/test_keypair_snapshot.py::test_public_load_rejects_lock_path_replacement_after_open PASSED [ 26%]
+tests/unit/test_mp03_jws_core.py::test_create_and_verify_roundtrip_is_typed_and_keeps_context_in_header PASSED [ 26%]
+tests/unit/test_mp03_jws_core.py::test_signature_covers_received_compact_bytes_without_reserializing PASSED [ 26%]
+tests/unit/test_mp03_jws_core.py::test_wrong_signature_remains_cryptography_invalid_signature PASSED [ 26%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[None] PASSED [ 27%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[value1] PASSED [ 27%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[x] PASSED [ 27%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[1] PASSED [ 27%]
+tests/unit/test_mp03_jws_core.py::test_header_and_payload_must_be_objects[True] PASSED [ 28%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[alg-HS256] PASSED [ 28%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[alg-True] PASSED [ 28%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[typ-JWS] PASSED [ 29%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[typ-1] PASSED [ 29%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[kid- ] PASSED [ 29%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[kid-True] PASSED [ 29%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[iat-True] PASSED [ 30%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[iat-1] PASSED [ 30%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[exp-True] PASSED [ 30%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[exp-1.5] PASSED [ 30%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[aud-] PASSED [ 31%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[aud-7] PASSED [ 31%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-get /tasks/1] PASSED [ 31%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET https://example.test/tasks/1] PASSED [ 31%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET /tasks/1?q=x] PASSED [ 32%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET /tasks/1#x] PASSED [ 32%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET  /tasks/1] PASSED [ 32%]
+tests/unit/test_mp03_jws_core.py::test_rejects_wrong_header_field_values[resource-GET /tasks/{id}] PASSED [ 32%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[alg] PASSED [ 33%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[typ] PASSED [ 33%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[kid] PASSED [ 33%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[iat] PASSED [ 34%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[exp] PASSED [ 34%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[aud] PASSED [ 34%]
+tests/unit/test_mp03_jws_core.py::test_rejects_every_missing_header_field[resource] PASSED [ 34%]
+tests/unit/test_mp03_jws_core.py::test_rejects_extra_header_field PASSED [ 35%]
+tests/unit/test_mp03_jws_core.py::test_payload_requires_nonblank_string_action[payload0] PASSED [ 35%]
+tests/unit/test_mp03_jws_core.py::test_payload_requires_nonblank_string_action[payload1] PASSED [ 35%]
+tests/unit/test_mp03_jws_core.py::test_payload_requires_nonblank_string_action[payload2] PASSED [ 35%]
+tests/unit/test_mp03_jws_core.py::test_action_only_payload_and_same_named_domain_fields_are_valid PASSED [ 36%]
+tests/unit/test_mp03_jws_core.py::test_rejects_duplicate_and_nonfinite_json PASSED [ 36%]
+tests/unit/test_mp03_jws_core.py::test_decoder_failures_are_normalized_to_invalid_jws[decoder_error0] PASSED [ 36%]
+tests/unit/test_mp03_jws_core.py::test_decoder_failures_are_normalized_to_invalid_jws[decoder_error1] PASSED [ 36%]
+tests/unit/test_mp03_jws_core.py::test_create_jws_normalizes_recursive_payloads[deep] PASSED [ 37%]
+tests/unit/test_mp03_jws_core.py::test_create_jws_normalizes_recursive_payloads[cycle] PASSED [ 37%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[two.parts] PASSED [ 37%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[...] PASSED [ 37%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[a.b.c.d] PASSED [ 38%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[@@@.e30.AA] PASSED [ 38%]
+tests/unit/test_mp03_jws_core.py::test_malformed_compact_or_base64_is_clean_invalid_jws[e30.e30.@@@] PASSED [ 38%]
+tests/unit/test_mp03_jws_core.py::test_signature_must_decode_to_exact_ed25519_length[1] PASSED [ 39%]
+tests/unit/test_mp03_jws_core.py::test_signature_must_decode_to_exact_ed25519_length[63] PASSED [ 39%]
+tests/unit/test_mp03_jws_core.py::test_signature_must_decode_to_exact_ed25519_length[65] PASSED [ 39%]
+tests/unit/test_mp03_jws_core.py::test_valid_length_wrong_signature_remains_invalid_signature PASSED [ 39%]
+tests/unit/test_mp03_jws_core.py::test_token_policy_rejects_bool_and_invalid_ranges PASSED [ 40%]
+tests/unit/test_mp03_jws_core.py::test_temporal_edges_and_maximum_lifetime PASSED [ 40%]
+tests/unit/test_mp03_jws_core.py::test_authentic_signature_is_checked_before_temporal_state PASSED [ 40%]
+tests/unit/test_mp03_jws_core.py::test_context_and_signer_guards PASSED  [ 40%]
+tests/unit/test_mp03_jws_core.py::test_platform_signer_requires_positive_ttl_and_explicit_context PASSED [ 41%]
+tests/unit/test_mp03_jws_core.py::test_platform_signer_requires_canonical_validated_keypair PASSED [ 41%]
+tests/unit/test_mp03_jws_core.py::test_identity_success_parser_binds_complete_wire_to_requested_token PASSED [ 41%]
+tests/unit/test_mp03_jws_core.py::test_identity_binding_compares_json_types_recursively[requested0-claimed0] PASSED [ 41%]
+tests/unit/test_mp03_jws_core.py::test_identity_binding_compares_json_types_recursively[requested1-claimed1] PASSED [ 42%]
+tests/unit/test_mp03_jws_core.py::test_identity_binding_compares_json_types_recursively[requested2-claimed2] PASSED [ 42%]
+tests/unit/test_mp03_jws_core.py::test_claimed_valid_identity_wraps_unparseable_requested_token PASSED [ 42%]
+tests/unit/test_mp03_jws_core.py::test_claimed_valid_identity_wraps_recursive_wire_shape PASSED [ 43%]
+tests/unit/test_mp03_jws_core.py::test_identity_invalid_signature_wire_is_never_success PASSED [ 43%]
+tests/unit/test_mp03_jws_core.py::test_verification_preserves_original_json_serialization[None] PASSED [ 43%]
+tests/unit/test_mp03_jws_core.py::test_verification_preserves_original_json_serialization[2] PASSED [ 43%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload0] PASSED [ 44%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload1] PASSED [ 44%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload2] PASSED [ 44%]
+tests/unit/test_mp03_jws_core.py::test_bad_signature_precedes_action_content_validation[payload3] PASSED [ 44%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload0] PASSED [ 45%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload1] PASSED [ 45%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload2] PASSED [ 45%]
+tests/unit/test_mp03_jws_core.py::test_unverified_structural_parse_does_not_admit_action[payload3] PASSED [ 45%]
+tests/unit/test_mp03_jws_core.py::test_temporal_rejection_precedes_authenticated_action_validation[1893456031-1893456091-TokenNotYetValidError] PASSED [ 46%]
+tests/unit/test_mp03_jws_core.py::test_temporal_rejection_precedes_authenticated_action_validation[1893455900-1893455970-TokenExpiredError] PASSED [ 46%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload0] PASSED [ 46%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload1] PASSED [ 46%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload2] PASSED [ 47%]
+tests/unit/test_mp03_jws_core.py::test_issuer_and_identity_success_still_require_valid_action[payload3] PASSED [ 47%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload0] PASSED [ 47%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload1] PASSED [ 48%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload2] PASSED [ 48%]
+tests/unit/test_mp03_jws_core.py::test_context_boundary_rejects_incomplete_authenticated_payload[payload3] PASSED [ 48%]
+tests/unit/test_mp03_outbound_matrix.py::test_platform_bank_court_reputation_and_task_board_tokens PASSED [ 48%]
+tests/unit/test_mp03_outbound_matrix.py::test_platform_sign_requires_explicit_context_and_registration PASSED [ 49%]
+tests/unit/test_mp03_producers.py::test_agent_config_rejects_invalid_ttl_and_policy_mismatch PASSED [ 49%]
+tests/unit/test_mp03_producers.py::test_load_agent_config_requires_complete_strict_signing PASSED [ 49%]
+tests/unit/test_mp03_producers.py::test_post_task_emits_separate_context_bound_tokens PASSED [ 49%]
+tests/unit/test_mp03_producers.py::test_unregistered_agent_cannot_sign PASSED [ 50%]
+tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[None] PASSED [ 50%]
+tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[policy1] PASSED [ 50%]
+tests/unit/test_mp03_producers.py::test_agent_config_requires_validated_token_policy[policy2] PASSED [ 50%]
+tests/unit/test_mp04_legacy_observations.py::test_control_fixtures_are_admissible_before_mutation PASSED [ 51%]
+tests/unit/test_mp04_legacy_observations.py::test_other_financial_boundaries_reject_valid_legacy_outcomes_control[issuance] PASSED [ 51%]
+tests/unit/test_mp04_legacy_observations.py::test_other_financial_boundaries_reject_valid_legacy_outcomes_control[release] PASSED [ 51%]
+tests/unit/test_mp04_legacy_observations.py::test_other_financial_boundaries_reject_valid_legacy_outcomes_control[split] PASSED [ 51%]
+tests/unit/test_mp04_legacy_observations.py::test_credit_attempts_share_one_unchanged_historical_observation PASSED [ 52%]
+tests/unit/test_mp04_legacy_observations.py::test_lock_attempts_preserve_cutover_fact_and_project_native_settlement PASSED [ 52%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[attempt_id] PASSED [ 52%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[attempt_kind] PASSED [ 53%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[attempt_hash] PASSED [ 53%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[account] PASSED [ 53%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[amount] PASSED [ 53%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[reference] PASSED [ 54%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[observed_kind_wrong] PASSED [ 54%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[observed_kind_missing] PASSED [ 54%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[transaction_type] PASSED [ 54%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[extra_transaction] PASSED [ 55%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[extra_observation] PASSED [ 55%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[extra_top] PASSED [ 55%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[missing_transaction_key] PASSED [ 55%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[missing_observation_key] PASSED [ 56%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[missing_attempt_key] PASSED [ 56%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[missing_top_key] PASSED [ 56%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[coerced_amount] PASSED [ 56%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[boolean_amount] PASSED [ 57%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[amount_out_of_range] PASSED [ 57%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[balance_negative] PASSED [ 57%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[balance_boolean] PASSED [ 58%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[historical_operation_id] PASSED [ 58%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[forged_fact_hash] PASSED [ 58%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[raw_timestamp] PASSED [ 58%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[raw_event_id] PASSED [ 59%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_credit_observations_remain_rejected_controls[event_out_of_range] PASSED [ 59%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[attempt_id] PASSED [ 59%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[attempt_kind] PASSED [ 59%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[attempt_hash] PASSED [ 60%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[payer] PASSED [ 60%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[task] PASSED [ 60%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[amount] PASSED [ 60%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[observed_kind_wrong] PASSED [ 61%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[observed_kind_missing] PASSED [ 61%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_type] PASSED [ 61%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[current_payer] PASSED [ 62%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[current_escrow] PASSED [ 62%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[current_task] PASSED [ 62%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[current_amount] PASSED [ 62%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[lock_escrow] PASSED [ 63%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_payer_mismatch] PASSED [ 63%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_task_mismatch] PASSED [ 63%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_amount_mismatch] PASSED [ 63%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[historical_operation_id] PASSED [ 64%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[forged_transaction_hash] PASSED [ 64%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[forged_lock_hash] PASSED [ 64%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_with_locked_status] PASSED [ 64%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_hash_without_fact] PASSED [ 65%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[unsorted_resolution_ids] PASSED [ 65%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_escrow_mismatch] PASSED [ 65%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_status_mismatch] PASSED [ 65%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[released_cardinality] PASSED [ 66%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[split_cardinality_zero] PASSED [ 66%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[split_cardinality_three] PASSED [ 66%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[duplicate_resolution_ids] PASSED [ 67%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_empty_id] PASSED [ 67%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[resolution_time_mismatch] PASSED [ 67%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[forged_resolution_hash] PASSED [ 67%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[extra_top] PASSED [ 68%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[extra_observation] PASSED [ 68%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[extra_transaction] PASSED [ 68%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[extra_lock] PASSED [ 68%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[extra_current] PASSED [ 69%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_attempt_key] PASSED [ 69%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_top_key] PASSED [ 69%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_observation_key] PASSED [ 69%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_transaction_key] PASSED [ 70%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_lock_key] PASSED [ 70%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[missing_current_key] PASSED [ 70%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[coerced_event] PASSED [ 70%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[raw_timestamp] PASSED [ 71%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_event_out_of_range] PASSED [ 71%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[lock_event_out_of_range] PASSED [ 71%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[transaction_balance_negative] PASSED [ 72%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[money_boolean] PASSED [ 72%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[money_zero] PASSED [ 72%]
+tests/unit/test_mp04_legacy_observations.py::test_invalid_lock_observations_remain_rejected_controls[money_out_of_range] PASSED [ 72%]
+tests/unit/test_mp04_legacy_observations.py::test_self_consistent_terminal_resolution_fact_is_preserved PASSED [ 73%]
+tests/unit/test_mp04_legacy_observations.py::test_self_consistent_split_resolution_fact_is_preserved PASSED [ 73%]
+tests/unit/test_mp04_legacy_observations.py::test_self_consistent_one_leg_split_resolution_is_preserved PASSED [ 73%]
+tests/unit/test_mp04_legacy_observations.py::test_terminal_historical_null_resolution_time_is_preserved[released] PASSED [ 73%]
+tests/unit/test_mp04_legacy_observations.py::test_terminal_historical_null_resolution_time_is_preserved[split] PASSED [ 74%]
+tests/unit/test_mp04_legacy_observations.py::test_locked_historical_nonnull_resolution_time_is_preserved[] PASSED [ 74%]
+tests/unit/test_mp04_legacy_observations.py::test_locked_historical_nonnull_resolution_time_is_preserved[legacy-nonnull-time] PASSED [ 74%]
+tests/unit/test_mp04_legacy_observations.py::test_native_settlement_preserves_empty_historical_creation_time[escrow_release] PASSED [ 74%]
+tests/unit/test_mp04_legacy_observations.py::test_native_settlement_preserves_empty_historical_creation_time[escrow_split] PASSED [ 75%]
+tests/unit/test_mp04_legacy_observations.py::test_native_lock_still_rejects_empty_creation_time PASSED [ 75%]
+tests/unit/test_mp04_legacy_observations.py::test_native_projection_rejects_non_string_or_non_utf8_creation_time[7] PASSED [ 75%]
+tests/unit/test_mp04_legacy_observations.py::test_native_projection_rejects_non_string_or_non_utf8_creation_time[\ud800] PASSED [ 75%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[cancel_task-args0-business0-POST /tasks/t-1/cancel] PASSED [ 76%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[submit_bid-args1-business1-POST /tasks/t-1/bids] PASSED [ 76%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[accept_bid-args2-business2-POST /tasks/t-1/bids/bid-1/accept] PASSED [ 76%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[submit_deliverable-args3-business3-POST /tasks/t-1/submit] PASSED [ 77%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[approve_task-args4-business4-POST /tasks/t-1/approve] PASSED [ 77%]
+tests/unit/test_mp07_task_board_producer.py::test_mutation_preserves_explicit_identity_across_caller_retry[dispute_task-args5-business5-POST /tasks/t-1/dispute] PASSED [ 77%]
+tests/unit/test_mp07_task_board_producer.py::test_post_task_binds_explicit_window_and_distinct_escrow_token PASSED [ 77%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[post_task-args0] PASSED [ 78%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[cancel_task-args1] PASSED [ 78%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[submit_bid-args2] PASSED [ 78%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[accept_bid-args3] PASSED [ 78%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[submit_deliverable-args4] PASSED [ 79%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[approve_task-args5] PASSED [ 79%]
+tests/unit/test_mp07_task_board_producer.py::test_native_fields_are_required_keyword_only[dispute_task-args6] PASSED [ 79%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[None] PASSED [ 79%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[True] PASSED [ 80%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[0] PASSED [ 80%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[-1] PASSED [ 80%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[1.5] PASSED [ 81%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[20] PASSED [ 81%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_acceptance_window_is_rejected_before_signing[9223372036855] PASSED [ 81%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[None] PASSED [ 81%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[True] PASSED [ 82%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[op-bad] PASSED [ 82%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_operation_id_is_rejected_before_signing[op-AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA] PASSED [ 82%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[None] PASSED [ 82%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[True] PASSED [ 83%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[-1] PASSED [ 83%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[1.5] PASSED [ 83%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[0] PASSED [ 83%]
+tests/unit/test_mp07_task_board_producer.py::test_invalid_lifecycle_version_is_rejected_before_signing[9223372036854775808] PASSED [ 84%]
+tests/unit/test_mp07_task_board_producer.py::test_sqlite_boundary_values_are_signed_exactly PASSED [ 84%]
+tests/unit/test_mp07_task_board_status.py::test_public_status_types_are_constructible_and_response_is_frozen PASSED [ 84%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[submit_bid-args0-201-body0-expected_payload0-POST /tasks/t-1/bids] PASSED [ 84%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[accept_bid-args1-200-body1-expected_payload1-POST /tasks/t-1/bids/bid-1/accept] PASSED [ 85%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[submit_deliverable-args2-200-body2-expected_payload2-POST /tasks/t-1/submit] PASSED [ 85%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[cancel_task-args3-200-body3-expected_payload3-POST /tasks/t-1/cancel] PASSED [ 85%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[cancel_task-args4-202-body4-expected_payload4-POST /tasks/t-1/cancel] PASSED [ 86%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[approve_task-args5-200-body5-expected_payload5-POST /tasks/t-1/approve] PASSED [ 86%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[approve_task-args6-202-body6-expected_payload6-POST /tasks/t-1/approve] PASSED [ 86%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[dispute_task-args7-200-body7-expected_payload7-POST /tasks/t-1/dispute] PASSED [ 86%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_returns_status_and_preserves_signed_fields[dispute_task-args8-202-body8-expected_payload8-POST /tasks/t-1/dispute] PASSED [ 87%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[submit_bid-args0-200-body0] PASSED [ 87%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[accept_bid-args1-201-body1] PASSED [ 87%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[submit_deliverable-args2-202-body2] PASSED [ 87%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[cancel_task-args3-201-body3] PASSED [ 88%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[approve_task-args4-201-body4] PASSED [ 88%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_unexpected_success_status[dispute_task-args5-201-body5] PASSED [ 88%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[accept_bid-args0-200-{-None] PASSED [ 88%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[accept_bid-args1-200-None-json_body1] PASSED [ 89%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[submit_bid-args2-201-None-json_body2] PASSED [ 89%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[submit_deliverable-args3-200-None-json_body3] PASSED [ 89%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_malformed_success_body[approve_task-args4-202-None-json_body4] PASSED [ 89%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_status_body_contradiction[approve_task-args0-200-body0] PASSED [ 90%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_status_body_contradiction[approve_task-args1-202-body1] PASSED [ 90%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_rejects_status_body_contradiction[cancel_task-args2-202-body2] PASSED [ 90%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[submit_bid-args0] PASSED [ 91%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[accept_bid-args1] PASSED [ 91%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[submit_deliverable-args2] PASSED [ 91%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[cancel_task-args3] PASSED [ 91%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[approve_task-args4] PASSED [ 92%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_http_error_response[dispute_task-args5] PASSED [ 92%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[submit_bid-args0] PASSED [ 92%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[accept_bid-args1] PASSED [ 92%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[submit_deliverable-args2] PASSED [ 93%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[cancel_task-args3] PASSED [ 93%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[approve_task-args4] PASSED [ 93%]
+tests/unit/test_mp07_task_board_status.py::test_native_command_preserves_transport_timeout[dispute_task-args5] PASSED [ 93%]
+tests/unit/test_platform_signer_keys.py::test_platform_agent_refuses_to_sign_before_registration PASSED [ 94%]
+tests/unit/test_platform_signer_keys.py::test_platform_agent_signs_with_registered_identity_and_config_key PASSED [ 94%]
+tests/unit/test_platform_signer_keys.py::test_local_principal_rejection_precedes_action_content[payload0] PASSED [ 94%]
+tests/unit/test_platform_signer_keys.py::test_local_principal_rejection_precedes_action_content[payload1] PASSED [ 94%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[expired-TokenExpiredError] PASSED [ 95%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[future-TokenNotYetValidError] PASSED [ 95%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[overlong-InvalidJwsError] PASSED [ 95%]
+tests/unit/test_platform_signer_keys.py::test_crypto_and_policy_precede_local_principal[bad_signature-InvalidSignature] PASSED [ 96%]
+tests/unit/test_signing.py::TestKeygenRoundtrip::test_creates_and_loads_keys PASSED [ 96%]
+tests/unit/test_signing.py::TestSignVerify::test_sign_and_verify_roundtrip PASSED [ 96%]
+tests/unit/test_signing.py::TestSignVerify::test_verify_rejects_wrong_key PASSED [ 96%]
+tests/unit/test_signing.py::TestSignVerify::test_malformed_token_raises_value_error PASSED [ 97%]
+tests/unit/test_signing.py::TestSignVerify::test_canonicalization_is_key_order_independent PASSED [ 97%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_payload PASSED [ 97%]
+tests/unit/test_signing.py::TestTamperRejection::test_rejects_tampered_header PASSED [ 97%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_ttl_stamps_iat_exp_into_header_not_payload PASSED [ 98%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_legacy_token_without_exp_is_rejected PASSED [ 98%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_expired_token_is_rejected PASSED [ 98%]
+tests/unit/test_signing.py::TestExpiryHeaderClaims::test_unexpired_token_is_accepted PASSED [ 98%]
+tests/unit/test_signing.py::TestLegacyProfileRejection::test_rejects_base_agent_old_profile PASSED [ 99%]
+tests/unit/test_signing.py::TestLegacyProfileRejection::test_rejects_platform_signer_old_profile PASSED [ 99%]
+tests/unit/test_signing.py::TestPlatformSigner::test_signs_and_verifies PASSED [ 99%]
+tests/unit/test_signing.py::TestPlatformSigner::test_legacy_signer_without_lifetime_is_rejected PASSED [100%]
+
+============================= 379 passed in 3.38s ==============================
+[0;32m✓ service-auth CI passed[0m
+[0;34m--- Phase 2: Service CI ---[0m
+Checking identity...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;32m✓ Unit tests passed[0m
+[0;32m✓ Architecture tests passed[0m
+[0;32m✓ Code-lspchecks passed[0m
+
+[0;32m✓ All CI checks passed[0m
+
+Checking central-bank...
+[0;34m=== Running CI Checks (Quiet Mode) ===[0m
+[0;32m✓ Init passed[0m
+[0;32m✓ Test prerequisites passed[0m
+[0;32m✓ Code-style passed[0m
+[0;32m✓ Code-typecheck passed[0m
+[0;32m✓ Code-security passed[0m
+[0;32m✓ Code-deptry passed[0m
+[0;32m✓ Code-spell passed[0m
+[0;32m✓ Code-semgrep passed[0m
+[0;32m✓ Code-audit passed[0m
+[0;31m✗ Unit tests failed[0m
+
+[0;34m=== Running Unit Tests ===[0m
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/flo/Developer/github/agent-economy/services/central-bank/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/flo/Developer/github/agent-economy/services/central-bank
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 278 items
+
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_account_success PASSED [  0%]
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_account_zero_balance PASSED [  0%]
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_duplicate_account PASSED [  1%]
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_account_agent_not_found PASSED [  1%]
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_account_non_platform_forbidden PASSED [  1%]
+tests/unit/routers/test_accounts.py::TestCreateAccount::test_create_account_missing_token PASSED [  2%]
+tests/unit/routers/test_accounts.py::TestCreditAccount::test_credit_success PASSED [  2%]
+tests/unit/routers/test_accounts.py::TestCreditAccount::test_credit_account_not_found PASSED [  2%]
+tests/unit/routers/test_accounts.py::TestGetBalance::test_get_balance_success PASSED [  3%]
+tests/unit/routers/test_accounts.py::TestGetBalance::test_get_balance_forbidden_other_account PASSED [  3%]
+tests/unit/routers/test_accounts.py::TestGetBalance::test_get_balance_missing_auth_header PASSED [  3%]
+tests/unit/routers/test_accounts.py::TestGetTransactions::test_get_transactions_success PASSED [  4%]
+tests/unit/routers/test_escrow.py::TestEscrowLock::test_escrow_lock_success PASSED [  4%]
+tests/unit/routers/test_escrow.py::TestEscrowLock::test_escrow_lock_insufficient_funds PASSED [  5%]
+tests/unit/routers/test_escrow.py::TestEscrowLock::test_escrow_lock_wrong_agent_forbidden PASSED [  5%]
+tests/unit/routers/test_escrow.py::TestEscrowRelease::test_escrow_release_success PASSED [  5%]
+tests/unit/routers/test_escrow.py::TestEscrowRelease::test_competing_release_reports_winning_operation PASSED [  6%]
+tests/unit/routers/test_escrow.py::TestEscrowRelease::test_escrow_not_found PASSED [  6%]
+tests/unit/routers/test_escrow.py::TestEscrowSplit::test_escrow_split_success PASSED [  6%]
+tests/unit/routers/test_health.py::test_health_returns_ok PASSED         [  7%]
+tests/unit/routers/test_health.py::test_health_post_not_allowed PASSED   [  7%]
+tests/unit/routers/test_health_gateway_down.py::test_health_degrades_when_gateway_down PASSED [  7%]
+tests/unit/routers/test_mp04_legacy_routes.py::test_historical_route_preserves_observation_and_logs_no_new_ownership[credit] PASSED [  8%]
+tests/unit/routers/test_mp04_legacy_routes.py::test_historical_route_preserves_observation_and_logs_no_new_ownership[escrow_lock] PASSED [  8%]
+tests/unit/routers/test_mp04_receipt_logging.py::test_positive_issuance_log_uses_receipt_identity PASSED [  8%]
+tests/unit/routers/test_mp04_receipt_logging.py::test_zero_account_log_has_no_financial_identity PASSED [  9%]
+tests/unit/routers/test_mp04_receipt_logging.py::test_credit_log_keeps_the_validated_command_facts PASSED [  9%]
+tests/unit/routers/test_mp04_receipt_logging.py::test_lock_log_reads_escrow_identity_from_the_receipt PASSED [ 10%]
+tests/unit/routers/test_mp04_receipt_logging.py::test_release_log_reads_amount_from_the_receipt_leg PASSED [ 10%]
+tests/unit/routers/test_mp04_receipt_logging.py::test_split_log_reads_both_ordered_receipt_legs PASSED [ 10%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_routes_reject_boolean_money_before_ledger_call[/accounts-payload0-invalid_amount] PASSED [ 11%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_routes_reject_boolean_money_before_ledger_call[/accounts/a-test/credit-payload1-invalid_amount] PASSED [ 11%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_routes_reject_boolean_money_before_ledger_call[/escrow/lock-payload2-invalid_amount] PASSED [ 11%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_routes_reject_boolean_money_before_ledger_call[/escrow/esc-test/split-payload3-invalid_payload] PASSED [ 12%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_routes_reject_money_above_sqlite_integer_range[/accounts-payload0] PASSED [ 12%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_routes_reject_money_above_sqlite_integer_range[/accounts/a-test/credit-payload1] PASSED [ 12%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_routes_reject_money_above_sqlite_integer_range[/escrow/lock-payload2] PASSED [ 13%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_split_wrong_signature_precedes_percentage_range PASSED [ 13%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_split_expired_signature_precedes_percentage_range PASSED [ 14%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_split_valid_signature_reaches_percentage_range PASSED [ 14%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_split_wrong_signature_precedes_boolean_percentage_type PASSED [ 14%]
+tests/unit/routers/test_mp06_monetary_boundary.py::test_split_valid_signature_rejects_boolean_percentage PASSED [ 15%]
+tests/unit/routers/test_review_fixes.py::TestJWSVerificationFailure::test_create_account_invalid_jws_returns_403 PASSED [ 15%]
+tests/unit/routers/test_review_fixes.py::TestJWSVerificationFailure::test_escrow_lock_invalid_jws_returns_403 PASSED [ 15%]
+tests/unit/routers/test_review_fixes.py::TestJWSVerificationFailure::test_credit_invalid_jws_returns_403 PASSED [ 16%]
+tests/unit/routers/test_review_fixes.py::TestJWSVerificationFailure::test_get_balance_invalid_jws_returns_403 PASSED [ 16%]
+tests/unit/routers/test_review_fixes.py::TestPayloadMismatch::test_credit_payload_mismatch_returns_400 PASSED [ 16%]
+tests/unit/routers/test_review_fixes.py::TestPayloadMismatch::test_escrow_release_payload_mismatch_returns_400 PASSED [ 17%]
+tests/unit/routers/test_review_fixes.py::TestPayloadMismatch::test_escrow_split_payload_mismatch_returns_400 PASSED [ 17%]
+tests/unit/routers/test_review_fixes.py::TestMissingRequiredFields::test_create_account_missing_initial_balance PASSED [ 17%]
+tests/unit/routers/test_review_fixes.py::TestMissingRequiredFields::test_credit_missing_reference PASSED [ 18%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_agent_creates_own_account_with_zero_balance PASSED [ 18%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_agent_cannot_create_account_for_another_agent PASSED [ 19%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_agent_cannot_create_account_with_nonzero_balance PASSED [ 19%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_agent_duplicate_account_returns_409 PASSED [ 19%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_agent_not_found_in_identity_returns_404 PASSED [ 20%]
+tests/unit/routers/test_self_service_account.py::TestAgentSelfServiceAccountCreation::test_platform_still_creates_accounts_with_balance PASSED [ 20%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountBodyTokenValidation::test_null_token_returns_invalid_jws PASSED [ 20%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountBodyTokenValidation::test_non_string_token_returns_invalid_jws PASSED [ 21%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountMalformedJsonBody::test_malformed_json_body_returns_invalid_json PASSED [ 21%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountMalformedJsonBody::test_json_array_body_returns_invalid_json PASSED [ 21%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountPayloadShape::test_wrong_action_returns_invalid_payload PASSED [ 22%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountPayloadShape::test_missing_action_returns_invalid_payload PASSED [ 22%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountPayloadShape::test_missing_agent_id_returns_invalid_payload PASSED [ 23%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountPayloadShape::test_missing_initial_balance_returns_invalid_payload PASSED [ 23%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountInvalidAmount::test_negative_initial_balance_returns_invalid_amount PASSED [ 23%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountInvalidAmount::test_non_integer_initial_balance_returns_invalid_amount PASSED [ 24%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreateAccountSignatureBeatsPayload::test_invalid_signature_reported_even_with_malformed_payload PASSED [ 24%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditAmountValidation::test_zero_amount_returns_invalid_amount PASSED [ 24%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditAmountValidation::test_negative_amount_returns_invalid_amount PASSED [ 25%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditPayloadShape::test_missing_reference_returns_invalid_payload PASSED [ 25%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditPayloadShape::test_wrong_action_returns_invalid_payload PASSED [ 25%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditIdempotencyAndConflict::test_multiple_credits_accumulate PASSED [ 26%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditIdempotencyAndConflict::test_duplicate_reference_different_amount_reports_winning_operation PASSED [ 26%]
+tests/unit/routers/test_t072_accounts_credit_gaps.py::TestCreditIdempotencyAndConflict::test_idempotent_credit_returns_same_tx_id PASSED [ 26%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestBearerAuthorizationHeaderShape::test_header_without_bearer_prefix_returns_invalid_jws PASSED [ 27%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestBalanceWrongActionAndMismatch::test_wrong_action_for_correct_owner_returns_invalid_payload PASSED [ 27%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestBalanceWrongActionAndMismatch::test_payload_account_id_mismatch_returns_payload_mismatch PASSED [ 28%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestBalanceQueryScenarios::test_balance_reflects_credits_and_escrow_locks PASSED [ 28%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestBalanceQueryScenarios::test_account_not_found PASSED [ 28%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_ordered_by_timestamp_then_tx_id PASSED [ 29%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_empty_list_for_zero_balance_account PASSED [ 29%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_includes_credit_escrow_lock_and_escrow_release_types PASSED [ 29%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_each_transaction_has_all_required_fields PASSED [ 30%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_account_not_found PASSED [ 30%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_wrong_agent_accessing_anothers_transactions PASSED [ 30%]
+tests/unit/routers/test_t072_balance_transactions_gaps.py::TestTransactionHistoryScenarios::test_wrong_action_returns_invalid_payload PASSED [ 31%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_account_not_found PASSED [ 31%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_idempotent_lock_returns_same_escrow_id PASSED [ 32%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_duplicate_task_id_different_amount_reports_winning_operation PASSED [ 32%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_zero_amount_returns_invalid_amount PASSED [ 32%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_negative_amount_returns_invalid_amount PASSED [ 33%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_missing_task_id_returns_invalid_payload PASSED [ 33%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_missing_agent_id_returns_invalid_payload PASSED [ 33%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowLockScenarios::test_wrong_action_returns_invalid_payload PASSED [ 34%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowReleaseScenarios::test_recipient_balance_increases_by_escrow_amount PASSED [ 34%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowReleaseScenarios::test_recipient_account_not_found PASSED [ 34%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowReleaseScenarios::test_missing_recipient_account_id_returns_invalid_payload PASSED [ 35%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowReleaseScenarios::test_malformed_payload_from_non_platform_signer_beats_forbidden PASSED [ 35%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_even_50_50_split PASSED [ 35%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_uneven_80_20_split_floor_math PASSED [ 36%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_worker_gets_all_100_0_split PASSED [ 36%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_odd_amount_floor_rounding PASSED [ 37%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_both_balances_updated_after_split PASSED [ 37%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_escrow_not_found PASSED [ 37%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_competing_split_reports_winning_release PASSED [ 38%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_worker_pct_below_zero_returns_invalid_amount PASSED [ 38%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_non_integer_worker_pct_returns_invalid_payload PASSED [ 38%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_worker_account_not_found PASSED [ 39%]
+tests/unit/routers/test_t072_escrow_gaps.py::TestEscrowSplitScenarios::test_malformed_payload_from_non_platform_signer_beats_forbidden PASSED [ 39%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHealthAccuracy::test_total_accounts_is_accurate PASSED [ 39%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHealthAccuracy::test_total_escrowed_excludes_released_escrows PASSED [ 40%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHealthAccuracy::test_uptime_is_monotonic PASSED [ 40%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[GET-/accounts] PASSED [ 41%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/accounts] PASSED [ 41%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/accounts] PASSED [ 41%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/accounts/a-x] PASSED [ 42%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/accounts/a-x] PASSED [ 42%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[POST-/accounts/a-x] PASSED [ 42%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/accounts/a-x/transactions] PASSED [ 43%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/accounts/a-x/transactions] PASSED [ 43%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[POST-/accounts/a-x/transactions] PASSED [ 43%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/accounts/a-x/credit] PASSED [ 44%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/accounts/a-x/credit] PASSED [ 44%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[GET-/escrow/lock] PASSED [ 44%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/escrow/lock] PASSED [ 45%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/escrow/lock] PASSED [ 45%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[GET-/escrow/esc-x/release] PASSED [ 46%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/escrow/esc-x/release] PASSED [ 46%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/escrow/esc-x/release] PASSED [ 46%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[GET-/escrow/esc-x/split] PASSED [ 47%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[PUT-/escrow/esc-x/split] PASSED [ 47%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[DELETE-/escrow/esc-x/split] PASSED [ 47%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestHttpMethodMisuse::test_wrong_method_returns_method_not_allowed[POST-/health] PASSED [ 48%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestErrorEnvelopeConsistency::test_error_envelope_has_exactly_error_message_details PASSED [ 48%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestErrorEnvelopeConsistency::test_no_internal_error_leakage PASSED [ 48%]
+tests/unit/routers/test_t072_health_http_sec_gaps.py::TestIdFormatting::test_ids_are_correctly_formatted PASSED [ 49%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestAgentTierMalformedTokenPassthrough::test_empty_string_token_on_post_returns_invalid_jws PASSED [ 49%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestAgentTierMalformedTokenPassthrough::test_malformed_jws_shapes_on_post_return_invalid_jws[not-a-jws-at-all] PASSED [ 50%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestAgentTierMalformedTokenPassthrough::test_malformed_jws_shapes_on_post_return_invalid_jws[only.two-parts] PASSED [ 50%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestAgentTierMalformedTokenPassthrough::test_malformed_jws_shapes_on_post_return_invalid_jws[four.parts.is.wrong.here] PASSED [ 50%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestAgentTierMalformedTokenPassthrough::test_empty_bearer_token_returns_invalid_jws PASSED [ 51%]
+tests/unit/routers/test_t072_identity_passthrough_gaps.py::TestOwnershipPrecedesPayloadValidation::test_wrong_owner_reported_even_with_malformed_payload PASSED [ 51%]
+tests/unit/routers/test_t072_platform_signer_gaps.py::test_non_platform_signer_on_release_is_forbidden PASSED [ 51%]
+tests/unit/routers/test_t072_platform_signer_gaps.py::test_non_platform_signer_on_split_is_forbidden PASSED [ 52%]
+tests/unit/routers/test_t072_platform_signer_gaps.py::test_create_account_fails_cleanly_when_identity_down PASSED [ 52%]
+tests/unit/routers/test_t072_platform_signer_gaps.py::test_expired_platform_token_rejected_on_credit PASSED [ 52%]
+tests/unit/routers/test_t072_platform_signer_gaps.py::test_non_expiring_token_is_rejected_before_request PASSED [ 53%]
+tests/unit/routers/test_two_tier_auth.py::test_platform_credit_succeeds_when_identity_down PASSED [ 53%]
+tests/unit/routers/test_two_tier_auth.py::test_platform_release_succeeds_when_identity_down PASSED [ 53%]
+tests/unit/routers/test_two_tier_auth.py::test_platform_split_succeeds_when_identity_down PASSED [ 54%]
+tests/unit/routers/test_two_tier_auth.py::test_agent_escrow_lock_fails_cleanly_when_identity_down PASSED [ 54%]
+tests/unit/routers/test_two_tier_auth.py::test_credit_invalid_signature_precedes_domain_payload PASSED [ 55%]
+tests/unit/routers/test_two_tier_auth.py::test_credit_wellformed_nonplatform_is_forbidden PASSED [ 55%]
+tests/unit/test_config.py::test_config_loads_from_yaml PASSED            [ 55%]
+tests/unit/test_config.py::test_config_rejects_extra_fields PASSED       [ 56%]
+tests/unit/test_ledger_audit_log.py::test_create_account_emits_audit_log PASSED [ 56%]
+tests/unit/test_ledger_audit_log.py::test_credit_emits_audit_log PASSED  [ 56%]
+tests/unit/test_ledger_audit_log.py::test_escrow_lock_emits_audit_log PASSED [ 57%]
+tests/unit/test_ledger_audit_log.py::test_escrow_release_emits_audit_log PASSED [ 57%]
+tests/unit/test_ledger_audit_log.py::test_escrow_split_emits_audit_log PASSED [ 57%]
+tests/unit/test_ledger_db_client_normalization.py::TestBankAccountsSchemaShape::test_bank_accounts_has_the_expected_columns PASSED [ 58%]
+tests/unit/test_ledger_db_client_normalization.py::TestGetAccountCoversEveryColumn::test_get_account_returns_every_schema_column PASSED [ 58%]
+tests/unit/test_ledger_db_client_normalization.py::TestGetAccountCoversEveryColumn::test_get_account_rejects_unknown_fields PASSED [ 58%]
+tests/unit/test_ledger_db_client_normalization.py::TestGetTransactionsCoversNonExcludedColumns::test_returns_every_non_excluded_schema_column PASSED [ 59%]
+tests/unit/test_ledger_safety.py::test_credit_is_idempotent_by_reference PASSED [ 59%]
+tests/unit/test_ledger_safety.py::test_credit_duplicate_reference_different_amount_errors PASSED [ 60%]
+tests/unit/test_ledger_safety.py::test_escrow_lock_is_idempotent_by_task_id PASSED [ 60%]
+tests/unit/test_ledger_safety.py::test_escrow_lock_same_task_different_amount_conflicts PASSED [ 60%]
+tests/unit/test_ledger_safety.py::test_escrow_release_is_atomic PASSED   [ 61%]
+tests/unit/test_ledger_safety.py::test_escrow_split_is_atomic PASSED     [ 61%]
+tests/unit/test_ledger_store_contract.py::TestEscrowLockTransactionShape::test_writes_escrow_lock_type_with_bare_task_id_reference[in_memory] PASSED [ 61%]
+tests/unit/test_ledger_store_contract.py::TestEscrowLockTransactionShape::test_writes_escrow_lock_type_with_bare_task_id_reference[gateway] ERROR [ 62%]
+tests/unit/test_ledger_store_contract.py::TestEscrowReleaseTransactionShape::test_writes_escrow_release_type_with_bare_escrow_id_reference[in_memory] PASSED [ 62%]
+tests/unit/test_ledger_store_contract.py::TestEscrowReleaseTransactionShape::test_writes_escrow_release_type_with_bare_escrow_id_reference[gateway] ERROR [ 62%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_both_legs_write_escrow_release_type_with_bare_escrow_id_reference[in_memory] PASSED [ 63%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_both_legs_write_escrow_release_type_with_bare_escrow_id_reference[gateway] ERROR [ 63%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_worker_leg_is_not_written[in_memory] PASSED [ 64%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_worker_leg_is_not_written[gateway] ERROR [ 64%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_poster_leg_is_not_written[in_memory] PASSED [ 64%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_poster_leg_is_not_written[gateway] ERROR [ 65%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_poster_that_does_not_match_the_escrow_payer[in_memory] PASSED [ 65%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_poster_that_does_not_match_the_escrow_payer[gateway] ERROR [ 65%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_out_of_range_worker_pct_with_invalid_amount[in_memory] PASSED [ 66%]
+tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_out_of_range_worker_pct_with_invalid_amount[gateway] ERROR [ 66%]
+tests/unit/test_mp01_fixture_log_isolation.py::test_router_fixture_owns_bank_logs_before_startup PASSED [ 66%]
+tests/unit/test_mp01_fixture_log_isolation.py::test_integration_fixture_owns_bank_logs_before_startup PASSED [ 67%]
+tests/unit/test_mp01_fixture_log_isolation.py::test_two_tier_auth_config_writer_owns_bank_logs PASSED [ 67%]
+tests/unit/test_mp03_platform_credentials.py::test_platform_agent_config_path_is_required[] PASSED [ 67%]
+tests/unit/test_mp03_platform_credentials.py::test_platform_agent_config_path_is_required[   ] PASSED [ 68%]
+tests/unit/test_mp03_platform_credentials.py::test_platform_agent_config_path_has_no_default PASSED [ 68%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[missing] PASSED [ 69%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[partial] PASSED [ 69%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[mismatched] PASSED [ 69%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[corrupt] PASSED [ 70%]
+tests/unit/test_mp03_platform_credentials.py::test_invalid_platform_keys_fail_before_registration[unsafe_mode] PASSED [ 70%]
+tests/unit/test_mp03_receiver_context.py::test_remote_verifier_rejects_wrong_audience_before_caller_use PASSED [ 70%]
+tests/unit/test_mp03_receiver_context.py::test_remote_invalid_signature_maps_to_forbidden PASSED [ 71%]
+tests/unit/test_mp03_receiver_context.py::test_local_adapter_cryptographically_rejects_unregistered_kid PASSED [ 71%]
+tests/unit/test_mp03_receiver_context.py::test_wrong_authenticated_context_has_no_ledger_effect PASSED [ 71%]
+tests/unit/test_mp04_contract_fixture_cleanup.py::test_gateway_contract_config_is_removed_after_a_body_exception FAILED [ 72%]
+tests/unit/test_mp04_financial_responses.py::test_credit_rejects_malformed_gateway_success[malformed0] PASSED [ 72%]
+tests/unit/test_mp04_financial_responses.py::test_credit_rejects_malformed_gateway_success[malformed1] PASSED [ 73%]
+tests/unit/test_mp04_financial_responses.py::test_credit_rejects_mismatched_gateway_operation_identity PASSED [ 73%]
+tests/unit/test_mp04_financial_responses.py::test_zero_account_rejects_malformed_authoritative_projection[projection0] PASSED [ 73%]
+tests/unit/test_mp04_financial_responses.py::test_zero_account_rejects_malformed_authoritative_projection[projection1] PASSED [ 74%]
+tests/unit/test_mp04_financial_responses.py::test_zero_account_rejects_malformed_authoritative_projection[projection2] PASSED [ 74%]
+tests/unit/test_mp04_financial_responses.py::test_zero_account_rejects_malformed_authoritative_projection[projection3] PASSED [ 74%]
+tests/unit/test_mp04_financial_responses.py::test_zero_account_rejects_malformed_authoritative_projection[projection4] PASSED [ 75%]
+tests/unit/test_mp04_financial_responses.py::test_zero_account_rejects_malformed_authoritative_projection[projection5] PASSED [ 75%]
+tests/unit/test_mp04_financial_responses.py::test_account_operation_identity_is_rejected_before_gateway_call[10-None] PASSED [ 75%]
+tests/unit/test_mp04_financial_responses.py::test_account_operation_identity_is_rejected_before_gateway_call[0-op-00000000-0000-4000-8000-000000000001] PASSED [ 76%]
+tests/unit/test_mp04_financial_responses.py::test_expected_credit_receipt_is_accepted_before_malformed_vectors PASSED [ 76%]
+tests/unit/test_mp04_financial_responses.py::test_credit_receipt_rejects_cross_field_inconsistency[path0-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb] PASSED [ 76%]
+tests/unit/test_mp04_financial_responses.py::test_credit_receipt_rejects_cross_field_inconsistency[path1-other] PASSED [ 77%]
+tests/unit/test_mp04_financial_responses.py::test_credit_receipt_rejects_cross_field_inconsistency[path2-payer] PASSED [ 77%]
+tests/unit/test_mp04_financial_responses.py::test_credit_receipt_rejects_cross_field_inconsistency[path3-debit] PASSED [ 78%]
+tests/unit/test_mp04_financial_responses.py::test_credit_receipt_rejects_cross_field_inconsistency[path4-a-other] PASSED [ 78%]
+tests/unit/test_mp04_financial_responses.py::test_credit_receipt_rejects_cross_field_inconsistency[path5-11] PASSED [ 78%]
+tests/unit/test_mp04_financial_responses.py::test_credit_receipt_rejects_cross_field_inconsistency[path6--1] PASSED [ 79%]
+tests/unit/test_mp04_financial_responses.py::test_credit_receipt_rejects_empty_or_extra_legs PASSED [ 79%]
+tests/unit/test_mp04_financial_responses.py::test_split_receipt_rejects_misordered_legs_and_release_rejects_wrong_escrow PASSED [ 79%]
+tests/unit/test_mp04_financial_responses.py::test_clean_escrow_projection_terminal_semantics[escrow_lock-locked-None] PASSED [ 80%]
+tests/unit/test_mp04_financial_responses.py::test_clean_escrow_projection_terminal_semantics[escrow_lock-released-later] PASSED [ 80%]
+tests/unit/test_mp04_financial_responses.py::test_clean_escrow_projection_terminal_semantics[escrow_release-released-now] PASSED [ 80%]
+tests/unit/test_mp04_financial_responses.py::test_clean_escrow_projection_terminal_semantics[escrow_split-split-now] PASSED [ 81%]
+tests/unit/test_mp04_financial_responses.py::test_escrow_projection_rejects_impossible_terminal_semantics[escrow_release-released-0-now] PASSED [ 81%]
+tests/unit/test_mp04_financial_responses.py::test_escrow_projection_rejects_impossible_terminal_semantics[escrow_release-split-100-now] PASSED [ 82%]
+tests/unit/test_mp04_financial_responses.py::test_escrow_projection_rejects_impossible_terminal_semantics[escrow_release-released-100-None] PASSED [ 82%]
+tests/unit/test_mp04_financial_responses.py::test_escrow_projection_rejects_impossible_terminal_semantics[escrow_split-released-100-now] PASSED [ 82%]
+tests/unit/test_mp04_financial_responses.py::test_escrow_projection_rejects_impossible_terminal_semantics[escrow_split-split-100-None] PASSED [ 83%]
+tests/unit/test_mp04_financial_responses.py::test_escrow_projection_rejects_impossible_terminal_semantics[escrow_lock-locked-100-unexpected] PASSED [ 83%]
+tests/unit/test_mp04_financial_responses.py::test_escrow_projection_rejects_impossible_terminal_semantics[escrow_lock-released-100-None] PASSED [ 83%]
+tests/unit/test_mp04_legacy_responses.py::test_bank_returns_verified_historical_observation_unchanged[credit-credit_account] PASSED [ 84%]
+tests/unit/test_mp04_legacy_responses.py::test_bank_returns_verified_historical_observation_unchanged[escrow_lock-escrow_lock] PASSED [ 84%]
+tests/unit/test_mp04_legacy_responses.py::test_native_lock_audit_uses_winning_transaction_not_retry_candidate PASSED [ 84%]
+tests/unit/test_mp04_legacy_responses.py::test_bank_preserves_typed_history_errors_and_exact_safe_details[credit-credit_account-legacy_operation_conflict-409-details0] PASSED [ 85%]
+tests/unit/test_mp04_legacy_responses.py::test_bank_preserves_typed_history_errors_and_exact_safe_details[escrow_lock-escrow_lock-legacy_operation_conflict-409-details1] PASSED [ 85%]
+tests/unit/test_mp04_legacy_responses.py::test_bank_preserves_typed_history_errors_and_exact_safe_details[escrow_release-escrow_release-historical_settlement_unreplayable-409-details2] PASSED [ 85%]
+tests/unit/test_mp04_legacy_responses.py::test_bank_preserves_typed_history_errors_and_exact_safe_details[escrow_split-escrow_split-historical_settlement_unreplayable-409-details3] PASSED [ 86%]
+tests/unit/test_mp04_legacy_responses.py::test_bank_preserves_typed_history_errors_and_exact_safe_details[credit-credit_account-receipt_ownership_missing-500-details4] PASSED [ 86%]
+tests/unit/test_mp04_legacy_responses.py::test_bank_preserves_typed_history_errors_and_exact_safe_details[escrow_lock-escrow_lock-receipt_ownership_failed-500-details5] PASSED [ 87%]
+tests/unit/test_mp04_legacy_responses.py::test_bank_preserves_typed_history_errors_and_exact_safe_details[credit-credit_account-operation_id_conflict-409-details6] PASSED [ 87%]
+tests/unit/test_mp04_memory_receipts.py::test_positive_issuance_replays_an_immutable_native_receipt PASSED [ 87%]
+tests/unit/test_mp04_memory_receipts.py::test_zero_balance_creation_has_no_receipt_or_operation_identity PASSED [ 88%]
+tests/unit/test_mp04_memory_receipts.py::test_credit_replay_and_conflicts_preserve_the_winner_without_mutation PASSED [ 88%]
+tests/unit/test_mp04_memory_receipts.py::test_lock_replay_retains_receipt_and_projects_current_settlement PASSED [ 88%]
+tests/unit/test_mp04_memory_receipts.py::test_opposing_settlement_reports_the_true_winner_without_moving_money PASSED [ 89%]
+tests/unit/test_mp04_memory_receipts.py::test_split_has_ordered_logical_zero_leg_without_requiring_zero_recipient[0] PASSED [ 89%]
+tests/unit/test_mp04_memory_receipts.py::test_split_has_ordered_logical_zero_leg_without_requiring_zero_recipient[100] PASSED [ 89%]
+tests/unit/test_mp04_memory_receipts.py::test_partial_split_has_exact_positive_legs_transactions_and_conservation PASSED [ 90%]
+tests/unit/test_mp04_memory_receipts.py::test_same_account_partial_split_overflow_preserves_all_observable_state PASSED [ 90%]
+tests/unit/test_mp04_memory_receipts.py::test_release_exact_replay_restores_pristine_receipt_without_new_effect PASSED [ 91%]
+tests/unit/test_mp04_memory_receipts.py::test_split_exact_replay_restores_pristine_receipt_without_new_effect PASSED [ 91%]
+tests/unit/test_mp04_memory_receipts.py::test_shared_store_instances_race_to_one_settlement_receipt_winner PASSED [ 91%]
+tests/unit/test_mp04_memory_receipts.py::test_failed_release_overflow_is_atomic_and_keeps_escrow_locked PASSED [ 92%]
+tests/unit/test_mp04_memory_receipts.py::test_async_fake_is_a_thin_parity_adapter_with_fresh_responses PASSED [ 92%]
+tests/unit/test_mp06_monetary_boundary.py::test_bank_money_range_matches_gateway_storage_boundary PASSED [ 92%]
+tests/unit/test_mp06_monetary_boundary.py::test_in_memory_store_rejects_boolean_money_without_state_change PASSED [ 93%]
+tests/unit/test_mp06_monetary_boundary.py::test_db_client_rejects_boolean_money_before_gateway_call PASSED [ 93%]
+tests/unit/test_mp06_monetary_boundary.py::test_in_memory_total_escrowed_can_exceed_one_stored_integer PASSED [ 93%]
+tests/unit/test_mp06_monetary_boundary.py::test_in_memory_credit_overflow_is_atomic PASSED [ 94%]
+tests/unit/test_mp06_monetary_boundary.py::test_in_memory_release_overflow_keeps_escrow_locked PASSED [ 94%]
+tests/unit/test_mp06_monetary_boundary.py::test_in_memory_split_prechecks_all_legs_before_mutation PASSED [ 94%]
+tests/unit/test_mp06_monetary_boundary.py::test_in_memory_lock_replay_after_settlement_returns_actual_status[release] PASSED [ 95%]
+tests/unit/test_mp06_monetary_boundary.py::test_in_memory_lock_replay_after_settlement_returns_actual_status[split] PASSED [ 95%]
+tests/unit/test_mp06_monetary_boundary.py::test_db_client_lock_uses_gateway_replay_status PASSED [ 96%]
+tests/unit/test_mp06_monetary_boundary.py::test_db_client_lock_rejects_missing_or_invalid_gateway_status[None] PASSED [ 96%]
+tests/unit/test_mp06_monetary_boundary.py::test_db_client_lock_rejects_missing_or_invalid_gateway_status[True] PASSED [ 96%]
+tests/unit/test_mp06_monetary_boundary.py::test_db_client_lock_rejects_missing_or_invalid_gateway_status[unknown] PASSED [ 97%]
+tests/unit/test_mp06_monetary_boundary.py::test_db_client_preserves_gateway_balance_overflow_conflict[credit] PASSED [ 97%]
+tests/unit/test_mp06_monetary_boundary.py::test_db_client_preserves_gateway_balance_overflow_conflict[release] PASSED [ 97%]
+tests/unit/test_mp06_monetary_boundary.py::test_db_client_preserves_gateway_balance_overflow_conflict[split] PASSED [ 98%]
+tests/unit/test_mp07_receipt_event_provenance.py::test_release_event_emits_canonical_source_with_optional_task_binding PASSED [ 98%]
+tests/unit/test_no_base_agent_imports.py::test_no_base_agent_imports PASSED [ 98%]
+tests/unit/test_placeholder.py::test_service_scaffolded PASSED           [ 99%]
+tests/unit/test_platform_integration.py::test_get_platform_agent_id_errors_when_no_platform_agent PASSED [ 99%]
+tests/unit/test_platform_integration.py::test_get_platform_agent_id_returns_runtime_platform_agent_id PASSED [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of TestEscrowLockTransactionShape.test_writes_escrow_lock_type_with_bare_task_id_reference[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:207: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:164: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:30: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowReleaseTransactionShape.test_writes_escrow_release_type_with_bare_escrow_id_reference[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:207: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:164: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:30: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowSplitTransactionShape.test_both_legs_write_escrow_release_type_with_bare_escrow_id_reference[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:207: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:164: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:30: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowSplitTransactionShape.test_zero_amount_worker_leg_is_not_written[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:207: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:164: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:30: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowSplitTransactionShape.test_zero_amount_poster_leg_is_not_written[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:207: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:164: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:30: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowSplitTransactionShape.test_rejects_poster_that_does_not_match_the_escrow_payer[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:207: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:164: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:30: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+_ ERROR at setup of TestEscrowSplitTransactionShape.test_rejects_out_of_range_worker_pct_with_invalid_amount[gateway] _
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_ledger_store_contract.py:207: in store
+    async for client in _gateway_backed_client(db_path):
+tests/unit/test_ledger_store_contract.py:164: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:30: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+=================================== FAILURES ===================================
+________ test_gateway_contract_config_is_removed_after_a_body_exception ________
+../../libs/service-commons/src/service_commons/config.py:137: in load_settings
+    return settings_model(**yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+The above exception was the direct cause of the following exception:
+tests/unit/test_mp04_contract_fixture_cleanup.py:20: in test_gateway_contract_config_is_removed_after_a_body_exception
+    await anext(fixture)
+tests/unit/test_ledger_store_contract.py:164: in _gateway_backed_client
+    app = create_app()
+          ^^^^^^^^^^^^
+../db-gateway/src/db_gateway_service/app.py:30: in create_app
+    settings = get_settings()
+               ^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:165: in get_settings
+    return load_settings(settings_model, yaml_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../libs/service-commons/src/service_commons/config.py:139: in load_settings
+    raise ConfigurationError(
+E   service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+E   board_authority
+E     Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+E       For further information visit https://errors.pydantic.dev/2.12/v/missing
+E   All configuration values must be explicitly specified.
+E   No default values are allowed.
+=========================== short test summary info ============================
+FAILED tests/unit/test_mp04_contract_fixture_cleanup.py::test_gateway_contract_config_is_removed_after_a_body_exception - service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+board_authority
+  Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+All configuration values must be explicitly specified.
+No default values are allowed.
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowLockTransactionShape::test_writes_escrow_lock_type_with_bare_task_id_reference[gateway] - service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+board_authority
+  Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+All configuration values must be explicitly specified.
+No default values are allowed.
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowReleaseTransactionShape::test_writes_escrow_release_type_with_bare_escrow_id_reference[gateway] - service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+board_authority
+  Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+All configuration values must be explicitly specified.
+No default values are allowed.
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_both_legs_write_escrow_release_type_with_bare_escrow_id_reference[gateway] - service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+board_authority
+  Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+All configuration values must be explicitly specified.
+No default values are allowed.
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_worker_leg_is_not_written[gateway] - service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+board_authority
+  Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+All configuration values must be explicitly specified.
+No default values are allowed.
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_zero_amount_poster_leg_is_not_written[gateway] - service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+board_authority
+  Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+All configuration values must be explicitly specified.
+No default values are allowed.
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_poster_that_does_not_match_the_escrow_payer[gateway] - service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+board_authority
+  Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+All configuration values must be explicitly specified.
+No default values are allowed.
+ERROR tests/unit/test_ledger_store_contract.py::TestEscrowSplitTransactionShape::test_rejects_out_of_range_worker_pct_with_invalid_amount[gateway] - service_commons.config.ConfigurationError: Configuration validation failed: 1 validation error for Settings
+board_authority
+  Field required [type=missing, input_value={'service': {'name': 'db-...gateway.bank.write']}}}}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+All configuration values must be explicitly specified.
+No default values are allowed.
+=================== 1 failed, 270 passed, 7 errors in 8.71s ====================
+error: recipe `test-unit` failed on line 303 with exit code 1
+error: recipe `ci-quiet` failed with exit code 1
+error: recipe `ci-quiet` failed with exit code 1

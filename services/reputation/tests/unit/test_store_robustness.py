@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from reputation_service.services.feedback_store import DuplicateFeedbackError, FeedbackStore
+from reputation_service.services.exceptions import DuplicateFeedbackError
+from tests.fakes.sqlite_feedback_store import SqliteFeedbackStore as FeedbackStore
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -33,6 +34,7 @@ def _insert_once(store: FeedbackStore) -> None:
         rating="satisfied",
         comment=None,
         force_visible=False,
+        source="peer",
     )
 
 

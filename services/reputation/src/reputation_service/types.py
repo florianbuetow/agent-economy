@@ -18,3 +18,10 @@ class FeedbackRecord:
     comment: str | None
     submitted_at: str
     visible: bool
+    # Defaulted (GAP-E12): reputation_feedback.role is a real, persisted, NOT NULL
+    # column, but every existing FeedbackRecord(...) call site predates this field.
+    # Optional with a None default keeps them all valid.
+    role: str | None = None
+    # "peer" for party-to-party feedback, "court" for platform (ruling) feedback.
+    # Defaulted for the same reason as role: older constructors predate the column.
+    source: str | None = None

@@ -90,7 +90,7 @@ class MathTaskFactory:
         if level is not None:
             target_levels = [level]
         else:
-            target_levels = list(levels)  # type: ignore[assignment]
+            target_levels = list(levels)  # type: ignore[arg-type]
 
         tasks: list[MathTask] = []
         for lev in target_levels:
@@ -572,7 +572,7 @@ def _gen_modulo_text(rng: random.Random) -> MathTask:
     div_text = _to_text(divisor) if divisor <= 20 else str(divisor)
     return MathTask(
         title="Find the remainder (word problem)",
-        spec=f"""TASK: When {dividend} is divided by {divisor}, what is the remainder? In other words, if you divide {dividend} by {divisor}, how much is left over?
+        spec=f"""TASK: When {dividend} is divided by {div_text}, what is the remainder? In other words, if you divide {dividend} by {div_text}, how much is left over?
 
 OUTPUT FORMAT: A single non-negative integer (the remainder).
 
@@ -746,7 +746,7 @@ def _gen_system_infinite(rng: random.Random) -> MathTask:
     a, b = rng.randint(1, 4), rng.randint(1, 4)
     c = rng.randint(2, 12)
     ex1 = f"{a}x + {b}y = {c}"
-    ex2 = f"{2*a}x + {2*b}y = {2*c}"
+    ex2 = f"{2 * a}x + {2 * b}y = {2 * c}"
     return MathTask(
         title="Solve a 2×2 linear system (infinite solutions)",
         spec=f"""TASK: Solve the system:
@@ -832,7 +832,33 @@ VERIFICATION: {base}^result = {arg}.""",
 
 def _gen_prime_check(rng: random.Random) -> MathTask:
     if rng.random() < 0.5:
-        primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
+        primes = [
+            2,
+            3,
+            5,
+            7,
+            11,
+            13,
+            17,
+            19,
+            23,
+            29,
+            31,
+            37,
+            41,
+            43,
+            47,
+            53,
+            59,
+            61,
+            67,
+            71,
+            73,
+            79,
+            83,
+            89,
+            97,
+        ]
         n = rng.choice(primes)
         solutions = ["yes", "true", "prime"]
     else:

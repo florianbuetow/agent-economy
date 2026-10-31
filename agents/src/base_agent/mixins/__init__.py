@@ -1,10 +1,12 @@
-"""Service-specific mixin classes for BaseAgent."""
+"""Compatibility shim — mixins moved to ``service_auth`` (WP-02)."""
 
-from base_agent.mixins.bank import BankMixin
-from base_agent.mixins.court import CourtMixin
-from base_agent.mixins.identity import IdentityMixin
-from base_agent.mixins.reputation import ReputationMixin
-from base_agent.mixins.task_board import TaskBoardMixin
+from service_auth.mixins import (
+    BankMixin,
+    CourtMixin,
+    IdentityMixin,
+    ReputationMixin,
+    TaskBoardMixin,
+)
 
 __all__ = [
     "BankMixin",

@@ -29,6 +29,7 @@ async def submit_feedback(request: Request) -> JSONResponse:
             "from_agent_id",
             "to_agent_id",
             "role",
+            "source",
             "category",
             "rating",
             "submitted_at",
@@ -47,6 +48,26 @@ async def submit_feedback(request: Request) -> JSONResponse:
 
     result = state.db_writer.submit_feedback(data)
     return JSONResponse(status_code=201, content=result)
+
+
+@router.post("/feedback/reveal-expired")
+async def reveal_expired_feedback(request: Request) -> JSONResponse:
+    """Durably reveal sealed feedback submitted at or before ``cutoff``."""
+    body = await request.body()
+    data = parse_json_body(body)
+    validate_required_fields(data, ["cutoff", "timestamp"])
+
+    state = get_app_state()
+    if state.db_writer is None:
+        raise ServiceError(
+            error="service_not_ready",
+            message="DbWriter not initialized",
+            status_code=503,
+            details={},
+        )
+
+    result = state.db_writer.reveal_expired_feedback(data)
+    return JSONResponse(status_code=200, content=result)
 
 
 @router.get("/feedback/count")
@@ -94,9 +115,9 @@ async def list_feedback(request: Request) -> JSONResponse:
     state = get_app_state()
     if state.db_reader is None:
         raise ServiceError(
-            error="method_not_allowed",
-            message="Method not allowed",
-            status_code=405,
+            error="service_not_ready",
+            message="DbReader not initialized",
+            status_code=503,
             details={},
         )
 

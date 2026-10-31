@@ -1,5 +1,104 @@
 # Database Gateway Service — Production Release Test Specification
 
+## MP-08 durable financial-effect recovery acceptance amendment
+
+Use the [MP-08 financial recovery contract](../../plans/2026-10-22-mp08-financial-recovery-contract.md)
+as the normative expected behavior. These cases extend the release gate; their
+presence and focused results do not claim that the repository-wide gate has
+passed.
+
+Required V5 schema and migration proof maps to
+`test_mp08_current_schema_classification.py`, `test_mp08_schema_v5.py`,
+`test_mp08_migration.py`, `test_mp08_migration_rejection.py`, and
+`test_mp08_migration_cli.py`. It must prove exact current-V5 classification,
+fresh empty cutover, explicit verified-backup-bound V4-to-V5 migration, exact
+metadata and attestation, preservation of prior domain bytes and
+`sqlite_sequence`, current Task Board KID ownership, and fail-closed rejection
+of partial, unknown, nonexact, future, corrupt, conflicting, unsupported or
+foreign-owned sources. Older V2/V3/V4 classifiers remain migration-history
+controls rather than the current startup norm.
+
+Required startup audit proof maps to `test_mp08_effect_recovery_audit.py` and
+the MP-08 review audit regressions. It recomputes frozen membership and dynamic
+coverage, verifies source/delivery identity and ownership, proves exact receipt
+event binding, rejects duplicate or overlapping sources, and preserves valid
+Court observations without creating a financial delivery. Court delivery itself
+is excluded for MP-10.
+
+Queue, fencing and protected API proof maps to
+`test_mp08_effect_delivery_queue.py`, `test_mp08_effect_finalization.py`,
+`routers/test_mp08_effect_delivery_boundary.py`,
+`routers/test_mp08_native_effect_finalizer_boundary.py`, and the MP-08 queue,
+precedence, state and blocked-evidence regressions. It must cover:
+
+- atomic native claim plus sidecar creation and exact supported legacy import;
+- one due dead-letter evidence check before each lease, without Bank dispatch or
+  attempt-counter change;
+- due ordering, lease expiry, inclusive attempt budget, checked exponential
+  backoff, total/cycle/operator/generation exhaustion and no starvation;
+- exact worker UUID and generation fences, monotonic completion after lease
+  expiry, and direct-retry overlap without reopening completed work;
+- pre-dead-letter exact receipt lookup, confirmed completion, contradictory
+  evidence blocking, and receipt absence only then becoming a dead letter;
+- required `gateway.board.write`, 403-before-lookup, capable foreign-owner 404,
+  same-owner stale 409, native-only finalizer 400, evidence-conflict 409, and
+  clock-exhaustion 503 with byte-identical transactional state;
+- bounded diagnostics, strict list query shape, dead-letter-only retry, preserved
+  immutable identity and historical failure diagnostics, and no secret/raw
+  receipt leakage.
+
+Focused pure-transition tests must also exercise
+`db_gateway_service.effect_delivery_transitions` directly. They must prove each
+planner is deterministic over frozen `DeliveryQueueState` and
+`DeliveryQueuePolicy`, returns only `ApplyTransition`, `EvidenceRequired`, or
+`RejectTransition`, handles inclusive budgets and checked time/counter bounds,
+and performs no SQL, authorization or receipt classification. Writer-level tests
+must separately prove that applying the plans retains the same atomic and
+authorization behavior. This requirement is not itself a claim that those
+focused tests or the full release gate have passed.
+
+Public truth proof maps to `test_mp08_financial_projection.py`,
+`test_mp08_legacy_pending_public_truth.py`, and the historical read-cost and
+history regression cases. Gateway detail/list projections must contain exactly
+the versioned eight-field `financial_effect` contract. Confirmed outcomes require
+the intended receipt's complete immutable validation. Competing winners and
+status-only terminals remain unconfirmed. Historical worker payment requires
+the exhaustive predicate and remains stable across startup/read recomputation.
+Ruling releases at 100 and 0 percent map to `worker_paid` and
+`poster_refunded`; intermediate rulings map to `split` only when the matching
+receipt is confirmed. GDP and aggregate earnings assertions remain unchanged
+for MP-19.
+
+## MP-04 receipt acceptance amendment
+
+This amendment supersedes historical flat-response, split-amount and caller financial-constraint
+expectations below. Existing authorization, atomicity and monetary assertions retain their intent
+under the new request/receipt contract; unrelated domain commands are unaffected.
+
+Runtime migration tests were retired with the legacy migration CLI (2026-10-31): the Gateway
+creates only the current schema and refuses any other at startup, so no v0/v1/v2 history
+fixture or migrate command remains to test.
+
+Use the [financial receipt contract](../../plans/2026-10-16-mp04-receipt-contract.md) for native
+operation identity and historical observation semantics. Existing valid fixtures must explicitly
+supply operation IDs and settlement references; split uses a percentage and removes caller-owned
+financial constraints. Preserve original money/authorization/event assertions during this explicit
+contract reconciliation. Add independent authoritative red cases before implementing each slice.
+
+Required proof includes global identity reuse, exact replay after intervening activity, changed-ID
+natural-key conflicts with the true winner, opposing settlements through independent connections,
+receipt/leg/event atomic rollback, zero-recipient account absence, and complete legacy observations.
+The separately backup-bound v1-to-v2 migration must preserve all existing domain rows and identities,
+reject partial/unknown/corrupt sources, and retain deterministic legacy-set attestation through
+future native operations. An unowned effect or altered marker set must fail audit/startup admission.
+Retain the unchanged v0-to-v1 tests against the frozen v1 resource; do not reinterpret those as v2.
+
+Schema-classifier reconciliation: the three existing future-version fixtures in
+`test_mp06_schema.py` and `test_schema_review_regressions.py` now use version 3 because version 2
+has a declared schema. Keep their FUTURE/unsupported-version and no-journal-mutation assertions.
+New v2 tests separately reject missing ownership tables and malformed metadata as partial schemas;
+the frozen v1 resource and exact v0-to-v1 migration target remain unchanged.
+
 ## Purpose
 
 This document is the release-gate test specification for the Database Gateway Service.
@@ -9,9 +108,9 @@ It is intentionally strict and unambiguous:
 - Every failing response must use the standard error envelope.
 - Any behavior not listed here is out of scope for release sign-off.
 
-The Database Gateway is unique among the services: it has no authentication, no business logic, and no outbound service calls. Its correctness guarantees are: (1) every write is atomic with its event, (2) idempotency is enforced via database constraints, (3) foreign key and uniqueness violations are caught and returned as structured errors, and (4) concurrent writes are serialized via `BEGIN IMMEDIATE`.
+The Database Gateway authenticates service callers locally with strict Ed25519 capability tokens and makes no outbound service calls. It does not decide domain-level agent permissions or state-machine legality; those stay with the calling services. It enforces service-route grants plus real persistence consistency: atomic write/event pairing, database constraints, serialized `BEGIN IMMEDIATE` writes, and optional compare-and-set constraints.
 
-This document focuses only on core functionality, atomicity, idempotency, and constraint enforcement.
+This document focuses on core functionality, atomicity, idempotency, constraint (CAS) enforcement, and the read API.
 
 ---
 
@@ -21,7 +120,7 @@ All failing responses must be JSON in this format:
 
 ```json
 {
-  "error": "ERROR_CODE",
+  "error": "error_code",
   "message": "Human-readable description",
   "details": {}
 }
@@ -31,38 +130,60 @@ Required status/error mappings:
 
 | Status | Error Code                  | Required When |
 |--------|-----------------------------|---------------|
-| 400    | `MISSING_FIELD`             | A required field is absent, `null`, or empty string |
-| 400    | `INVALID_AMOUNT`            | Amount is not a valid integer in the required range |
-| 400    | `INVALID_FIELD`             | `updates` object contains an unknown column name |
-| 400    | `EMPTY_UPDATES`             | `updates` object is empty |
-| 400    | `AMOUNT_MISMATCH`           | Split amounts do not sum to escrow amount |
-| 400    | `INVALID_JSON`              | Request body is malformed JSON |
-| 402    | `INSUFFICIENT_FUNDS`        | Escrow lock would cause negative balance |
-| 404    | `ACCOUNT_NOT_FOUND`         | No account with this ID |
-| 404    | `ESCROW_NOT_FOUND`          | No escrow with this ID |
-| 404    | `TASK_NOT_FOUND`            | No task with this ID |
-| 405    | `METHOD_NOT_ALLOWED`        | Unsupported HTTP method on a defined route |
-| 409    | `PUBLIC_KEY_EXISTS`          | Duplicate public key registration |
-| 409    | `ACCOUNT_EXISTS`            | Account already exists for this agent |
-| 409    | `REFERENCE_CONFLICT`        | Duplicate credit reference with different amount |
-| 409    | `ESCROW_ALREADY_LOCKED`     | Escrow already locked for this (payer, task) pair with different amount |
-| 409    | `ESCROW_ALREADY_RESOLVED`   | Escrow has already been released or split |
-| 409    | `TASK_EXISTS`               | Task with this ID already exists |
-| 409    | `BID_EXISTS`                | Agent already bid on this task |
-| 409    | `ASSET_EXISTS`              | Asset with this ID already exists |
-| 409    | `FEEDBACK_EXISTS`           | Feedback already submitted for this (task, from, to) triple |
-| 409    | `CLAIM_EXISTS`              | Claim with this ID already exists |
-| 409    | `REBUTTAL_EXISTS`           | Rebuttal with this ID already exists |
-| 409    | `RULING_EXISTS`             | Ruling with this ID already exists |
-| 409    | `FOREIGN_KEY_VIOLATION`     | Foreign key constraint failed |
-| 413    | `PAYLOAD_TOO_LARGE`         | Request body exceeds configured `request.max_body_size` |
-| 415    | `UNSUPPORTED_MEDIA_TYPE`    | `Content-Type` is not `application/json` for JSON endpoints |
+| 400    | `missing_field`             | A required field is absent, `null`, or empty string |
+| 400    | `invalid_amount`            | Amount is not a valid integer in the required range |
+| 400    | `amount_out_of_range`       | Input exceeds SQLite's signed-64-bit monetary representation |
+| 400    | `payload_mismatch`          | Initial issuance differs from balance or split poster is not the escrow payer |
+| 400    | `invalid_field`             | `updates` object contains an unknown column name |
+| 400    | `empty_updates`             | `updates` object is empty |
+| 400    | `amount_mismatch`           | Split amounts do not sum to escrow amount |
+| 400    | `invalid_json`              | Request body is malformed JSON |
+| 402    | `insufficient_funds`        | Escrow lock would cause negative balance |
+| 404    | `account_not_found`         | No account with this ID |
+| 404    | `escrow_not_found`          | No escrow with this ID |
+| 404    | `task_not_found`            | No task with this ID |
+| 405    | `method_not_allowed`        | Unsupported HTTP method on a defined route |
+| 409    | `public_key_exists`          | Duplicate public key registration |
+| 409    | `account_exists`            | Account already exists for this agent |
+| 409    | `reference_conflict`        | Duplicate credit reference with different amount |
+| 409    | `amount_out_of_range`       | A credit or settlement would exceed the recipient balance limit |
+| 409    | `escrow_already_locked`     | Escrow already locked for this (payer, task) pair with different amount |
+| 409    | `escrow_already_resolved`   | Escrow has already been released or split |
+| 409    | `task_exists`               | Task with this ID already exists |
+| 409    | `bid_exists`                | Agent already bid on this task |
+| 409    | `asset_exists`              | Asset with this ID already exists |
+| 409    | `feedback_exists`           | Feedback already submitted for this (task, from, to) triple |
+| 409    | `claim_exists`              | Claim with this ID already exists |
+| 409    | `rebuttal_exists`           | Rebuttal with this ID already exists |
+| 409    | `ruling_exists`             | Ruling with this ID already exists |
+| 409    | `task_already_disputed`     | A second, distinct claim was filed against a task that already has one |
+| 409    | `constraint_violation`      | A supplied `constraints` (CAS) precondition did not match the row's current state |
+| 409    | `foreign_key_violation`     | Foreign key constraint failed |
+| 400    | `invalid_constraints`       | `constraints` is present but not a JSON object |
+| 404    | `not_found`                 | Generic CAS not-found (see Category 21) — the target row of a constrained update on `POST /board/tasks/{task_id}/status` or `POST /court/claims/{claim_id}/status` doesn't exist at all |
+| 404    | `agent_not_found`           | No agent with this ID (`GET /identity/agents/{id}`) |
+| 404    | `bid_not_found`             | No bid with this ID (`GET /board/bids/{id}`) |
+| 404    | `asset_not_found`           | No asset with this ID (`GET /board/assets/{id}`) |
+| 404    | `feedback_not_found`        | No feedback with this ID (`GET /reputation/feedback/{id}`) |
+| 404    | `claim_not_found`           | No claim with this ID |
+| 404    | `rebuttal_not_found`        | No rebuttal for this claim (`GET /court/claims/{id}/rebuttal`) |
+| 404    | `ruling_not_found`          | No ruling for this claim (`GET /court/rulings/{id}`) |
+| 413    | `payload_too_large`         | Request body exceeds configured `request.max_body_size` |
+| 415    | `unsupported_media_type`    | `Content-Type` is not `application/json` for JSON endpoints |
+| 400    | `invalid_jws`               | Bearer token violates the strict compact-JWS profile |
+| 400    | `invalid_payload`           | Audience/resource/action or exact body/query digest does not match |
+| 401    | `invalid_authorization`     | Authorization is missing, duplicated, malformed, or not one Bearer token |
+| 401    | `token_expired`             | Token is expired under receiver time policy |
+| 401    | `token_not_yet_valid`       | Token issuance time is beyond allowed clock skew |
+| 403    | `forbidden`                 | Unknown KID, bad signature, missing grant, or unclassified route |
 
 ---
 
 ## Test Data Conventions
 
-- All requests are plain JSON. No JWS tokens — the gateway trusts its callers.
+- Exact `GET /health` is public. Every other request uses one distinct service fixture signer and the route's explicit capability.
+- Test signers build the final HTTPX request first and sign its exact body bytes, encoded query bytes, uppercase method, and percent-encoded path.
+- Fixture credentials are distinct per domain; no all-powerful test credential is permitted.
 - `valid_event(source, type)` constructs a valid event object with all required fields populated.
 - `agent_id` values match `a-<uuid4>`. The test harness generates fresh UUIDs per test.
 - `task_id` values match `t-<uuid4>`.
@@ -104,42 +225,44 @@ Required status/error mappings:
 **Action:** Register Bob with the same `public_key` but different `agent_id`.
 **Expected:**
 - `409 Conflict`
-- `error = PUBLIC_KEY_EXISTS`
+- `error = public_key_exists`
 
-### AGT-04 Idempotent replay returns existing agent
-**Setup:** Register Alice. Capture response.
-**Action:** Send the identical request again (same `agent_id`, `name`, `public_key`, `registered_at`).
+### AGT-04 Idempotent replay returns the original agent_id and event_id
+**Setup:** Register Alice with a fresh `agent_id`. Capture the response, including `event_id`.
+**Action:** Send a realistic replay — same `public_key`, `name`, `registered_at`, but a *different* `agent_id` and a fresh `event.timestamp` (matching how a real caller retries: it does not remember the server-assigned `agent_id` from a request it believes may have failed).
 **Expected:**
 - `201 Created` (or `200 OK`)
-- Returned `agent_id` matches the original
+- Returned `agent_id` matches the **original** registration's `agent_id`, not the one sent in the replay
+- Returned `event_id` equals the **original** response's `event_id` exactly — not `0`, not a new `event_id` from a second event row
+- The `events` table still contains exactly one `agent.registered` event for this agent
 
 ### AGT-05 Missing required field: `name`
 **Action:** Omit `name` from the request body.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### AGT-06 Missing required field: `public_key`
 **Action:** Omit `public_key` from the request body.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### AGT-07 Missing required field: `agent_id`
 **Action:** Omit `agent_id` from the request body.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### AGT-08 Missing required field: `registered_at`
 **Action:** Omit `registered_at` from the request body.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### AGT-09 Missing event object
 **Action:** Omit the `event` field entirely.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### AGT-10 Event with missing required fields
 **Action:** Send `event` with `event_source` omitted.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### AGT-11 Null required fields
 **Action:** `{agent_id: null, name: null, public_key: null, registered_at: null, event: valid_event(...)}`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### AGT-12 Event is written atomically with the agent
 **Setup:** Register a valid agent. Query the `events` table directly (via WAL read).
@@ -149,7 +272,7 @@ Required status/error mappings:
 
 ### AGT-13 Malformed JSON body
 **Action:** Send truncated/invalid JSON.
-**Expected:** `400`, `error = INVALID_JSON`
+**Expected:** `400`, `error = invalid_json`
 
 ---
 
@@ -180,27 +303,27 @@ Required status/error mappings:
 **Action:** Send identical `POST /bank/accounts` with same `account_id`.
 **Expected:**
 - `409 Conflict`
-- `error = ACCOUNT_EXISTS`
+- `error = account_exists`
 
 ### ACCT-05 Foreign key violation: agent does not exist
 **Action:** `POST /bank/accounts` with `account_id` that has no corresponding `identity_agents` row.
 **Expected:**
 - `409 Conflict`
-- `error = FOREIGN_KEY_VIOLATION`
+- `error = foreign_key_violation`
 
 ### ACCT-06 Negative balance is rejected
 **Action:** `POST /bank/accounts` with `balance: -1`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_AMOUNT`
+- `error = invalid_amount`
 
 ### ACCT-07 Missing required field: `account_id`
 **Action:** Omit `account_id`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### ACCT-08 Missing event object
 **Action:** Omit `event` field.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### ACCT-09 Event is written atomically with the account
 **Setup:** Create account for alice with initial credit.
@@ -228,47 +351,49 @@ Required status/error mappings:
 - First credit: `balance_after` is `30`
 - Second credit: `balance_after` is `50`
 
-### CR-03 Idempotent credit returns same tx_id
-**Setup:** Credit alice with `amount: 25, reference: "salary_round_1"`. Capture `tx_id`.
-**Action:** Send the identical credit request again (same `account_id`, `amount`, `reference`).
+### CR-03 Idempotent credit returns the original tx_id, balance_after, and event_id
+**Setup:** Credit alice with `amount: 25, reference: "salary_round_1"`. Capture `tx_id`, `balance_after`, and `event_id`.
+**Action:** Send a realistic replay — same `account_id`, `amount`, `reference`, but a fresh `tx_id` and fresh timestamps (matching a real caller's retry, which does not know whether its first attempt landed).
 **Expected:**
 - `200 OK`
-- Returned `tx_id` matches the original
-- `balance_after` matches the original
+- Returned `tx_id` matches the **original**, not the fresh one sent in the replay
+- `balance_after` matches the original real value (never `0`)
+- `event_id` matches the **original** response's `event_id` exactly (never `0`, never a new event)
 - Balance is not double-credited
+- The `events` table gained no new row from the replay
 
 ### CR-04 Duplicate reference with different amount is rejected
 **Setup:** Credit alice with `amount: 25, reference: "salary_round_1"`.
 **Action:** Credit alice with `amount: 30, reference: "salary_round_1"`.
 **Expected:**
 - `409 Conflict`
-- `error = REFERENCE_CONFLICT`
+- `error = reference_conflict`
 
 ### CR-05 Account not found
 **Action:** `POST /bank/credit` with `account_id` that does not exist.
 **Expected:**
 - `404 Not Found`
-- `error = ACCOUNT_NOT_FOUND`
+- `error = account_not_found`
 
 ### CR-06 Zero amount is rejected
 **Action:** Credit with `amount: 0`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_AMOUNT`
+- `error = invalid_amount`
 
 ### CR-07 Negative amount is rejected
 **Action:** Credit with `amount: -10`.
 **Expected:**
 - `400 Bad Request`
-- `error = INVALID_AMOUNT`
+- `error = invalid_amount`
 
 ### CR-08 Missing required field: `reference`
 **Action:** Omit `reference`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### CR-09 Missing required field: `amount`
 **Action:** Omit `amount`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### CR-10 Credit transaction is written to bank_transactions
 **Setup:** Credit alice with `amount: 10, reference: "bonus"`.
@@ -292,6 +417,7 @@ Required status/error mappings:
 **Expected:**
 - `201 Created`
 - Body includes `escrow_id`, `balance_after`, `event_id`
+- Body includes `status: "locked"`; replay returns the actual stored status (see MP06-MON-03)
 - `balance_after` is `70`
 
 ### ELOCK-02 Balance decreases by lock amount
@@ -318,7 +444,7 @@ Required status/error mappings:
 **Action:** Lock escrow with `amount: 50`.
 **Expected:**
 - `402 Payment Required`
-- `error = INSUFFICIENT_FUNDS`
+- `error = insufficient_funds`
 
 ### ELOCK-06 Insufficient funds does not modify balance
 **Setup:** Create account for alice with `balance: 10`. Attempt lock with `amount: 50` (fails).
@@ -329,37 +455,40 @@ Required status/error mappings:
 **Action:** Lock escrow with `payer_account_id` that does not exist.
 **Expected:**
 - `404 Not Found`
-- `error = ACCOUNT_NOT_FOUND`
+- `error = account_not_found`
 
-### ELOCK-08 Idempotent lock returns same escrow_id
-**Setup:** Lock escrow with `amount: 30, task_id: "t-001"`. Capture `escrow_id`.
-**Action:** Send the identical lock request again (same `payer_account_id`, `amount`, `task_id`).
+### ELOCK-08 Idempotent lock returns the original escrow_id, real balance, and original event_id
+**Setup:** Lock escrow with `amount: 30, task_id: "t-001"`. Capture `escrow_id`, `balance_after`, and `event_id`.
+**Action:** Send a realistic replay — same `payer_account_id`, `amount`, `task_id`, but a fresh `escrow_id`/`tx_id` and fresh timestamps.
 **Expected:**
-- Returns existing `escrow_id`
+- Returns the **original** `escrow_id` (not the fresh one sent in the replay)
+- `balance_after` is the account's real current balance (never `0`)
+- `event_id` matches the **original** response's `event_id` exactly
 - Balance is not double-debited
+- `bank_escrow` still contains exactly one `locked`-then-still-`locked` row for this `(payer_account_id, task_id)` pair
 
 ### ELOCK-09 Duplicate (payer, task) with different amount is rejected
 **Setup:** Lock escrow with `amount: 30, task_id: "t-001"` from alice.
 **Action:** Lock escrow with `amount: 50, task_id: "t-001"` from alice.
 **Expected:**
 - `409 Conflict`
-- `error = ESCROW_ALREADY_LOCKED`
+- `error = escrow_already_locked`
 
 ### ELOCK-10 Zero amount is rejected
 **Action:** Lock escrow with `amount: 0`.
-**Expected:** `400`, `error = INVALID_AMOUNT`
+**Expected:** `400`, `error = invalid_amount`
 
 ### ELOCK-11 Negative amount is rejected
 **Action:** Lock escrow with `amount: -10`.
-**Expected:** `400`, `error = INVALID_AMOUNT`
+**Expected:** `400`, `error = invalid_amount`
 
 ### ELOCK-12 Missing required field: `task_id`
 **Action:** Omit `task_id`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### ELOCK-13 Missing event object
 **Action:** Omit `event` field.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### ELOCK-14 Exact balance lock succeeds
 **Setup:** Create account for alice with `balance: 50`.
@@ -407,25 +536,25 @@ Required status/error mappings:
 
 ### EREL-05 Escrow not found
 **Action:** Release with `escrow_id` that does not exist.
-**Expected:** `404`, `error = ESCROW_NOT_FOUND`
+**Expected:** `404`, `error = escrow_not_found`
 
 ### EREL-06 Already resolved escrow
 **Setup:** Lock escrow from alice, release to bob.
 **Action:** Attempt to release the same escrow again.
-**Expected:** `409`, `error = ESCROW_ALREADY_RESOLVED`
+**Expected:** `409`, `error = escrow_already_resolved`
 
 ### EREL-07 Recipient account not found
 **Setup:** Lock escrow from alice.
 **Action:** Release with `recipient_account_id` that does not exist.
-**Expected:** `404`, `error = ACCOUNT_NOT_FOUND`
+**Expected:** `404`, `error = account_not_found`
 
 ### EREL-08 Missing required field: `recipient_account_id`
 **Action:** Omit `recipient_account_id`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### EREL-09 Missing required field: `escrow_id`
 **Action:** Omit `escrow_id`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ---
 
@@ -492,40 +621,40 @@ Required status/error mappings:
 ### ESPL-09 Amounts do not sum to escrow amount
 **Setup:** Lock escrow of `amount: 100` from alice.
 **Action:** Split with `worker_amount: 60, poster_amount: 60` (sum = 120 != 100).
-**Expected:** `400`, `error = AMOUNT_MISMATCH`
+**Expected:** `400`, `error = amount_mismatch`
 
 ### ESPL-10 Escrow not found
 **Action:** Split with `escrow_id` that does not exist.
-**Expected:** `404`, `error = ESCROW_NOT_FOUND`
+**Expected:** `404`, `error = escrow_not_found`
 
 ### ESPL-11 Already resolved escrow
 **Setup:** Lock escrow from alice, release it to bob.
 **Action:** Attempt to split the same escrow.
-**Expected:** `409`, `error = ESCROW_ALREADY_RESOLVED`
+**Expected:** `409`, `error = escrow_already_resolved`
 
 ### ESPL-12 Worker account not found
 **Setup:** Lock escrow from alice.
 **Action:** Split with `worker_account_id` that does not exist.
-**Expected:** `404`, `error = ACCOUNT_NOT_FOUND`
+**Expected:** `404`, `error = account_not_found`
 
 ### ESPL-13 Poster account not found
 **Setup:** Lock escrow from alice.
 **Action:** Split with `poster_account_id` that does not exist.
-**Expected:** `404`, `error = ACCOUNT_NOT_FOUND`
+**Expected:** `404`, `error = account_not_found`
 
 ### ESPL-14 Negative worker_amount is rejected
 **Setup:** Lock escrow from alice.
 **Action:** Split with `worker_amount: -10, poster_amount: 110`.
-**Expected:** `400`, `error = INVALID_AMOUNT`
+**Expected:** `400`, `error = invalid_amount`
 
 ### ESPL-15 Negative poster_amount is rejected
 **Setup:** Lock escrow from alice.
 **Action:** Split with `worker_amount: 110, poster_amount: -10`.
-**Expected:** `400`, `error = INVALID_AMOUNT`
+**Expected:** `400`, `error = invalid_amount`
 
 ### ESPL-16 Missing required field: `worker_account_id`
 **Action:** Omit `worker_account_id`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ---
 
@@ -541,27 +670,27 @@ Required status/error mappings:
 ### TASK-02 Duplicate task_id is rejected
 **Setup:** Create a task with `task_id: "t-001"`.
 **Action:** Create another task with the same `task_id`.
-**Expected:** `409`, `error = TASK_EXISTS`
+**Expected:** `409`, `error = task_exists`
 
 ### TASK-03 Foreign key violation: poster_id does not exist
 **Action:** Create task with `poster_id` that has no matching `identity_agents` row.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### TASK-04 Foreign key violation: escrow_id does not exist
 **Action:** Create task with `escrow_id` that has no matching `bank_escrow` row.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### TASK-05 Missing required field: `title`
 **Action:** Omit `title`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### TASK-06 Missing required field: `spec`
 **Action:** Omit `spec`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### TASK-07 Missing event object
 **Action:** Omit `event`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### TASK-08 Task and event are written atomically
 **Setup:** Create a valid task.
@@ -570,7 +699,7 @@ Required status/error mappings:
 
 ### TASK-09 Negative reward is rejected
 **Action:** Create task with `reward: -1`.
-**Expected:** `400`, `error = INVALID_AMOUNT`
+**Expected:** `400`, `error = invalid_amount`
 
 ---
 
@@ -586,7 +715,7 @@ Required status/error mappings:
 ### BID-02 Duplicate bid (same bidder, same task) is rejected
 **Setup:** Submit a bid from bob on task t-001.
 **Action:** Submit another bid from bob on task t-001 (different `bid_id`).
-**Expected:** `409`, `error = BID_EXISTS`
+**Expected:** `409`, `error = bid_exists`
 
 ### BID-03 Different bidders on same task succeed
 **Setup:** Register bob and carol. Create a task.
@@ -595,19 +724,19 @@ Required status/error mappings:
 
 ### BID-04 Foreign key violation: task_id does not exist
 **Action:** Submit bid with `task_id` that has no matching task.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### BID-05 Foreign key violation: bidder_id does not exist
 **Action:** Submit bid with `bidder_id` that has no matching agent.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### BID-06 Missing required field: `proposal`
 **Action:** Omit `proposal`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### BID-07 Missing event object
 **Action:** Omit `event`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ---
 
@@ -653,23 +782,23 @@ Required status/error mappings:
 
 ### TSTAT-08 Task not found
 **Action:** Update `task_id` that does not exist.
-**Expected:** `404`, `error = TASK_NOT_FOUND`
+**Expected:** `404`, `error = task_not_found`
 
 ### TSTAT-09 Unknown column in updates is rejected
 **Action:** Update with `{updates: {status: "approved", nonexistent_column: "value"}, event: valid_event(...)}`.
-**Expected:** `400`, `error = INVALID_FIELD`
+**Expected:** `400`, `error = invalid_field`
 
 ### TSTAT-10 Empty updates object
 **Action:** Update with `{updates: {}, event: valid_event(...)}`.
-**Expected:** `400`, `error = EMPTY_UPDATES`
+**Expected:** `400`, `error = empty_updates`
 
 ### TSTAT-11 Missing updates object
 **Action:** Omit `updates` field entirely.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### TSTAT-12 Missing event object
 **Action:** Omit `event` field entirely.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### TSTAT-13 Multiple fields updated in one call
 **Setup:** Create a task.
@@ -696,23 +825,23 @@ Required status/error mappings:
 ### ASSET-02 Duplicate asset_id is rejected
 **Setup:** Record an asset with `asset_id: "asset-001"`.
 **Action:** Record another asset with the same `asset_id`.
-**Expected:** `409`, `error = ASSET_EXISTS`
+**Expected:** `409`, `error = asset_exists`
 
 ### ASSET-03 Foreign key violation: task_id does not exist
 **Action:** Record asset with `task_id` that has no matching task.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### ASSET-04 Foreign key violation: uploader_id does not exist
 **Action:** Record asset with `uploader_id` that has no matching agent.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### ASSET-05 Missing required field: `filename`
 **Action:** Omit `filename`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### ASSET-06 Missing event object
 **Action:** Omit `event`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### ASSET-07 Multiple assets for the same task succeed
 **Setup:** Create a task. Record two assets with different `asset_id` values.
@@ -722,31 +851,32 @@ Required status/error mappings:
 
 ## Category 11: Feedback Submission (`POST /reputation/feedback`)
 
-### FB-01 Submit feedback without reveal
+### FB-01 First-sided feedback stays sealed
 **Setup:** Register alice and bob. Create a task.
-**Action:** `POST /reputation/feedback` with `{feedback_id: "fb-<uuid>", task_id: <task_id>, from_agent_id: alice, to_agent_id: bob, role: "poster", category: "delivery_quality", rating: "satisfied", comment: "Good work", submitted_at: "...", reveal_reverse: false, event: valid_event("reputation", "feedback.revealed")}`.
+**Action:** `POST /reputation/feedback` with `{feedback_id: "fb-<uuid>", task_id: <task_id>, from_agent_id: alice, to_agent_id: bob, role: "poster", category: "delivery_quality", rating: "satisfied", comment: "Good work", submitted_at: "...", event: valid_event("reputation", "feedback.submitted")}`. There is no `reveal_reverse` or `reverse_feedback_id` field in the request — those fields are not part of the current contract.
 **Expected:**
 - `201 Created`
 - Body includes `feedback_id`, `visible`, `event_id`
-- `visible` is `false`
+- `visible` is `false` (no reverse-direction row exists yet, so the gateway's own reverse-pair lookup finds nothing)
 
-### FB-02 Submit feedback with mutual reveal
-**Setup:** Register alice and bob. Create a task. Submit feedback from bob to alice (no reveal). Capture `feedback_id` of bob's feedback.
-**Action:** Submit feedback from alice to bob with `reveal_reverse: true, reverse_feedback_id: <bob_feedback_id>`.
+### FB-02 Counter-feedback reveals both rows automatically
+**Setup:** Register alice and bob. Create a task. Submit feedback from bob to alice (`role: "worker"`, `category: "spec_quality"`) — no reveal-related fields sent, same as FB-01. Capture `feedback_id` of bob's feedback.
+**Action:** Submit feedback from alice to bob, same (`task_id`, opposite direction). The gateway performs the reverse-pair lookup itself — the caller does not tell it what to reveal or pass the reverse row's ID.
 **Expected:**
 - `201 Created`
-- `visible` is `true`
+- `visible` is `true` in the response for alice's write (the write that completes the pair)
 
 ### FB-03 Mutual reveal sets both feedbacks to visible
 **Setup:** Same as FB-02.
 **Action:** Query `reputation_feedback` table for both feedbacks.
 **Expected:**
 - Both rows have `visible = 1`
+- Exactly one `events` row exists with `event_source = 'reputation'` and `event_type = 'feedback.revealed'` for this task (in addition to the two `feedback.submitted`-style events from the callers' own `event` bodies)
 
 ### FB-04 Duplicate feedback (same task, from, to) is rejected
 **Setup:** Submit feedback from alice to bob for task t-001.
 **Action:** Submit another feedback from alice to bob for task t-001 (different `feedback_id`).
-**Expected:** `409`, `error = FEEDBACK_EXISTS`
+**Expected:** `409`, `error = feedback_exists`
 
 ### FB-05 Same agents, different tasks succeed
 **Setup:** Create two tasks. Submit feedback from alice to bob for each.
@@ -754,26 +884,33 @@ Required status/error mappings:
 
 ### FB-06 Foreign key violation: from_agent_id does not exist
 **Action:** Submit feedback with `from_agent_id` that has no matching agent.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### FB-07 Missing required field: `rating`
 **Action:** Omit `rating`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### FB-08 Missing event object
 **Action:** Omit `event`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### FB-09 Null comment is accepted
 **Action:** Submit feedback with `comment: null`.
 **Expected:** `201 Created`
 
-### FB-10 Feedback without reveal_reverse defaults to sealed
-**Action:** Submit feedback with `reveal_reverse: false` (no `reverse_feedback_id`).
-**Expected:**
-- `201 Created`
-- `visible` is `false`
-- Database row has `visible = 0`
+### FB-10 force_visible bypasses sealing without suppressing a real reveal
+**Setup:** Register alice, bob, and carol. Create a task. Submit feedback from carol to bob (no reveal — establishes a row that is NOT alice/bob's reverse pair).
+**Action A:** Submit feedback from alice to bob with `force_visible: true` (no reverse pair exists for alice/bob yet).
+**Expected A:**
+- `201 Created`, `visible` is `true`
+- Database row has `visible = 1`
+- Carol's unrelated feedback is unaffected (`visible = 0`)
+- No `feedback.revealed` event is emitted (no reverse pair existed to reveal)
+
+**Action B:** Submit feedback from bob to alice (the real reverse of alice's `force_visible` feedback), with `force_visible` omitted.
+**Expected B:**
+- `201 Created`, `visible` is `true` — the reverse-pair lookup runs regardless of `force_visible`, so a sealed counterpart is still found and revealed
+- A `feedback.revealed` event is now emitted
 
 ---
 
@@ -789,27 +926,27 @@ Required status/error mappings:
 ### CLM-02 Duplicate claim_id is rejected
 **Setup:** File a claim.
 **Action:** File another claim with the same `claim_id`.
-**Expected:** `409`, `error = CLAIM_EXISTS`
+**Expected:** `409`, `error = claim_exists`
 
 ### CLM-03 Foreign key violation: task_id does not exist
 **Action:** File claim with `task_id` that has no matching task.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### CLM-04 Foreign key violation: claimant_id does not exist
 **Action:** File claim with `claimant_id` that has no matching agent.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### CLM-05 Foreign key violation: respondent_id does not exist
 **Action:** File claim with `respondent_id` that has no matching agent.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### CLM-06 Missing required field: `reason`
 **Action:** Omit `reason`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### CLM-07 Missing event object
 **Action:** Omit `event`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### CLM-08 Claim and event are written atomically
 **Setup:** File a valid claim.
@@ -844,23 +981,23 @@ Required status/error mappings:
 ### REB-04 Duplicate rebuttal_id is rejected
 **Setup:** Submit a rebuttal.
 **Action:** Submit another rebuttal with the same `rebuttal_id`.
-**Expected:** `409`, `error = REBUTTAL_EXISTS`
+**Expected:** `409`, `error = rebuttal_exists`
 
 ### REB-05 Foreign key violation: claim_id does not exist
 **Action:** Submit rebuttal with `claim_id` that has no matching claim.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### REB-06 Foreign key violation: agent_id does not exist
 **Action:** Submit rebuttal with `agent_id` that has no matching agent.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### REB-07 Missing required field: `content`
 **Action:** Omit `content`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### REB-08 Missing event object
 **Action:** Omit `event`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### REB-09 Rebuttal and claim update are atomic
 **Setup:** File a claim. Submit rebuttal with `claim_status_update: "rebuttal"`.
@@ -895,27 +1032,27 @@ Required status/error mappings:
 ### RUL-04 Duplicate ruling_id is rejected
 **Setup:** Record a ruling.
 **Action:** Record another ruling with the same `ruling_id`.
-**Expected:** `409`, `error = RULING_EXISTS`
+**Expected:** `409`, `error = ruling_exists`
 
 ### RUL-05 Foreign key violation: claim_id does not exist
 **Action:** Record ruling with `claim_id` that has no matching claim.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### RUL-06 Foreign key violation: task_id does not exist
 **Action:** Record ruling with `task_id` that has no matching task.
-**Expected:** `409`, `error = FOREIGN_KEY_VIOLATION`
+**Expected:** `409`, `error = foreign_key_violation`
 
 ### RUL-07 Missing required field: `summary`
 **Action:** Omit `summary`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### RUL-08 Missing required field: `judge_votes`
 **Action:** Omit `judge_votes`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### RUL-09 Missing event object
 **Action:** Omit `event`.
-**Expected:** `400`, `error = MISSING_FIELD`
+**Expected:** `400`, `error = missing_field`
 
 ### RUL-10 Ruling and claim update are atomic
 **Setup:** File a claim. Record ruling with `claim_status_update: "ruled"`.
@@ -950,6 +1087,11 @@ Required status/error mappings:
 **Setup:** Perform at least one write.
 **Action:** `GET /health`
 **Expected:** `database_size_bytes` is greater than 0
+
+### HLTH-05 database_size_bytes includes the -wal and -shm sidecar files, not just the main db file
+**Setup:** Perform enough writes that the `-wal` file exists and is non-empty (WAL mode does not checkpoint after every write).
+**Action:** `GET /health`. Independently stat `economy.db`, `economy.db-wal`, and `economy.db-shm` (when present) on disk and sum their sizes.
+**Expected:** `database_size_bytes` equals the sum of all files that currently exist — a regression to reporting only the main file's size (undercounting recently committed WAL data) must fail this test.
 
 ---
 
@@ -1024,7 +1166,7 @@ Required status/error mappings:
 **Action:** Send two concurrent escrow lock requests for different tasks, each with `amount: 60`.
 **Expected:**
 - Exactly one succeeds with `201 Created`
-- Exactly one fails with `402 INSUFFICIENT_FUNDS`
+- Exactly one fails with `402 insufficient_funds`
 - alice's balance is `40` (100 - 60)
 
 ### CONC-02 Concurrent duplicate agent registrations are safe
@@ -1032,7 +1174,7 @@ Required status/error mappings:
 **Action:** Send both simultaneously.
 **Expected:**
 - Exactly one `201 Created`
-- Exactly one `409 PUBLIC_KEY_EXISTS`
+- Exactly one `409 public_key_exists`
 - No duplicate rows for the public key
 
 ### CONC-03 Concurrent credits with same reference are idempotent
@@ -1047,37 +1189,33 @@ Required status/error mappings:
 ## Category 19: HTTP Method and Content Type Misuse
 
 ### HTTP-01 Wrong method on defined routes is blocked
-**Action:** Send unsupported HTTP methods:
-- `GET /identity/agents` (POST only)
+**Action:** Send unsupported HTTP methods. `GET /identity/agents`, `GET /board/tasks`, `GET /reputation/feedback`, and `GET /court/claims` are now real list-read endpoints (see Category 22) and are deliberately **excluded** from this test — sending `GET` to those exact paths returns `200`, not `405`. The remaining paths have no `GET` route at that exact path (only a `POST` route, or a `GET` route under a different, more specific path) and must still reject `GET`:
 - `PUT /identity/agents`
 - `DELETE /identity/agents`
-- `GET /bank/accounts` (POST only)
+- `GET /bank/accounts` (POST only — note: `GET /bank/accounts/count` and `GET /bank/accounts/{id}` are separate, valid routes; the bare `/bank/accounts` path has no `GET`)
 - `GET /bank/credit` (POST only)
-- `GET /bank/escrow/lock` (POST only)
-- `GET /bank/escrow/release` (POST only)
-- `GET /bank/escrow/split` (POST only)
-- `GET /board/tasks` (POST only — note: this is the write endpoint, not a list endpoint)
-- `GET /board/bids` (POST only)
-- `GET /board/tasks/{task_id}/status` (POST only)
-- `GET /board/assets` (POST only)
-- `GET /reputation/feedback` (POST only)
-- `GET /court/claims` (POST only)
-- `GET /court/rebuttals` (POST only)
-- `GET /court/rulings` (POST only)
+- `GET /bank/escrow/lock` (the literal segment `lock` is rejected as an `escrow_id` — see ELOCK-16/Category 22)
+- `GET /bank/escrow/release` (same reasoning)
+- `GET /bank/escrow/split` (same reasoning)
+- `GET /board/bids` (POST only — bids are only readable via `/board/tasks/{task_id}/bids` or `/board/bids/{bid_id}`)
+- `GET /board/tasks/{task_id}/status` (POST only — distinct from `GET /board/tasks/{task_id}`, which is valid)
+- `GET /board/assets` (POST only — assets are only readable via `/board/tasks/{task_id}/assets` or `/board/assets/{id}`)
+- `GET /court/rebuttals` (POST only — rebuttals are only readable via `/court/claims/{claim_id}/rebuttal`)
+- `GET /court/rulings` (POST only — rulings are only readable via `/court/rulings/{claim_id}`)
 - `POST /health` (GET only)
-**Expected:** `405`, `error = METHOD_NOT_ALLOWED` for each
+**Expected:** `405`, `error = method_not_allowed` for each
 
 ### HTTP-02 Wrong content type on POST endpoints
 **Action:** Send `Content-Type: text/plain` with JSON-looking body to `POST /identity/agents`.
-**Expected:** `415`, `error = UNSUPPORTED_MEDIA_TYPE`
+**Expected:** `415`, `error = unsupported_media_type`
 
 ### HTTP-03 Oversized request body
 **Action:** Send a body exceeding configured `request.max_body_size` to `POST /identity/agents`.
-**Expected:** `413`, `error = PAYLOAD_TOO_LARGE`
+**Expected:** `413`, `error = payload_too_large`
 
 ### HTTP-04 Malformed JSON body on various endpoints
 **Action:** Send truncated/invalid JSON to `POST /bank/credit`, `POST /board/tasks`, `POST /court/claims`.
-**Expected:** `400`, `error = INVALID_JSON` for each
+**Expected:** `400`, `error = invalid_json` for each
 
 ---
 
@@ -1091,7 +1229,7 @@ Required status/error mappings:
 **Expected:** All failures comply. `details` is an object (may be empty `{}`).
 
 ### SEC-02 No internal error leakage
-**Action:** Trigger representative failures (`INVALID_JSON`, `MISSING_FIELD`, `ACCOUNT_NOT_FOUND`, `ESCROW_NOT_FOUND`, `INSUFFICIENT_FUNDS`, `FOREIGN_KEY_VIOLATION`, `AMOUNT_MISMATCH`).
+**Action:** Trigger representative failures (`invalid_json`, `missing_field`, `account_not_found`, `escrow_not_found`, `insufficient_funds`, `foreign_key_violation`, `amount_mismatch`).
 **Expected:** `message` never includes stack traces, SQL fragments, file paths, or driver internals.
 
 ### SEC-03 IDs in responses match expected formats
@@ -1107,6 +1245,435 @@ Required status/error mappings:
 ### SEC-05 No endpoint returns 500 for any documented error scenario
 **Action:** Run all tests in this document.
 **Expected:** No response has status code `500`.
+
+---
+
+## Category 21: Compare-and-Set Constraints (`constraints`)
+
+### CAS-01 Task status update succeeds when constraints match
+**Setup:** Create a task in `open` status.
+**Action:** `POST /board/tasks/{task_id}/status` with `{updates: {status: "accepted"}, constraints: {status: "open"}, event: ...}`.
+**Expected:** `200 OK`, `status` is `"accepted"`.
+
+### CAS-02 Task status update fails with constraint_violation when constraints don't match
+**Setup:** Create a task. Accept it (`status` becomes `"accepted"`).
+**Action:** `POST /board/tasks/{task_id}/status` with `{updates: {status: "submitted"}, constraints: {status: "open"}, event: ...}`.
+**Expected:**
+- `409 Conflict`
+- `error = constraint_violation`
+- `details` contains `table: "board_tasks"`, `constraint: "status"`, `expected: "open"`, `actual: "accepted"`
+
+### CAS-03 Empty constraints object behaves as no constraints
+**Setup:** Create a task.
+**Action:** `POST /board/tasks/{task_id}/status` with `{updates: {status: "accepted"}, constraints: {}, event: ...}`.
+**Expected:** `200 OK` (an empty `constraints` object is not a guard).
+
+### CAS-04 constraints on a task_id that does not exist at all returns the generic not_found code
+**Action:** `POST /board/tasks/{task_id}/status` with `constraints: {status: "open"}` on a `task_id` that was never created.
+**Expected:** `404`, `error = not_found` (not `task_not_found` — see the CAS nuance in the API spec: the row-missing case on a constrained update to this endpoint surfaces the generic code, since there is no pre-write existence check).
+
+### CAS-05 Same task_id without constraints returns the endpoint-specific not-found code
+**Action:** `POST /board/tasks/{task_id}/status` with the same nonexistent `task_id` and **no** `constraints`.
+**Expected:** `404`, `error = task_not_found` (contrast with CAS-04 — the code differs solely based on whether `constraints` was supplied).
+
+### CAS-06 Escrow release honors constraints
+**Setup:** Lock escrow from alice.
+**Action:** `POST /bank/escrow/release` with `constraints: {status: "locked"}` and a valid recipient.
+**Expected:** `200 OK`, `status` is `"released"`.
+
+### CAS-07 Escrow split with a stale constraint is rejected
+**Setup:** Lock escrow from alice, then release it to bob (status becomes `"released"`).
+**Action:** `POST /bank/escrow/split` with `constraints: {status: "locked"}` on the same `escrow_id`.
+**Expected:** `409`, `error = escrow_already_resolved` — **adjudicated WP-13** (T-072 sweep):
+`BankWriter.escrow_split`/`escrow_release` call `_load_escrow()` first, which unconditionally
+checks the escrow's current status before any `constraints` handling is ever reached. Within the
+same `BEGIN IMMEDIATE` transaction, if `_load_escrow` sees `status != "locked"` it always raises
+`escrow_already_resolved` first — a `constraints: {status: "locked"}` check on the same row can
+never independently fire `constraint_violation` for this exact scenario, because by the time the
+constrained `UPDATE` would run, the escrow is already known-resolved. This is intentional,
+adjudicated behavior, not a bug: `escrow_already_resolved` is the more informative signal here
+(the resource's terminal state, not merely a precondition mismatch), and the escrow coordinator's
+retry semantics are built around that 409 family. Do not change `bank_writer.py`'s check order to
+force `constraint_violation` to win instead.
+
+### CAS-08 Bid submission with a cross-table constraint rejects a late bid
+**Setup:** Create a task, then move it to `accepted` (out of `open`).
+**Action:** `POST /board/bids` with `constraints: {status: "open"}` for that task.
+**Expected:** `409`, `error = constraint_violation` — no bid row is inserted and `bid_count` is not incremented.
+
+### CAS-09 Asset recording with a cross-table constraint
+**Setup:** Create a task, then cancel it.
+**Action:** `POST /board/assets` with `constraints: {status: "open"}` for that task.
+**Expected:** `409`, `error = constraint_violation` — no asset row is inserted.
+
+### CAS-10 Rebuttal claim-status update honors constraints
+**Setup:** File a claim (`status: "filed"`).
+**Action:** `POST /court/rebuttals` with `claim_status_update: "rebuttal"` and `constraints: {status: "filed"}`.
+**Expected:** `201 Created`; `court_claims.status` becomes `"rebuttal"`.
+
+### CAS-11 constraints value present but not an object is rejected
+**Action:** `POST /board/tasks/{task_id}/status` with `constraints: "open"` (a string, not an object).
+**Expected:** `400`, `error = invalid_constraints`.
+
+---
+
+## Category 22: Read API (`GET` routes)
+
+Every route below is read-only, requires no request body, and never mutates state. Unless noted, a nonexistent `task_id`/`account_id`/etc. filter on a *list* route returns an empty list with `200`, not `404` — only single-resource `GET .../{id}` routes 404.
+
+### READ-01 GET /identity/agents/count reflects registrations
+**Setup:** Register 3 agents.
+**Action:** `GET /identity/agents/count`.
+**Expected:** `200`, `{"count": 3}`.
+
+### READ-02 GET /identity/agents lists all agents, ordered by registered_at
+**Setup:** Register alice then bob.
+**Action:** `GET /identity/agents`.
+**Expected:** `200`, `{"agents": [alice, bob]}` in that order.
+
+### READ-03 GET /identity/agents?public_key= filters to one agent
+**Setup:** Register alice.
+**Action:** `GET /identity/agents?public_key=<alice's public_key>`.
+**Expected:** `200`, `{"agents": [alice]}` (exactly one).
+
+### READ-04 GET /identity/agents/{agent_id} returns the agent
+**Setup:** Register alice.
+**Action:** `GET /identity/agents/{alice_id}`.
+**Expected:** `200`, full agent record.
+
+### READ-05 GET /identity/agents/{agent_id} not found
+**Action:** `GET /identity/agents/a-does-not-exist`.
+**Expected:** `404`, `error = agent_not_found`.
+
+### READ-06 GET /bank/accounts/{account_id} returns the account
+**Setup:** Create an account with `balance: 40`.
+**Action:** `GET /bank/accounts/{account_id}`.
+**Expected:** `200`, `{"account_id": ..., "balance": 40, "created_at": ...}`.
+
+### READ-07 GET /bank/accounts/{account_id} not found
+**Action:** `GET /bank/accounts/a-does-not-exist`.
+**Expected:** `404`, `error = account_not_found`.
+
+### READ-08 GET /bank/accounts/{account_id}/transactions lists history in order
+**Setup:** Create an account, credit it twice.
+**Action:** `GET /bank/accounts/{account_id}/transactions`.
+**Expected:** `200`, `{"transactions": [tx1, tx2]}` ordered by `(timestamp, tx_id)`; each entry includes `event_id`.
+
+### READ-09 GET /bank/escrow/total-locked sums only locked escrow
+**Setup:** Lock escrow of `100` and `50` from two different tasks; release one of them.
+**Action:** `GET /bank/escrow/total-locked`.
+**Expected:** `200`, `{"total": 50}` (only the still-locked one counts).
+
+### READ-10 GET /bank/escrow/{escrow_id} returns the record
+**Setup:** Lock escrow.
+**Action:** `GET /bank/escrow/{escrow_id}`.
+**Expected:** `200`, full escrow record including `status: "locked"`.
+
+### READ-11 GET /bank/escrow/{escrow_id} not found
+**Action:** `GET /bank/escrow/esc-does-not-exist`.
+**Expected:** `404`, `error = escrow_not_found`.
+
+### READ-12 GET /bank/escrow/lock|release|split as a literal ID is rejected, not misrouted
+**Action:** `GET /bank/escrow/lock`.
+**Expected:** `405`, `error = method_not_allowed` (not a false `404 escrow_not_found` for an escrow literally named `"lock"`).
+
+### READ-13 GET /board/tasks/count and count-by-status
+**Setup:** Create 2 tasks in `open`, 1 in `accepted`.
+**Action:** `GET /board/tasks/count` then `GET /board/tasks/count-by-status`.
+**Expected:** `{"count": 3}`; `{"open": 2, "accepted": 1}`.
+
+### READ-14 GET /board/tasks lists with status/poster_id/worker_id filters
+**Setup:** Create tasks with varying posters and statuses.
+**Action:** `GET /board/tasks?status=open`, then `GET /board/tasks?poster_id=<id>`.
+**Expected:** Each returns `200` with only the matching tasks, newest `created_at` first.
+
+### READ-15 GET /board/tasks supports limit and offset
+**Setup:** Create 5 tasks.
+**Action:** `GET /board/tasks?limit=2&offset=2`.
+**Expected:** `200`, exactly 2 tasks returned, skipping the first 2 in `created_at DESC` order.
+
+### READ-16 GET /board/tasks/{task_id} includes bid_count and escrow_pending
+**Setup:** Create a task, submit 2 bids on it.
+**Action:** `GET /board/tasks/{task_id}`.
+**Expected:** `200`; `bid_count` is `2`; `escrow_pending` is present (defaults to `0`).
+
+### READ-17 GET /board/tasks/{task_id} not found
+**Action:** `GET /board/tasks/t-does-not-exist`.
+**Expected:** `404`, `error = task_not_found`.
+
+### READ-18 GET /board/tasks/{task_id}/bids returns bids for the task
+**Setup:** Submit 2 bids on a task.
+**Action:** `GET /board/tasks/{task_id}/bids`.
+**Expected:** `200`, `{"bids": [bid1, bid2]}` ordered by `submitted_at`; does not 404 for a nonexistent `task_id` (returns an empty list instead).
+
+### READ-19 GET /board/tasks/{task_id}/assets/count and /assets
+**Setup:** Record 2 assets on a task.
+**Action:** `GET /board/tasks/{task_id}/assets/count` then `GET /board/tasks/{task_id}/assets`.
+**Expected:** `{"count": 2}`; `{"assets": [asset1, asset2]}`.
+
+### READ-20 GET /board/bids/{bid_id} requires task_id and 404s otherwise
+**Setup:** Submit a bid.
+**Action:** `GET /board/bids/{bid_id}?task_id={task_id}` then `GET /board/bids/{bid_id}?task_id=t-wrong`.
+**Expected:** First: `200` with the bid. Second: `404`, `error = bid_not_found` (bids are looked up by the `(bid_id, task_id)` pair).
+
+### READ-21 GET /board/assets/{asset_id} requires task_id
+**Setup:** Record an asset.
+**Action:** `GET /board/assets/{asset_id}?task_id={task_id}`.
+**Expected:** `200`, full asset record.
+
+### READ-22 GET /reputation/feedback/count and /{feedback_id}
+**Setup:** Submit one feedback row.
+**Action:** `GET /reputation/feedback/count` then `GET /reputation/feedback/{feedback_id}`.
+**Expected:** `{"count": 1}`; `200` with the feedback record including `visible` (boolean).
+
+### READ-23 GET /reputation/feedback/{feedback_id} not found
+**Action:** `GET /reputation/feedback/fb-does-not-exist`.
+**Expected:** `404`, `error = feedback_not_found`.
+
+### READ-24 GET /reputation/feedback filters by task_id or agent_id
+**Setup:** Submit feedback from alice to bob on task t-1.
+**Action:** `GET /reputation/feedback?task_id=t-1` and separately `GET /reputation/feedback?agent_id=<bob_id>`.
+**Expected:** Both return `200` with a list containing that feedback (`agent_id` filters on `to_agent_id`, i.e. the recipient).
+
+### READ-25 GET /reputation/feedback with neither filter returns an empty list
+**Action:** `GET /reputation/feedback` (no query params).
+**Expected:** `200`, `{"feedback": []}`.
+
+### READ-26 GET /court/claims/count and count-active
+**Setup:** File 2 claims; rule on one of them (its status becomes `"ruled"`).
+**Action:** `GET /court/claims/count` then `GET /court/claims/count-active`.
+**Expected:** `{"count": 2}`; `{"count": 1}` (active = `status != 'ruled'`).
+
+### READ-27 GET /court/claims filters by status and claimant_id
+**Setup:** File claims with different claimants and statuses.
+**Action:** `GET /court/claims?status=filed` and `GET /court/claims?claimant_id=<id>`.
+**Expected:** Both `200`, filtered correctly, ordered by `filed_at`.
+
+### READ-28 GET /court/claims/{claim_id} not found
+**Action:** `GET /court/claims/clm-does-not-exist`.
+**Expected:** `404`, `error = claim_not_found`.
+
+### READ-29 GET /court/claims/{claim_id}/rebuttal
+**Setup:** File a claim, submit a rebuttal.
+**Action:** `GET /court/claims/{claim_id}/rebuttal`.
+**Expected:** `200`, the rebuttal record.
+
+### READ-30 GET /court/claims/{claim_id}/rebuttal not found
+**Setup:** File a claim, do not submit a rebuttal.
+**Action:** `GET /court/claims/{claim_id}/rebuttal`.
+**Expected:** `404`, `error = rebuttal_not_found`.
+
+### READ-31 GET /court/rulings/{claim_id}
+**Setup:** File a claim, record a ruling.
+**Action:** `GET /court/rulings/{claim_id}`.
+**Expected:** `200`, the ruling record.
+
+### READ-32 GET /court/rulings/{claim_id} not found
+**Action:** `GET /court/rulings/clm-does-not-exist`.
+**Expected:** `404`, `error = ruling_not_found`.
+
+### READ-33 Court may read exactly one Board task through its narrow grant
+**Setup:** Create a task via the normal Board write path.
+**Action:** Issue `GET /board/tasks/{task_id}` with `gateway-court` and action `gateway.board.task.read`.
+**Expected:** `200`. The same credential is forbidden from Board lists, counts, bids, assets, and writes.
+
+---
+
+## Category 23: Claim Status Update (`POST /court/claims/{claim_id}/status`)
+
+### CSTAT-01 Valid status update
+**Setup:** File a claim (`status: "filed"`).
+**Action:** `POST /court/claims/{claim_id}/status` with `{status: "rebuttal", event: valid_event("court", "claim.status_changed")}`.
+**Expected:** `200 OK`, `status` is `"rebuttal"`; `event_id` present.
+
+### CSTAT-02 Missing event is rejected — this endpoint always requires one
+**Setup:** File a claim.
+**Action:** `POST /court/claims/{claim_id}/status` with `{status: "ruled"}` and no `event` field.
+**Expected:** `400`, `error = missing_field`; claim status is unchanged; no event row is written.
+
+### CSTAT-03 Missing status is rejected
+**Action:** `POST /court/claims/{claim_id}/status` with `{event: valid_event(...)}` and no `status`.
+**Expected:** `400`, `error = missing_field`.
+
+### CSTAT-04 Claim not found (no constraints)
+**Action:** `POST /court/claims/{claim_id}/status` on a nonexistent `claim_id`, no `constraints`.
+**Expected:** `404`, `error = claim_not_found`.
+
+### CSTAT-05 Claim not found (with constraints) uses the generic code
+**Action:** Same as CSTAT-04 but with `constraints: {status: "filed"}` supplied.
+**Expected:** `404`, `error = not_found` (see CAS-04/CAS-05 — same nuance applies to this endpoint).
+
+### CSTAT-06 Status update with constraints
+**Setup:** File a claim (`status: "filed"`).
+**Action:** `POST /court/claims/{claim_id}/status` with `{status: "rebuttal", constraints: {status: "filed"}, event: ...}`.
+**Expected:** `200 OK`.
+
+### CSTAT-07 Status update rejected when constraints don't match
+**Setup:** File a claim, then move it to `"rebuttal"`.
+**Action:** `POST /court/claims/{claim_id}/status` with `{status: "ruled", constraints: {status: "filed"}, event: ...}`.
+**Expected:** `409`, `error = constraint_violation`.
+
+### CSTAT-08 Update and event are atomic
+**Setup:** File a claim.
+**Action:** Update claim status. Query `court_claims` and `events` tables.
+**Expected:** Both the status change and a matching event row exist; `event_id` in the response matches the row.
+
+---
+
+## Category 24: Ruling Deletion (`DELETE /court/rulings/{claim_id}`)
+
+### RDEL-01 Deleting an existing ruling requires an event body and returns deleted: true
+**Setup:** File a claim, record a ruling for it.
+**Action:** `DELETE /court/rulings/{claim_id}` with `{event: valid_event("court", "ruling.deleted")}`.
+**Expected:**
+- `200 OK`
+- Body is `{"deleted": true, "claim_id": <claim_id>, "event_id": <positive int>}`
+- `court_rulings` no longer has a row for this `claim_id`
+- `events` gained exactly one new row matching the supplied event
+
+### RDEL-02 Deleting a ruling that does not exist is not an error
+**Action:** `DELETE /court/rulings/clm-does-not-exist` with a valid `{event: ...}` body.
+**Expected:**
+- `200 OK` — **never** `404`
+- Body is `{"deleted": false, "claim_id": "clm-does-not-exist", "event_id": null}`
+- No new row is written to `events` (a delete that deleted nothing does not get an event — that would violate the every-write-has-an-event invariant in the other direction)
+
+### RDEL-03 Missing event body is rejected
+**Action:** `DELETE /court/rulings/{claim_id}` with an empty body (`{}`) or no body at all, for a claim that has a real ruling.
+**Expected:** `400`, `error = missing_field`; the ruling row is **not** deleted (verify via `GET /court/rulings/{claim_id}` still returning `200`).
+
+### RDEL-04 Foreign-key-violating event rolls back the delete too
+**Setup:** File a claim, record a ruling for it.
+**Action:** `DELETE /court/rulings/{claim_id}` with `{event: {..., agent_id: "a-does-not-exist", ...}}`.
+**Expected:** `409`, `error = foreign_key_violation`; the ruling row still exists afterward (delete and event insert are one transaction — both roll back together).
+
+---
+
+## Category 25: Task Already Disputed (`POST /court/claims` second-claim case)
+
+### TDISP-01 A second claim against an already-disputed task is task_already_disputed, not claim_exists
+**Setup:** File a claim (`claim_id: A`) against `task_id: t-1`.
+**Action:** File a second claim with a **different** `claim_id` (`claim_id: B`) against the same `task_id: t-1`.
+**Expected:**
+- `409 Conflict`
+- `error = task_already_disputed` (not `claim_exists` — the `claim_id` values differ; the collision is on `court_claims.task_id`, a separate UNIQUE constraint)
+
+### TDISP-02 A real claim_id collision is still claim_exists
+**Setup:** File a claim with `claim_id: A` against `task_id: t-1`.
+**Action:** File another claim with the **same** `claim_id: A` (any `task_id`).
+**Expected:** `409`, `error = claim_exists` (regression check — TDISP-01's fix must not have broken the original CLM-02 case).
+
+---
+
+## Category 26: bid_count Materialization
+
+### BCNT-01 bid_count starts at zero
+**Setup:** Create a task.
+**Action:** `GET /board/tasks/{task_id}`.
+**Expected:** `bid_count` is `0`.
+
+### BCNT-02 bid_count increments with each accepted bid, in the same transaction as the insert
+**Setup:** Create a task. Register two bidders.
+**Action:** Submit one bid, then `GET /board/tasks/{task_id}`; submit a second bid, then `GET` again.
+**Expected:** `bid_count` is `1` after the first bid, `2` after the second.
+
+### BCNT-03 bid_count matches the real number of bids returned by the bids list
+**Setup:** Submit 3 bids on a task from 3 different bidders.
+**Action:** `GET /board/tasks/{task_id}` and `GET /board/tasks/{task_id}/bids`.
+**Expected:** `task.bid_count` equals `len(bids.bids)`, both `3`.
+
+### BCNT-04 A rejected duplicate bid does not inflate bid_count
+**Setup:** Submit a bid from bob on a task (`bid_count` becomes `1`).
+**Action:** Submit a second bid from bob on the same task (same bidder — rejected as `bid_exists`).
+**Expected:** `409`, `error = bid_exists`; `GET /board/tasks/{task_id}` still shows `bid_count: 1`.
+
+---
+
+## Category 27: Service Capability Admission
+
+### AUTH-01 Exact GET /health is the sole public request
+**Action:** Send unsigned `GET /health`, then unsigned `HEAD /health` and `GET /health?probe=1`.
+**Expected:** Exact GET returns `200`; the other requests require authorization and return `401 invalid_authorization`.
+
+### AUTH-02 Unsigned reads fail before every domain handler
+**Action:** Send one valid unsigned read request to Identity, Bank, Board, Reputation, and Court.
+**Expected:** Every response is `401 invalid_authorization`.
+
+### AUTH-03 Unsigned writes cause no database or event effect
+**Action:** Send one otherwise-valid unsigned write to every domain and compare domain/event row counts before and after.
+**Expected:** Every response is `401 invalid_authorization`; all counts are unchanged.
+
+### AUTH-04 Bearer header shape is strict
+**Action:** Send missing, Basic, empty Bearer, whitespace-bearing, non-ASCII, and duplicate Authorization headers.
+**Expected:** `401 invalid_authorization`; exactly one `Bearer <token>` header is required.
+
+### AUTH-05 Strict compact-JWS structure is required
+**Action:** Send a Bearer value that is not a strict three-segment token, has non-canonical base64url/JSON, duplicate JSON keys, wrong header fields, wrong `alg`/`typ`, or a payload other than exactly `action`, `body_sha256`, and `query_sha256`.
+**Expected:** Structural/profile failures return `400 invalid_jws`; authenticated payload-shape failures return `400 invalid_payload`.
+
+### AUTH-06 Unknown KID and invalid signature are forbidden
+**Action:** Sign once with an untrusted KID and once with a different private key under a trusted KID.
+**Expected:** Both return `403 forbidden`.
+
+### AUTH-07 Receiver-owned time policy is enforced
+**Action:** Send expired, future-issued, and over-maximum-lifetime tokens at exact policy boundaries.
+**Expected:** Expired is `401 token_expired`; future is `401 token_not_yet_valid`; excessive lifetime is `400 invalid_jws`.
+
+### AUTH-08 Audience, method, and exact path are bound
+**Action:** Replay a valid token against a different audience, method, concrete path, or percent-encoded path.
+**Expected:** `400 invalid_payload`; no handler effect.
+
+### AUTH-09 Exact body bytes are bound
+**Action:** Sign a valid JSON body, then add whitespace or otherwise change the received bytes without changing the token.
+**Expected:** `400 invalid_payload`; no database/event change.
+
+### AUTH-10 Exact encoded query bytes are bound
+**Action:** Sign one encoded query and send a reordered, re-encoded, added, removed, or changed query.
+**Expected:** `400 invalid_payload`.
+
+### AUTH-11 Final HTTPX request must be materialized before signing
+**Action:** Sign a final buffered request, a request with an unread streaming body, and a request with an existing Authorization header.
+**Expected:** Buffered request verifies; the official signer rejects unread streaming content and pre-authorized requests locally.
+
+### AUTH-12 Domain capabilities are least privilege
+**Action:** For each service KID, call one valid write in every other domain using that
+route's action (all 20 caller/domain pairs). Also exercise wrong-domain, unknown-key,
+bad-signature, expired, future, changed-body and changed-query writes in all five domains.
+**Expected:** Every cross-domain call is `403 forbidden`; other faults use their exact error
+contract. Compare the entire stored database before/after each rejection, including events and
+balances. A correctly signed identical-body control succeeds for each target domain.
+
+### AUTH-13 Court singular Board task read succeeds
+**Action:** Call `GET /board/tasks/{task_id}` as `gateway-court` with `gateway.board.task.read`.
+**Expected:** `200` and the requested task.
+
+### AUTH-14 Court cannot use the singular grant on static aggregates
+**Action:** Use `gateway.board.task.read` on `/board/tasks/count` and `/board/tasks/count-by-status`.
+**Expected:** `400 invalid_payload`; neither static route is matched as `{task_id}`.
+
+### AUTH-15 Court lacks all other Board reads
+**Action:** Call Board count, count-by-status, list, task bids, and task assets with `gateway-court` using `gateway.board.read`.
+**Expected:** Every request returns `403 forbidden`.
+
+### AUTH-16 Explicit route-policy inventory is exact
+**Action:** Compare every registered non-health FastAPI `(method, route template)` with the capability-policy table.
+**Expected:** Sets are identical. Application creation fails for any missing or stale policy entry; public inventory is exactly `GET /health`.
+
+### AUTH-17 Ordered route matching follows FastAPI
+**Action:** Resolve static Board count templates and a real singular task path through the admission matcher.
+**Expected:** Static templates win before `/board/tasks/{task_id}`; the singular path selects the parameter template.
+
+### AUTH-18 Newly registered unclassified route fails closed
+**Action:** Register a route after the frozen inventory, sign it with an otherwise valid trusted capability, and call it.
+**Expected:** `403 forbidden`; the handler does not execute.
+
+### AUTH-19 Trusted key material is domain-separated
+**Action:** Configure two trusted KIDs with byte-identical public keys or a public-key filename stem that differs from the KID.
+**Expected:** Application creation fails before serving requests.
+
+### AUTH-20 Body limits and replay cover DELETE
+**Action:** Send a correctly signed body-bearing `DELETE /court/rulings/{claim_id}` and oversized or wrong-content-type variants.
+**Expected:** Valid body reaches the unchanged handler with identical bytes; oversized is `413 payload_too_large`; wrong content type is `415 unsupported_media_type`.
 
 ---
 
@@ -1140,28 +1707,132 @@ Service is release-ready only if:
 | Dispute Claims | CLM-01 to CLM-08 | 8 |
 | Rebuttals | REB-01 to REB-09 | 9 |
 | Rulings | RUL-01 to RUL-10 | 10 |
-| Health | HLTH-01 to HLTH-04 | 4 |
+| Health | HLTH-01 to HLTH-05 | 5 |
 | Event Integrity | EVT-01 to EVT-05 | 5 |
 | Atomicity | ATOM-01 to ATOM-05 | 5 |
 | Concurrency | CONC-01 to CONC-03 | 3 |
 | HTTP Misuse | HTTP-01 to HTTP-04 | 4 |
 | Cross-Cutting Security | SEC-01 to SEC-05 | 5 |
-| **Total** |  | **178** |
+| Compare-and-Set Constraints | CAS-01 to CAS-11 | 11 |
+| Read API | READ-01 to READ-33 | 33 |
+| Claim Status Update | CSTAT-01 to CSTAT-08 | 8 |
+| Ruling Deletion | RDEL-01 to RDEL-04 | 4 |
+| Task Already Disputed | TDISP-01 to TDISP-02 | 2 |
+| bid_count Materialization | BCNT-01 to BCNT-04 | 4 |
+| Service Capability Admission | AUTH-01 to AUTH-20 | 20 |
+| **Total** |  | **261** |
 
 | Endpoint | Covered By |
 |----------|------------|
-| `GET /health` | HLTH-01 to HLTH-04 |
+| `GET /health` | HLTH-01 to HLTH-05, AUTH-01 |
 | `POST /identity/agents` | AGT-01 to AGT-13, CONC-02, EVT-02, EVT-04, SEC-04 |
 | `POST /bank/accounts` | ACCT-01 to ACCT-09, ATOM-01, EVT-05 |
 | `POST /bank/credit` | CR-01 to CR-11, EVT-02, SEC-04, CONC-03 |
 | `POST /bank/escrow/lock` | ELOCK-01 to ELOCK-15, ATOM-02, CONC-01 |
-| `POST /bank/escrow/release` | EREL-01 to EREL-09, ATOM-03 |
-| `POST /bank/escrow/split` | ESPL-01 to ESPL-16, ATOM-04 |
+| `POST /bank/escrow/release` | EREL-01 to EREL-09, ATOM-03, CAS-06 |
+| `POST /bank/escrow/split` | ESPL-01 to ESPL-16, ATOM-04, CAS-07 |
 | `POST /board/tasks` | TASK-01 to TASK-09, EVT-03 |
-| `POST /board/bids` | BID-01 to BID-07 |
-| `POST /board/tasks/{task_id}/status` | TSTAT-01 to TSTAT-14 |
-| `POST /board/assets` | ASSET-01 to ASSET-07 |
+| `POST /board/bids` | BID-01 to BID-07, CAS-08, BCNT-01 to BCNT-04 |
+| `POST /board/tasks/{task_id}/status` | TSTAT-01 to TSTAT-14, CAS-01 to CAS-05, CAS-11 |
+| `POST /board/assets` | ASSET-01 to ASSET-07, CAS-09 |
 | `POST /reputation/feedback` | FB-01 to FB-10 |
-| `POST /court/claims` | CLM-01 to CLM-08 |
-| `POST /court/rebuttals` | REB-01 to REB-09, ATOM-05 |
+| `POST /court/claims` | CLM-01 to CLM-08, TDISP-01, TDISP-02 |
+| `POST /court/claims/{claim_id}/status` | CSTAT-01 to CSTAT-08 |
+| `POST /court/rebuttals` | REB-01 to REB-09, ATOM-05, CAS-10 |
 | `POST /court/rulings` | RUL-01 to RUL-10 |
+| `DELETE /court/rulings/{claim_id}` | RDEL-01 to RDEL-04 |
+| Read API (`GET` routes, all domains) | READ-01 to READ-33, AUTH-01 to AUTH-18, CAS-04 (via `GET /board/tasks/{task_id}`), BCNT-01 to BCNT-04 (via `GET`) |
+
+## MP-06 schema admission and migration prerequisites
+
+These requirements supersede the earlier implicit additive-startup migration assumptions. They are
+release gates, not claims that the current implementation is complete.
+
+### MP06-SCH-01 Required schema input and maintenance cleanup
+
+A valid Gateway startup fixture provides a readable current schema at an explicit temporary path.
+A missing or unreadable configured schema fails startup. Shared maintenance exclusion must cover
+schema/DB initialization and remain held through resource cleanup; every startup failure releases it.
+Existing lock assertions remain in force when fixture inputs are reconciled.
+
+### MP06-SCH-02 Complete version admission without implicit ALTER
+
+An empty database bootstraps the exact current schema transactionally. Reopening an exact current
+schema preserves its rows. Complete supported v0 requires explicit offline migration; partial,
+unknown and future layouts fail before readiness and persistent journal changes. An isolated old
+Task Board table or two old Bank tables must retain identical bytes, columns and rows after repeated
+rejected startup attempts. They are not a supported full legacy version.
+
+The direct complete legacy layout and the approved historical base plus five additive columns are
+both recognized. Current-v1 column order is canonical; compatibility for the known legacy layouts
+must not permit arbitrary reordered current schemas.
+
+### MP06-SCH-03 Schema identity includes behavior and metadata
+
+Missing, duplicate, malformed or future version metadata cannot qualify as current. Classification
+must distinguish literal case/whitespace, active constraints from commented text, conflict policies,
+collation and foreign-key deferral. A commented-out money check that admits a negative balance must
+never classify as the constrained current schema. Full known table/index/key/constraint shape is
+required, including metadata provenance fields.
+
+### MP06-SCH-04 Bootstrap rollback and error preservation
+
+Faults during bootstrap leave no partial application objects. Comment-prefixed transaction control
+cannot escape the transaction. Rollback and close failures must not replace the primary admission
+or schema error; retain them as secondary diagnostics. Explicit connection settings must be valid
+and their effective journal/foreign-key state must be verified before readiness.
+
+### MP06-SCH-05 Migration requires fresh held admission
+
+The actual migration command rejects absent, invalid, mismatched or changed backups before opening
+the source for writes. It requires the exact existing exclusive maintenance lock and verified source
+DB/WAL identity, then separately validates supported schema and money on a verified clone. Artifact
+verification and detached diagnostic results are not migration authorization. Existing artifact-v1
+verification remains compatible and preserves its original unclassified-schema finding.
+
+Changing the backup completion marker or redirecting the scratch work directory must fail safely.
+The pre-write phase verifies original raw DB/WAL bytes; after authorized SQLite writes, identity and
+logical transaction checks replace raw-WAL equality. A pre-commit fault leaves the logical legacy
+schema/rows intact and the immutable backup unchanged. A commit exception remains an uncertain,
+nonzero result even if a fresh read observes committed v1; it never retries the commit. All invalid historical values and duplicate
+escrows are reported for explicit reconciliation, never silently coerced or deleted.
+
+### MP06-SCH-06 Data health before persistent configuration
+
+An exact current schema with a foreign-key orphan or an ignored CHECK violation fails startup before
+changing journal mode. Verify the exact integrity/FK issue counts for individual and simultaneous
+corruption, and prove the connection closes with bytes, rows, DELETE journal and sidecars unchanged.
+If either health PRAGMA raises a database error, return stable `database_integrity_failed` diagnostics
+with `health_check_unavailable`; raw diagnostic sentinels must not appear in the error.
+
+### MP06-MON-01 Authoritative amounts and initial issuance
+
+Call the writer directly as well as its signed service route. Reject booleans, non-integers and
+invalid signs with 400 `invalid_amount`, and values above `9223372036854775807` with 400
+`amount_out_of_range`. Positive initial balance must equal its positive initial credit; zero balance
+without issuance is valid. Mismatches return 400 `payload_mismatch`. Every negative case preserves
+accounts, transactions, escrows and events and leaves no transaction active.
+
+### MP06-MON-02 Guarded settlement and payer identity
+
+An existing unrelated poster is rejected with 400 `payload_mismatch`, including a zero-value poster
+share. A nonexistent poster remains 404 `account_not_found`. Credit, release and split cannot
+overflow a recipient balance or promote it to REAL. A same-account split whose first leg fits and
+second leg overflows must roll back both legs and its event. An exact split at the bound remains
+valid. Independent connections racing two credits into the final available unit admit exactly one
+credit and one event; the loser receives 409 `amount_out_of_range` without mutation.
+
+### MP06-MON-03 Replay precedes arithmetic
+
+An exact credit replay at the balance limit returns its original transaction/event and balance
+without another addition. An exact escrow lock replay succeeds with no remaining spendable balance,
+and after either release or split. It returns the original escrow/event and actual required
+`status`, with no new debit, escrow, transaction or event. A changed amount conflicts. This does not
+substitute for MP-04's durable release/split replay receipts.
+
+### MP06-MON-04 Aggregate conservation beyond one account's bound
+
+Two independently valid maximum-size locked escrows produce an exact Python-integer total larger
+than SQLite's signed-64-bit aggregate range. Neither SQL integer overflow nor REAL rounding is
+acceptable. Issuance equals balances plus locked escrow using exact totals, including after one
+escrow is released; empty locked escrow totals zero.

@@ -1,0 +1,17 @@
+{
+  "exit_code": 143,
+  "comparison": {
+    "before_count": 931,
+    "after_count": 931,
+    "changed": [],
+    "added": [],
+    "removed": [],
+    "identical": true
+  },
+  "runtime_count": 0,
+  "group_count": 0,
+  "metadata_clean": true,
+  "live_groups": [],
+  "unverified_groups": [],
+  "log_sha256": "7d399e2824f8ef7541ceef9d78c2c79f0093c622292f595b0790d8c9337a45cd"
+}

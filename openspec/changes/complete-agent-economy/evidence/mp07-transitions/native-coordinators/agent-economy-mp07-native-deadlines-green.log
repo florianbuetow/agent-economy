@@ -1,0 +1,65 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/task-board
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 6 items
+
+tests/integration/test_mp07_native_deadlines.py .FFFF.                   [100%]
+
+=================================== FAILURES ===================================
+_ test_open_deadline_uses_authoritative_bid_existence_and_native_refund[False-expire_bidding-10] _
+tests/integration/test_mp07_native_deadlines.py:474: in test_open_deadline_uses_authoritative_bid_existence_and_native_refund
+    assert first.json()["status"] == second.json()["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:23:57", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-090aa800-c804-4699-88be-325f306b59c2"}}
+{"timestamp": "2026-10-17 23:23:57", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/board/task-operations/op-efcaac9f-b881-555a-b261-e0e1950189f3/finalize"}}
+{"timestamp": "2026-10-17 23:23:57", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-090aa800-c804-4699-88be-325f306b59c2", "command": "expire_bidding", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+{"timestamp": "2026-10-17 23:23:57", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/board/task-operations"}}
+{"timestamp": "2026-10-17 23:23:57", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-090aa800-c804-4699-88be-325f306b59c2", "command": "expire_bidding", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+_ test_open_deadline_uses_authoritative_bid_existence_and_native_refund[True-expire_acceptance-30] _
+tests/integration/test_mp07_native_deadlines.py:474: in test_open_deadline_uses_authoritative_bid_existence_and_native_refund
+    assert first.json()["status"] == second.json()["status"] == "expired"
+E   AssertionError: assert 'open' == 'expired'
+E     
+E     - expired
+E     + open
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:23:58", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-3b693faf-274a-446b-8fae-db6330126e58"}}
+{"timestamp": "2026-10-17 23:23:58", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/board/task-operations/op-388e66fe-408e-5e8f-8123-82991af51fc4/finalize"}}
+{"timestamp": "2026-10-17 23:23:58", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-3b693faf-274a-446b-8fae-db6330126e58", "command": "expire_acceptance", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+{"timestamp": "2026-10-17 23:23:58", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/board/task-operations"}}
+{"timestamp": "2026-10-17 23:23:58", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-3b693faf-274a-446b-8fae-db6330126e58", "command": "expire_acceptance", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+_______ test_execution_expiry_refunds_fixed_reward_through_native_claim ________
+tests/integration/test_mp07_native_deadlines.py:514: in test_execution_expiry_refunds_fixed_reward_through_native_claim
+    assert response.json()["status"] == "expired"
+E   AssertionError: assert 'accepted' == 'expired'
+E     
+E     - expired
+E     + accepted
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:23:58", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-2c330c40-3437-4141-9925-f83389c50d33"}}
+{"timestamp": "2026-10-17 23:23:58", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/board/task-operations/op-06468a84-a6c4-5419-9a62-7fca367145f0/finalize"}}
+{"timestamp": "2026-10-17 23:23:58", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-2c330c40-3437-4141-9925-f83389c50d33", "command": "expire_execution", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+______ test_review_cutoff_autoapproves_fixed_reward_through_native_claim _______
+tests/integration/test_mp07_native_deadlines.py:590: in test_review_cutoff_autoapproves_fixed_reward_through_native_claim
+    assert response.json()["status"] == "approved"
+E   AssertionError: assert 'submitted' == 'approved'
+E     
+E     - approved
+E     + submitted
+----------------------------- Captured stdout call -----------------------------
+{"timestamp": "2026-10-17 23:23:59", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "task_not_found", "status_code": 404, "path": "/board/tasks/t-57fab8a2-7793-43ab-917d-f8b1f885c8b3"}}
+{"timestamp": "2026-10-17 23:23:59", "level": "WARNING", "logger": "db-gateway-task-board-integration-test.db_gateway_service.core.exceptions", "message": "Service error", "extra": {"error_code": "effect_evidence_conflict", "status_code": 409, "path": "/board/task-operations/op-867303a4-d355-5ef0-ae93-fdf06a62c789/finalize"}}
+{"timestamp": "2026-10-17 23:23:59", "level": "WARNING", "logger": "task-board.task_board_service.services.deadline_evaluator", "message": "Automatic task transition did not complete; current state will be re-read", "extra": {"task_id": "t-57fab8a2-7793-43ab-917d-f8b1f885c8b3", "command": "auto_approve", "error": "Persisted effect evidence contradicts the claimed task operation"}}
+=========================== short test summary info ============================
+FAILED tests/integration/test_mp07_native_deadlines.py::test_open_deadline_uses_authoritative_bid_existence_and_native_refund[False-expire_bidding-10]
+FAILED tests/integration/test_mp07_native_deadlines.py::test_open_deadline_uses_authoritative_bid_existence_and_native_refund[True-expire_acceptance-30]
+FAILED tests/integration/test_mp07_native_deadlines.py::test_execution_expiry_refunds_fixed_reward_through_native_claim
+FAILED tests/integration/test_mp07_native_deadlines.py::test_review_cutoff_autoapproves_fixed_reward_through_native_claim
+========================= 4 failed, 2 passed in 2.69s ==========================

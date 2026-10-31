@@ -1,0 +1,62 @@
+{
+  "scope": "runtime-fixture-integration",
+  "limits": "Logs prove only their recorded source version and scope; current source hashes do not retroactively certify earlier gates. No full root or package closure.",
+  "artifacts": [
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-feeder-fixture-reconciliation.md",
+      "artifact": "2026-10-18-mp07-feeder-fixture-reconciliation.md",
+      "sha256": "ac6e8f220226ee040564cc9400a75855705595d6192a30f20b8b57bb0eaf495c"
+    },
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-runtime-fixture-reconciliation.md",
+      "artifact": "2026-10-18-mp07-runtime-fixture-reconciliation.md",
+      "sha256": "d4d15e5c2d48ec95452650ea1c21252f2004a1f9e8c99e6ed07ffbd1a0ca7b73"
+    },
+    {
+      "origin": "/Users/flo/Developer/github/agent-economy/docs/plans/2026-10-18-mp07-worker-fixture-reconciliation.md",
+      "artifact": "2026-10-18-mp07-worker-fixture-reconciliation.md",
+      "sha256": "64db0f399d28c412bd808b70f0ea799271dbe6363e71c29a1bce74f3805a79e0"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-agents-ci-parent-after.sha256",
+      "artifact": "agent-economy-mp07-agents-ci-parent-after.sha256",
+      "sha256": "24b93031c9bae5b44bf4b1a282156d592ca457fbb730b50dd0708c4ca981ccf6"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-agents-ci-parent-before.sha256",
+      "artifact": "agent-economy-mp07-agents-ci-parent-before.sha256",
+      "sha256": "24b93031c9bae5b44bf4b1a282156d592ca457fbb730b50dd0708c4ca981ccf6"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-agents-ci-parent.log",
+      "artifact": "agent-economy-mp07-agents-ci-parent.log",
+      "sha256": "8e0612ee1c08f999c47fa9212fe86d959db8d856ebb28fb8ca8d58ca5482bc63"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-runtime-ack-before-startup-fixture.py",
+      "artifact": "agent-economy-mp07-runtime-ack-before-startup-fixture.py",
+      "sha256": "7d6fd480448cff9f1468d9ea5d5f6398240028c50184ccb34f439b5400891174"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-runtime-factory-fixture-green.log",
+      "artifact": "agent-economy-mp07-runtime-factory-fixture-green.log",
+      "sha256": "a4a400b4bd2c64aeb94ff76b278b31da97ef24776cab2c6517352e93f0cc5e9e"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-runtime-financial-sdk-tests-before.py",
+      "artifact": "agent-economy-mp07-runtime-financial-sdk-tests-before.py",
+      "sha256": "126bd95d71eca060f2516d3e04b84e710547bb56165551d5d0c205746bd31d4c"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-runtime-intents-before-exclusive-fixture.py",
+      "artifact": "agent-economy-mp07-runtime-intents-before-exclusive-fixture.py",
+      "sha256": "c773a6b831ad252f648a8516184b5d35549842fb5d63b8ff9893a193921b8f03"
+    },
+    {
+      "origin": "/private/tmp/agent-economy-mp07-runtime-startup-fixture-probe.log",
+      "artifact": "agent-economy-mp07-runtime-startup-fixture-probe.log",
+      "sha256": "f4b614eb8dee4f88809e2daa7d5e62089f9e169e039c95621aa15ebec566072b"
+    }
+  ],
+  "current_sources": {}
+}

@@ -1,29 +1,31 @@
 """Async HTTP clients for each platform service.
 
-Thin wrappers matching the API contracts in agents/src/base_agent/mixins/.
-Each function takes a DemoAgent and the relevant parameters, signs the
-request, and returns the parsed JSON response.
+Thin wrappers matching the API contracts in
+``libs/service-auth/src/service_auth/mixins/``. Each function takes a
+DemoAgent, the relevant parameters, and the service URL(s) it needs
+(resolved once by the caller from config.yaml — GAP-E11, no hardcoded
+URLs and no code defaults here), signs the request, and returns the
+parsed JSON response.
 """
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 import httpx
+from service_auth.financial_responses import (
+    parse_account_projection,
+    parse_financial_envelope,
+)
 
+from demo_replay.task_operations import operation_identity
 from demo_replay.wallet import DemoAgent
-
-# Default service URLs (same as agents/config.yaml)
-IDENTITY_URL = "http://localhost:8001"
-BANK_URL = "http://localhost:8002"
-TASK_BOARD_URL = "http://localhost:8003"
 
 
 async def register_agent(
     client: httpx.AsyncClient,
     agent: DemoAgent,
-    identity_url: str = IDENTITY_URL,
+    identity_url: str,
 ) -> dict[str, Any]:
     """Register an agent with the Identity service. Sets agent.agent_id on success.
 
@@ -59,22 +61,62 @@ async def register_agent(
     raise RuntimeError(msg)
 
 
+async def get_agent(
+    client: httpx.AsyncClient,
+    agent_id: str,
+    identity_url: str,
+) -> dict[str, Any]:
+    """Read one exact Identity registration."""
+    if not agent_id:
+        raise ValueError("agent_id must be a nonempty string")
+    response = await client.get(f"{identity_url}/agents/{agent_id}")
+    response.raise_for_status()
+    value: dict[str, Any] = response.json()
+    if value.get("agent_id") != agent_id:
+        raise RuntimeError("Identity registration lookup returned a different agent")
+    return value
+
+
 async def create_account(
     client: httpx.AsyncClient,
     platform: DemoAgent,
     agent_id: str,
-    bank_url: str = BANK_URL,
-) -> dict[str, Any]:
+    bank_url: str,
+) -> dict[str, object]:
     """Create a bank account for an agent (platform-signed)."""
     url = f"{bank_url}/accounts"
     token = platform.sign_jws(
-        {"action": "create_account", "agent_id": agent_id, "initial_balance": 0}
+        {"action": "create_account", "agent_id": agent_id, "initial_balance": 0},
+        audience="central-bank",
+        resource="POST /accounts",
     )
     resp = await client.post(url, json={"token": token})
     if resp.status_code == 409:
         return {"status": "already_exists"}
     resp.raise_for_status()
-    return resp.json()  # type: ignore[no-any-return]
+    return parse_account_projection(resp.json(), agent_id)
+
+
+async def get_account(
+    client: httpx.AsyncClient,
+    owner: DemoAgent,
+    bank_url: str,
+) -> dict[str, object]:
+    """Read and strictly bind the registered owner's bank account."""
+    if owner.agent_id is None:
+        raise ValueError("Account owner must be registered")
+    account_id = owner.agent_id
+    resource = f"GET /accounts/{account_id}"
+    response = await client.get(
+        f"{bank_url}/accounts/{account_id}",
+        headers=owner.auth_header(
+            {"action": "get_balance", "account_id": account_id},
+            audience="central-bank",
+            resource=resource,
+        ),
+    )
+    response.raise_for_status()
+    return parse_account_projection(response.json(), account_id)
 
 
 async def credit_account(
@@ -82,64 +124,32 @@ async def credit_account(
     platform: DemoAgent,
     account_id: str,
     amount: int,
-    bank_url: str = BANK_URL,
-) -> dict[str, Any]:
+    bank_url: str,
+    *,
+    operation_id: str,
+    reference: str,
+) -> dict[str, object]:
     """Credit funds to an agent's account (platform-signed)."""
     url = f"{bank_url}/accounts/{account_id}/credit"
-    reference = f"demo_fund_{uuid.uuid4().hex[:8]}"
     token = platform.sign_jws(
         {
             "action": "credit",
+            "operation_id": operation_id,
             "account_id": account_id,
             "amount": amount,
             "reference": reference,
-        }
+        },
+        audience="central-bank",
+        resource=f"POST /accounts/{account_id}/credit",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
-    return resp.json()  # type: ignore[no-any-return]
-
-
-async def post_task(
-    client: httpx.AsyncClient,
-    poster: DemoAgent,
-    title: str,
-    spec: str,
-    reward: int,
-    task_board_url: str = TASK_BOARD_URL,
-    bidding_deadline_seconds: int = 3600,
-    execution_deadline_seconds: int = 7200,
-    review_deadline_seconds: int = 3600,
-) -> dict[str, Any]:
-    """Post a new task to the Task Board. Returns response including task_id."""
-    url = f"{task_board_url}/tasks"
-    task_id = f"t-{uuid.uuid4()}"
-    task_token = poster.sign_jws(
-        {
-            "action": "create_task",
-            "task_id": task_id,
-            "poster_id": poster.agent_id,
-            "title": title,
-            "spec": spec,
-            "reward": reward,
-            "bidding_deadline_seconds": bidding_deadline_seconds,
-            "execution_deadline_seconds": execution_deadline_seconds,
-            "review_deadline_seconds": review_deadline_seconds,
-        }
+    return parse_financial_envelope(
+        resp.json(),
+        operation_id,
+        "credit",
+        {"account_id": account_id, "amount": amount, "reference": reference},
     )
-    escrow_token = poster.sign_jws(
-        {
-            "action": "escrow_lock",
-            "task_id": task_id,
-            "amount": reward,
-            "agent_id": poster.agent_id,
-        }
-    )
-    resp = await client.post(
-        url, json={"task_token": task_token, "escrow_token": escrow_token}
-    )
-    resp.raise_for_status()
-    return resp.json()  # type: ignore[no-any-return]
 
 
 async def submit_bid(
@@ -147,17 +157,27 @@ async def submit_bid(
     bidder: DemoAgent,
     task_id: str,
     amount: int,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
 ) -> dict[str, Any]:
     """Submit a bid on a task."""
+    operation_id, expected_lifecycle_version = operation_identity(
+        operation_id, expected_lifecycle_version
+    )
     url = f"{task_board_url}/tasks/{task_id}/bids"
     token = bidder.sign_jws(
         {
             "action": "submit_bid",
+            "operation_id": operation_id,
+            "expected_lifecycle_version": expected_lifecycle_version,
             "task_id": task_id,
             "bidder_id": bidder.agent_id,
             "amount": amount,
-        }
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/bids",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -168,7 +188,7 @@ async def list_bids(
     client: httpx.AsyncClient,
     poster: DemoAgent,
     task_id: str,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
 ) -> list[dict[str, Any]]:
     """List bids for a task (poster-signed auth header)."""
     url = f"{task_board_url}/tasks/{task_id}/bids"
@@ -177,7 +197,9 @@ async def list_bids(
             "action": "list_bids",
             "task_id": task_id,
             "poster_id": poster.agent_id,
-        }
+        },
+        audience="task-board",
+        resource=f"GET /tasks/{task_id}/bids",
     )
     resp = await client.get(url, headers=headers)
     resp.raise_for_status()
@@ -191,19 +213,41 @@ async def accept_bid(
     poster: DemoAgent,
     task_id: str,
     bid_id: str,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
 ) -> dict[str, Any]:
     """Accept a bid on a task."""
+    operation_id, expected_lifecycle_version = operation_identity(
+        operation_id, expected_lifecycle_version
+    )
     url = f"{task_board_url}/tasks/{task_id}/bids/{bid_id}/accept"
     token = poster.sign_jws(
         {
             "action": "accept_bid",
+            "operation_id": operation_id,
+            "expected_lifecycle_version": expected_lifecycle_version,
             "task_id": task_id,
             "bid_id": bid_id,
             "poster_id": poster.agent_id,
-        }
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/bids/{bid_id}/accept",
     )
     resp = await client.post(url, json={"token": token})
+    resp.raise_for_status()
+    return resp.json()  # type: ignore[no-any-return]
+
+
+async def get_task(
+    client: httpx.AsyncClient,
+    task_id: str,
+    task_board_url: str,
+) -> dict[str, Any]:
+    """Fetch task details from the Task Board."""
+    url = f"{task_board_url}/tasks/{task_id}"
+    resp = await client.get(url)
     resp.raise_for_status()
     return resp.json()  # type: ignore[no-any-return]
 
@@ -214,14 +258,16 @@ async def upload_asset(
     task_id: str,
     filename: str,
     content: bytes,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
 ) -> dict[str, Any]:
     """Upload a file asset for a task."""
     url = f"{task_board_url}/tasks/{task_id}/assets"
-    headers = worker.auth_header({"action": "upload_asset", "task_id": task_id})
-    resp = await client.post(
-        url, headers=headers, files={"file": (filename, content)}
+    headers = worker.auth_header(
+        {"action": "upload_asset", "task_id": task_id},
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/assets",
     )
+    resp = await client.post(url, headers=headers, files={"file": (filename, content)})
     resp.raise_for_status()
     return resp.json()  # type: ignore[no-any-return]
 
@@ -230,16 +276,26 @@ async def submit_deliverable(
     client: httpx.AsyncClient,
     worker: DemoAgent,
     task_id: str,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
 ) -> dict[str, Any]:
     """Submit deliverables for review."""
+    operation_id, expected_lifecycle_version = operation_identity(
+        operation_id, expected_lifecycle_version
+    )
     url = f"{task_board_url}/tasks/{task_id}/submit"
     token = worker.sign_jws(
         {
             "action": "submit_deliverable",
+            "operation_id": operation_id,
+            "expected_lifecycle_version": expected_lifecycle_version,
             "task_id": task_id,
             "worker_id": worker.agent_id,
-        }
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/submit",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -250,16 +306,26 @@ async def approve_task(
     client: httpx.AsyncClient,
     poster: DemoAgent,
     task_id: str,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
 ) -> dict[str, Any]:
     """Approve a submitted task."""
+    operation_id, expected_lifecycle_version = operation_identity(
+        operation_id, expected_lifecycle_version
+    )
     url = f"{task_board_url}/tasks/{task_id}/approve"
     token = poster.sign_jws(
         {
             "action": "approve_task",
+            "operation_id": operation_id,
+            "expected_lifecycle_version": expected_lifecycle_version,
             "task_id": task_id,
             "poster_id": poster.agent_id,
-        }
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/approve",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -271,17 +337,132 @@ async def dispute_task(
     poster: DemoAgent,
     task_id: str,
     reason: str,
-    task_board_url: str = TASK_BOARD_URL,
+    task_board_url: str,
+    *,
+    operation_id: str,
+    expected_lifecycle_version: int,
 ) -> dict[str, Any]:
     """Dispute a submitted task."""
+    operation_id, expected_lifecycle_version = operation_identity(
+        operation_id, expected_lifecycle_version
+    )
     url = f"{task_board_url}/tasks/{task_id}/dispute"
     token = poster.sign_jws(
         {
             "action": "dispute_task",
+            "operation_id": operation_id,
+            "expected_lifecycle_version": expected_lifecycle_version,
             "task_id": task_id,
             "poster_id": poster.agent_id,
             "reason": reason,
-        }
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/dispute",
+    )
+    resp = await client.post(url, json={"token": token})
+    resp.raise_for_status()
+    return resp.json()  # type: ignore[no-any-return]
+
+
+async def list_disputes(
+    client: httpx.AsyncClient,
+    court_url: str,
+    task_id: str | None = None,
+) -> list[dict[str, Any]]:
+    """List Court disputes, optionally filtered by task_id."""
+    params: dict[str, str] = {}
+    if task_id is not None:
+        params["task_id"] = task_id
+    resp = await client.get(f"{court_url}/disputes", params=params)
+    resp.raise_for_status()
+    data: dict[str, Any] = resp.json()
+    disputes: list[dict[str, Any]] = data["disputes"]
+    return disputes
+
+
+async def get_dispute(
+    client: httpx.AsyncClient,
+    court_url: str,
+    dispute_id: str,
+) -> dict[str, Any]:
+    """Fetch one authoritative Court dispute."""
+    if not dispute_id:
+        raise ValueError("dispute_id must be a nonempty string")
+    response = await client.get(f"{court_url}/disputes/{dispute_id}")
+    response.raise_for_status()
+    value: dict[str, Any] = response.json()
+    if value.get("dispute_id") != dispute_id:
+        raise RuntimeError("Court returned a different dispute")
+    return value
+
+
+async def file_claim(
+    client: httpx.AsyncClient,
+    platform: DemoAgent,
+    task_id: str,
+    claimant_id: str,
+    respondent_id: str,
+    claim: str,
+    escrow_id: str,
+    court_url: str,
+) -> dict[str, Any]:
+    """File a Court claim directly with a platform-signed token."""
+    url = f"{court_url}/disputes/file"
+    token = platform.sign_jws(
+        {
+            "action": "file_dispute",
+            "task_id": task_id,
+            "claimant_id": claimant_id,
+            "respondent_id": respondent_id,
+            "claim": claim,
+            "escrow_id": escrow_id,
+        },
+        audience="court",
+        resource="POST /disputes/file",
+    )
+    resp = await client.post(url, json={"token": token})
+    resp.raise_for_status()
+    return resp.json()  # type: ignore[no-any-return]
+
+
+async def submit_rebuttal(
+    client: httpx.AsyncClient,
+    worker: DemoAgent,
+    task_id: str,
+    dispute_id: str,
+    rebuttal: str,
+    task_board_url: str,
+) -> dict[str, Any]:
+    """Submit a worker rebuttal through Task Board mediation."""
+    url = f"{task_board_url}/tasks/{task_id}/rebuttal"
+    token = worker.sign_jws(
+        {
+            "action": "submit_rebuttal",
+            "task_id": task_id,
+            "dispute_id": dispute_id,
+            "worker_id": worker.agent_id,
+            "rebuttal": rebuttal,
+        },
+        audience="task-board",
+        resource=f"POST /tasks/{task_id}/rebuttal",
+    )
+    resp = await client.post(url, json={"token": token})
+    resp.raise_for_status()
+    return resp.json()  # type: ignore[no-any-return]
+
+
+async def trigger_ruling(
+    client: httpx.AsyncClient,
+    platform: DemoAgent,
+    dispute_id: str,
+    court_url: str,
+) -> dict[str, Any]:
+    """Trigger a Court ruling with a platform-signed token."""
+    url = f"{court_url}/disputes/{dispute_id}/rule"
+    token = platform.sign_jws(
+        {"action": "trigger_ruling", "dispute_id": dispute_id},
+        audience="court",
+        resource=f"POST /disputes/{dispute_id}/rule",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()
@@ -293,43 +474,34 @@ async def submit_feedback(
     agent: DemoAgent,
     task_id: str,
     to_agent_id: str,
-    role: str,
     category: str,
     rating: str,
     comment: str,
-    reputation_url: str = "http://localhost:8004",
+    reputation_url: str,
 ) -> dict[str, Any]:
-    """Submit sealed feedback for a task."""
+    """Submit sealed feedback for a task.
+
+    Matches the real Reputation API contract (``services/reputation/src/
+    reputation_service/routers/feedback.py``): the signer's identity is
+    carried as ``from_agent_id`` in the JWS payload — verified against the
+    signer's ``kid`` — not as a free-text ``role``. There is no separate
+    "reveal" action; a sealed record becomes visible automatically once
+    both parties have submitted feedback, or after the service's reveal
+    timeout elapses.
+    """
     url = f"{reputation_url}/feedback"
     token = agent.sign_jws(
         {
             "action": "submit_feedback",
+            "from_agent_id": agent.agent_id,
             "task_id": task_id,
             "to_agent_id": to_agent_id,
-            "role": role,
             "category": category,
             "rating": rating,
             "comment": comment,
-        }
-    )
-    resp = await client.post(url, json={"token": token})
-    resp.raise_for_status()
-    return resp.json()  # type: ignore[no-any-return]
-
-
-async def reveal_feedback(
-    client: httpx.AsyncClient,
-    agent: DemoAgent,
-    task_id: str,
-    reputation_url: str = "http://localhost:8004",
-) -> dict[str, Any]:
-    """Reveal feedback for a task (both parties have submitted)."""
-    url = f"{reputation_url}/tasks/{task_id}/feedback/reveal"
-    token = agent.sign_jws(
-        {
-            "action": "reveal_feedback",
-            "task_id": task_id,
-        }
+        },
+        audience="reputation",
+        resource="POST /feedback",
     )
     resp = await client.post(url, json={"token": token})
     resp.raise_for_status()

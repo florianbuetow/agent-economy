@@ -107,7 +107,8 @@ def add_feedback(
     conn.execute(
         "INSERT INTO reputation_feedback "
         "(feedback_id, task_id, from_agent_id, to_agent_id, role, category, "
-        "rating, comment, submitted_at, visible) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "rating, comment, submitted_at, visible, source) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'peer')",
         (
             feedback_id,
             task_id,
@@ -171,7 +172,7 @@ def wait_for_sse_update(page: Page, timeout: float = 5000) -> None:
     current_count = page.locator(".feed-item").count()
     with suppress(Exception):
         page.wait_for_function(
-            f"document.querySelectorAll('.feed-item').length > {current_count}",
+            f"() => document.querySelectorAll('.feed-item').length > {current_count}",
             timeout=timeout,
         )
 

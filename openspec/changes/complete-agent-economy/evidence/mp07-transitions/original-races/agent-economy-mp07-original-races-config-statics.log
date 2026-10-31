@@ -1,0 +1,15 @@
+All checks passed!
+3 files already formatted
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_atomic_task_transitions.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_atomic_task_transitions.py:53:9 - error: Method "auth_flow" overrides class "Auth" in an incompatible manner
+    Return type mismatch: base method returns type "Generator[Request, Response, None]", override returns type "Iterator[Request]"
+      "Iterator[Request]" is incompatible with protocol "Generator[Request, Response, None]"
+        "send" is not present
+        "throw" is not present
+        "close" is not present
+          "__iter__" is an incompatible type
+            Type "() -> Iterator[Request]" is not assignable to type "() -> Generator[_YieldT_co@Generator, _SendT_contra@Generator, _ReturnT_co@Generator]" (reportIncompatibleMethodOverride)
+/Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_deadline_transition_races.py
+  /Users/flo/Developer/github/agent-economy/services/task-board/tests/integration/test_mp07_deadline_transition_races.py:166:9 - error: Method "claim_task_operation" overrides class "TaskDbClient" in an incompatible manner
+    Parameter 2 name mismatch: base parameter is named "payload", override parameter is named "command" (reportIncompatibleMethodOverride)
+2 errors, 0 warnings, 0 informations

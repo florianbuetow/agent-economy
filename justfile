@@ -30,6 +30,18 @@
 #      E.g. printf "\033[31m✗ ci failed: tests exited with errors\033[0m\n"
 # =============================================================================
 
+# --- Service ports (single source; used via {{port_name}} interpolation below) ---
+port_identity := "8001"
+port_central_bank := "8002"
+port_task_board := "8003"
+port_reputation := "8004"
+port_court := "8005"
+port_db_gateway := "8007"
+port_ui := "8008"
+
+# Per-service stdout/stderr of services launched by start-all
+log_dir := "data/logs"
+
 # Default recipe: show help
 _default:
     @just help
@@ -37,19 +49,20 @@ _default:
 # Show available commands
 [private]
 help:
-    @clear
     @echo ""
     @printf "\033[0;34m=== Agent Task Economy ===\033[0m\n"
     @echo ""
     @printf "\033[1;33mSetup\033[0m\n"
     @printf "  \033[0;37mjust check            \033[0;34m Check if all required tools are installed\033[0m\n"
-    @printf "  \033[0;37mjust init             \033[0;34m Initialize project (git hooks, tooling)\033[0m\n"
-    @printf "  \033[0;37mjust init-all         \033[0;34m Initialize all service environments\033[0m\n"
+    @printf "  \033[0;37mjust init-all         \033[0;34m Initialize all project environments\033[0m\n"
     @printf "  \033[0;37mjust destroy-all      \033[0;34m Destroy all virtual environments\033[0m\n"
     @printf "  \033[0;37mjust setup-guard      \033[0;34m Set up guard file integrity collections\033[0m\n"
     @echo ""
     @printf "\033[1;33mLocal Development\033[0m\n"
     @printf "  \033[0;37mjust start-all        \033[0;34m Start all services in background\033[0m\n"
+    @printf "  \033[0;37mjust provision-keys   \033[0;34m Explicitly provision configured local agent keys\033[0m\n"
+    @printf "  \033[0;37mjust check-keys       \033[0;34m Validate configured local agent keys without changes\033[0m\n"
+    @printf "  \033[0;37mjust adopt-key-permissions\033[0;34m Explicitly harden valid legacy private keys to 0600\033[0m\n"
     @printf "  \033[0;37mjust start-identity   \033[0;34m Start identity service locally\033[0m\n"
     @printf "  \033[0;37mjust start-bank       \033[0;34m Start central bank service locally\033[0m\n"
     @printf "  \033[0;37mjust start-taskboard  \033[0;34m Start task board service locally\033[0m\n"
@@ -67,38 +80,46 @@ help:
     @printf "  \033[0;37mjust stop-ui          \033[0;34m Stop UI service\033[0m\n"
     @printf "  \033[0;37mjust start-feeder     \033[0;34m Start task feeder (posts math tasks)\033[0m\n"
     @printf "  \033[0;37mjust stop-feeder      \033[0;34m Stop task feeder\033[0m\n"
-    @printf "  \033[0;37mjust start-mathbot    \033[0;34m Start math worker agent (requires services + LM Studio)\033[0m\n"
-    @printf "  \033[0;37mjust stop-mathbot     \033[0;34m Stop math worker agent\033[0m\n"
-    @printf "  \033[0;37mjust fund-feeder <amount>\033[0;34m Fund the feeder agent with initial coins\033[0m\n"
+    @printf "  \033[0;37mjust start-mathbot [profile]\033[0;34m Start math worker agent from a named profile (default: mathbot; requires services + LM Studio)\033[0m\n"
+    @printf "  \033[0;37mjust stop-mathbot [profile]\033[0;34m Stop the exact local math worker profile (default: mathbot)\033[0m\n"
+    @printf "  \033[0;37mjust fund-feeder <amount> <operation-id> <reference>\033[0;34m Fund the feeder agent\033[0m\n"
+    @printf "  \033[0;37mjust fund-agent <agent-id> <amount> <operation-id> [reference]\033[0;34m Fund any registered agent (idempotent on operation id)\033[0m\n"
+    @printf "  \033[0;37mjust provision        \033[0;34m Provision the treasury (idempotent; run once after first start-all)\033[0m\n"
+    @printf "  \033[0;37mjust supervise-install\033[0;34m Install launchd/systemd units that restart crashed services\033[0m\n"
+    @printf "  \033[0;37mjust supervise-uninstall\033[0;34m Remove the supervision units\033[0m\n"
+    @printf "  \033[0;37mjust supervise-status \033[0;34m Show supervision unit state\033[0m\n"
+    @printf "  \033[0;37mjust backup <dest.tar.gz>\033[0;34m Stop the stack and archive all economy state\033[0m\n"
+    @printf "  \033[0;37mjust observability-up \033[0;34m Start the Grafana/OTLP viewer container (logs, traces, health)\033[0m\n"
+    @printf "  \033[0;37mjust observability-down\033[0;34m Stop the viewer container\033[0m\n"
+    @printf "  \033[0;37mjust economy-report   \033[0;34m Per-worker selection, approval, cost and quality report\033[0m\n"
+    @printf "  \033[0;37mjust start-classbot <profile>\033[0;34m Start a classification worker (classbot_keyword | classbot_llm)\033[0m\n"
+    @printf "  \033[0;37mjust restore <src.tar.gz>\033[0;34m Stop the stack and restore an archive (then run start-all)\033[0m\n"
     @printf "  \033[0;37mjust status           \033[0;34m Check health status of all services\033[0m\n"
-    @printf "  \033[0;37mjust watch            \033[0;34m Continuously watch service status (refreshes every 5s)\033[0m\n"
     @printf "  \033[0;37mjust logs             \033[0;34m Tail all service logs (color-coded)\033[0m\n"
     @echo ""
-    @printf "\033[1;33mDocker\033[0m\n"
-    @printf "  \033[0;37mjust docker-up        \033[0;34m Start all services\033[0m\n"
-    @printf "  \033[0;37mjust docker-up-dev    \033[0;34m Start all services with hot reload\033[0m\n"
-    @printf "  \033[0;37mjust docker-down      \033[0;34m Stop all services\033[0m\n"
-    @printf "  \033[0;37mjust docker-logs      \033[0;34m View logs (optionally: just docker-logs <service>)\033[0m\n"
-    @printf "  \033[0;37mjust docker-build     \033[0;34m Rebuild all Docker images from scratch\033[0m\n"
-    @echo ""
     @printf "\033[1;33mTask Generation\033[0m\n"
-    @printf "  \033[0;37mjust generate-tasks    \033[0;34m Generate math tasks to data/math_tasks.jsonl\033[0m\n"
+    @printf "  \033[0;37mjust generate-tasks    \033[0;34m Replace data/math_tasks.jsonl with generated math tasks\033[0m\n"
     @echo ""
     @printf "\033[1;33mDemo\033[0m\n"
-    @printf "  \033[0;37mjust demo             \033[0;34m Run quick demo (3 agents, ~25s)\033[0m\n"
-    @printf "  \033[0;37mjust demo-scale       \033[0;34m Run scaled demo (10 agents, ~60s)\033[0m\n"
+    @printf "  \033[0;37mjust demo             \033[0;34m Run a new quick demo (3 agents, ~25s)\033[0m\n"
+    @printf "  \033[0;37mjust demo-scale       \033[0;34m Run a new scaled demo (10 agents, ~60s)\033[0m\n"
+    @printf "  \033[0;37mjust demo-resume <run-id>\033[0;34m Resume a quick demo\033[0m\n"
+    @printf "  \033[0;37mjust demo-scale-resume <run-id>\033[0;34m Resume a scaled demo\033[0m\n"
     @echo ""
     @printf "\033[1;33mCI & Code Quality\033[0m\n"
     @printf "  \033[0;37mjust test-all         \033[0;34m Run tests for all services\033[0m\n"
     @printf "  \033[0;37mjust test-architecture\033[0;34m Run architecture tests for all services\033[0m\n"
     @printf "  \033[0;37mjust test-project-structure\033[0;34m Verify all service justfiles are identical\033[0m\n"
     @printf "  \033[0;37mjust test <service>   \033[0;34m Run tests for a specific service\033[0m\n"
-    @printf "  \033[0;37mjust ci               \033[0;34m Run ALL CI checks (services, agents, integration, e2e)\033[0m\n"
+    @printf "  \033[0;37mjust ci               \033[0;34m Run ALL CI checks (services, agents, tools, integration, e2e)\033[0m\n"
     @printf "  \033[0;37mjust ci-quiet         \033[0;34m Run ALL CI checks quietly\033[0m\n"
     @printf "  \033[0;37mjust ci-service <svc> \033[0;34m Run CI checks for a specific service\033[0m\n"
+    @printf "  \033[0;37mjust code-semgrep-path-policy\033[0;34m Enforce inherited PATH in first-party code\033[0m\n"
     @printf "  \033[0;37mjust ci-quiet-hook    \033[0;34m CI hook for Claude Code (blocks git commit if CI fails)\033[0m\n"
     @printf "  \033[0;37mjust format-all       \033[0;34m Auto-format all services\033[0m\n"
     @printf "  \033[0;37mjust test-integration \033[0;34m Run cross-service integration tests\033[0m\n"
+    @printf "  \033[0;37mjust test-integration-all\033[0;34m Run every service's own integration suite (live stack)\033[0m\n"
+    @printf "  \033[0;37mjust test-ui-e2e      \033[0;34m Run UI Playwright e2e suite (self-contained, no live stack)\033[0m\n"
     @printf "  \033[0;37mjust test-e2e         \033[0;34m Run e2e tests (starts/stops services automatically)\033[0m\n"
     @printf "  \033[0;37mjust stats            \033[0;34m Show lines of code across the project\033[0m\n"
     @echo ""
@@ -127,12 +148,9 @@ check:
     }
 
     check_tool "uv"     uv     "--version"
-    check_tool "python"  python3 "--version"
-    check_tool "docker"  docker  "--version"
     check_tool "curl"    curl    "--version"
     check_tool "jq"      jq      "--version"
     check_tool "lsof"    lsof    "-v"
-    check_tool "bd"      bd      "--version"
     check_tool "just"    just    "--version"
 
     printf "\n"
@@ -154,16 +172,13 @@ setup-guard:
 
 # --- Local Development ---
 
-# Initialize project (git hooks, tooling)
-init:
-    @echo ""
-    bash scripts/init-hooks.sh
-    @echo ""
-
 # Initialize all service environments
 init-all:
     @echo ""
-    @printf "\033[0;34m=== Initializing All Services ===\033[0m\n"
+    @printf "\033[0;34m=== Initializing All Environments ===\033[0m\n"
+    cd libs/service-commons && just init
+    cd libs/service-clients && just init
+    cd libs/service-auth && just init
     cd services/identity && just init
     cd services/central-bank && just init
     cd services/task-board && just init
@@ -173,7 +188,7 @@ init-all:
     cd services/ui && just init
     cd agents && just init
     cd tools && just init
-    @printf "\033[0;32m✓ All services initialized\033[0m\n"
+    @printf "\033[0;32m✓ All environments initialized\033[0m\n"
     @echo ""
 
 # Start identity service locally
@@ -218,6 +233,36 @@ start-ui:
     cd services/ui && just run
     @echo ""
 
+# Internal background launches used by start-all. These intentionally omit
+# hot reload while preserving Court's explicit local environment loading.
+_launch-db-gateway:
+    cd services/db-gateway && uv run uvicorn db_gateway_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_db_gateway}}
+
+_launch-identity:
+    cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_identity}}
+
+_launch-reputation:
+    cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_reputation}}
+
+_launch-bank:
+    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_central_bank}}
+
+_launch-taskboard:
+    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_task_board}}
+
+_launch-court:
+    #!/usr/bin/env bash
+    cd services/court
+    if [ -f .env ]; then
+        set -a
+        . .env
+        set +a
+    fi
+    uv run uvicorn court_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_court}}
+
+_launch-ui:
+    cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host "$(uv run ../../scripts/service_host.py "${CONFIG_PATH:-config.yaml}")" --port {{port_ui}}
+
 # Start all services in background (respects dependency order)
 start-all:
     #!/usr/bin/env bash
@@ -225,13 +270,44 @@ start-all:
     printf "\033[0;34m=== Starting All Services (Background) ===\033[0m\n"
     printf "\n"
 
+    if ! just check-keys; then
+        printf "\033[0;31m✗ Key preflight failed before service startup.\033[0m\n"
+        printf "Run 'just provision-keys' for an empty key store.\n"
+        printf "For valid legacy 0644 keys, run 'just adopt-key-permissions' explicitly.\n"
+        exit 1
+    fi
+
+    mkdir -p "{{log_dir}}"
+
+    court_env=services/court/.env
+    if [ -f "$court_env" ] && [ "$(ls -ld "$court_env" | cut -c5-10)" != "------" ]; then
+        printf "\033[0;31m✗ %s is group/world accessible; refusing to start Court.\033[0m\n" "$court_env"
+        printf "Run: chmod 600 %s\n" "$court_env"
+        exit 1
+    fi
+
+    launched_dirs=()
+    start_all_ok=0
+    cleanup_partial_start() {
+        if [ "$start_all_ok" -eq 1 ]; then
+            return 0
+        fi
+        for svc_dir in "${launched_dirs[@]}"; do
+            printf "Stopping %s (launched by this run)...\n" "$svc_dir"
+            (cd "services/$svc_dir" && just kill) || true
+        done
+    }
+    trap cleanup_partial_start EXIT
+
     wait_for_health() {
         local name=$1
         local port=$2
         local max_attempts=60
         local attempt=0
         while [ $attempt -lt $max_attempts ]; do
-            if curl -s --connect-timeout 1 "http://localhost:${port}/health" | grep -q '"ok"' 2>/dev/null; then
+            if curl --fail --silent --max-time 2 --connect-timeout 1 \
+                "http://localhost:${port}/health" 2>/dev/null \
+                | jq -e '.status == "ok"' >/dev/null 2>&1; then
                 printf "\033[0;32m✓ %s ready (port %s)\033[0m\n" "$name" "$port"
                 return 0
             fi
@@ -242,31 +318,95 @@ start-all:
         return 1
     }
 
+    is_healthy() {
+        local port=$1
+        curl --fail --silent --max-time 2 --connect-timeout 1 \
+            "http://localhost:${port}/health" 2>/dev/null \
+            | jq -e '.status == "ok"' >/dev/null 2>&1
+    }
+
+    start_unless_healthy() {
+        local name=$1
+        local port=$2
+        local recipe=$3
+        local svc_dir=$4
+        if is_healthy "$port"; then
+            printf "\033[0;32m✓ %s already healthy (port %s)\033[0m\n" "$name" "$port"
+            return 0
+        fi
+        just "$recipe" >>"{{log_dir}}/${svc_dir}.out" 2>&1 &
+        launched_dirs+=("$svc_dir")
+    }
+
     # Tier 1: DB Gateway first (creates economy.db needed by UI)
     printf "Starting tier 1 (DB Gateway)...\n"
-    cd services/db-gateway && uv run uvicorn db_gateway_service.app:create_app --factory --host 127.0.0.1 --port 8007 &
-    wait_for_health "DB Gateway" 8007
+    start_unless_healthy "DB Gateway" {{port_db_gateway}} _launch-db-gateway db-gateway
+    if ! wait_for_health "DB Gateway" {{port_db_gateway}}; then
+        printf "\033[0;31m✗ DB Gateway did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
 
-    # Tier 2: All remaining services in parallel (DB Gateway is ready)
-    printf "Starting tier 2 (all remaining services)...\n"
-    cd services/identity && uv run uvicorn identity_service.app:create_app --factory --host 127.0.0.1 --port 8001 &
-    cd services/reputation && uv run uvicorn reputation_service.app:create_app --factory --host 127.0.0.1 --port 8004 &
-    cd services/central-bank && uv run uvicorn central_bank_service.app:create_app --factory --host 127.0.0.1 --port 8002 &
-    cd services/task-board && uv run uvicorn task_board_service.app:create_app --factory --host 127.0.0.1 --port 8003 &
-    cd services/court && set -a && [ -f .env ] && . .env && set +a && uv run uvicorn court_service.app:create_app --factory --host 127.0.0.1 --port 8005 &
-    cd services/ui && uv run uvicorn ui_service.app:create_app --factory --host 127.0.0.1 --port 8008 &
+    # Tier 2: Identity first. It is the leaf service that central-bank,
+    # task-board, reputation, and court each register their platform agent
+    # against during startup. Launching it concurrently with those dependents
+    # caused a race: a dependent could POST /agents/register before Identity
+    # had bound its socket, raising httpx.ConnectError and aborting that
+    # service's lifespan ("Application startup failed. Exiting.").
+    printf "Starting tier 2 (Identity)...\n"
+    start_unless_healthy "Identity" {{port_identity}} _launch-identity identity
+    if ! wait_for_health "Identity" {{port_identity}}; then
+        printf "\033[0;31m✗ Identity did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
+    # Fully-online gate: confirm the registry actually serves reads, not just
+    # that the port is bound. Dependents will POST /agents/register, so assert
+    # GET /agents answers before launching them.
+    if ! curl --fail --silent --max-time 2 --connect-timeout 1 \
+        "http://localhost:{{port_identity}}/agents" 2>/dev/null \
+        | jq -e '.agents | type == "array"' >/dev/null 2>&1; then
+        printf "\033[0;31m✗ Identity health OK but /agents not serving; aborting startup\033[0m\n"
+        exit 1
+    fi
+    printf "\033[0;32m✓ Identity registry fully online (port {{port_identity}})\033[0m\n"
 
-    # Wait in dependency order
-    wait_for_health "Identity" 8001
-    wait_for_health "Central Bank" 8002
-    wait_for_health "Task Board" 8003
-    wait_for_health "Reputation" 8004
-    wait_for_health "Court" 8005
-    wait_for_health "UI" 8008
+    # Tier 3: economy services in parallel. Identity is healthy, so
+    # platform-agent registration can no longer race.
+    printf "Starting tier 3 (economy services)...\n"
+    start_unless_healthy "Reputation" {{port_reputation}} _launch-reputation reputation
+    start_unless_healthy "Central Bank" {{port_central_bank}} _launch-bank central-bank
+    start_unless_healthy "Task Board" {{port_task_board}} _launch-taskboard task-board
+    start_unless_healthy "Court" {{port_court}} _launch-court court
+
+    # Wait for the rest in dependency order
+    if ! wait_for_health "Central Bank" {{port_central_bank}}; then
+        printf "\033[0;31m✗ Central Bank did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
+    if ! wait_for_health "Task Board" {{port_task_board}}; then
+        printf "\033[0;31m✗ Task Board did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
+    if ! wait_for_health "Reputation" {{port_reputation}}; then
+        printf "\033[0;31m✗ Reputation did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
+    if ! wait_for_health "Court" {{port_court}}; then
+        printf "\033[0;31m✗ Court did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
+
+    # Tier 4: UI last, after every service it calls is healthy.
+    printf "Starting tier 4 (UI)...\n"
+    start_unless_healthy "UI" {{port_ui}} _launch-ui ui
+    if ! wait_for_health "UI" {{port_ui}}; then
+        printf "\033[0;31m✗ UI did not become healthy; aborting startup\033[0m\n"
+        exit 1
+    fi
 
     printf "\n"
+    start_all_ok=1
     printf "\033[0;32m✓ All services started\033[0m\n"
-    printf "\033[0;32m  UI Service: http://localhost:8008\033[0m\n"
+    printf "\033[0;32m  UI Service: http://localhost:{{port_ui}}\033[0m\n"
     printf "\n"
 
 # Stop identity service
@@ -320,16 +460,15 @@ stop-all:
 
     failed=0
     for svc in identity central-bank task-board reputation court db-gateway ui; do
-        cd "services/$svc" && just kill || failed=$((failed + 1))
-        cd - > /dev/null
+        if ! (cd "services/$svc" && just kill); then
+            failed=$((failed + 1))
+        fi
     done
 
-    # Also stop agents if running
-    pkill -f "python -m task_feeder" 2>/dev/null && printf "Task feeder stopped\n" || true
-    pkill -f "python -m math_worker" 2>/dev/null && printf "Math worker stopped\n" || true
-
     if [ "$failed" -gt 0 ]; then
-        printf "\033[0;33m⚠ %d service(s) could not be stopped\033[0m\n" "$failed"
+        printf "\033[0;31m✗ %d service(s) could not be stopped\033[0m\n" "$failed"
+        printf "\n"
+        exit 1
     else
         printf "\033[0;32m✓ All services stopped\033[0m\n"
     fi
@@ -350,38 +489,53 @@ stop-feeder:
     #!/usr/bin/env bash
     printf "\n"
     printf "\033[0;34m=== Stopping Task Feeder ===\033[0m\n"
-    pkill -f "python -m task_feeder" 2>/dev/null && \
-        printf "\033[0;32m✓ Task feeder stopped\033[0m\n" || \
-        printf "\033[0;33m⚠ Task feeder not running\033[0m\n"
+    repo_root=$PWD
+    agent_config=${AGENT_CONFIG_PATH:-"$repo_root/agents/config.yaml"}
+    if ! uv run --project agents scripts/stop_agent.py \
+        --repo-root "$repo_root" \
+        --config "$agent_config" \
+        --module task_feeder; then
+        printf "\033[0;31m✗ Task feeder stop refused: ownership could not be proven\033[0m\n"
+        exit 1
+    fi
+    printf "\033[0;32m✓ Task feeder termination requested safely\033[0m\n"
     printf "\n"
 
-# Start math worker agent (requires running services + LM Studio)
-start-mathbot:
+# Start math worker agent from a named profile (requires running services + LM Studio)
+start-mathbot profile="mathbot":
     #!/usr/bin/env bash
     printf "\n"
-    printf "\033[0;34m=== Starting Math Worker Agent ===\033[0m\n"
+    printf "\033[0;34m=== Starting Math Worker Agent (profile: %s) ===\033[0m\n" {{quote(profile)}}
     printf "\n"
-    cd agents && uv run python -m math_worker &
+    cd agents && uv run python -m math_worker {{quote(profile)}} &
     printf "Math worker agent starting in background (PID: $!)\n"
     printf "\n"
 
-# Stop math worker agent
-stop-mathbot:
+# Stop one exact math worker profile
+stop-mathbot profile="mathbot":
     #!/usr/bin/env bash
     printf "\n"
-    printf "\033[0;34m=== Stopping Math Worker Agent ===\033[0m\n"
-    pkill -f "python -m math_worker" 2>/dev/null && \
-        printf "\033[0;32m✓ Math worker agent stopped\033[0m\n" || \
-        printf "\033[0;33m⚠ Math worker agent not running\033[0m\n"
+    printf "\033[0;34m=== Stopping Math Worker Agent (profile: %s) ===\033[0m\n" {{quote(profile)}}
+    repo_root=$PWD
+    agent_config=${AGENT_CONFIG_PATH:-"$repo_root/agents/config.yaml"}
+    if ! uv run --project agents scripts/stop_agent.py \
+        --repo-root "$repo_root" \
+        --config "$agent_config" \
+        --module math_worker \
+        --profile {{quote(profile)}}; then
+        printf "\033[0;31m✗ Math worker stop refused: ownership could not be proven\033[0m\n"
+        exit 1
+    fi
+    printf "\033[0;32m✓ Math worker termination requested safely\033[0m\n"
     printf "\n"
 
 # Fund the feeder agent with initial coins
-fund-feeder amount:
+fund-feeder amount operation_id reference:
     #!/usr/bin/env bash
     printf "\n"
     printf "\033[0;34m=== Funding Feeder Agent ===\033[0m\n"
     printf "\n"
-    cd agents && uv run python -m fund_feeder_cli {{amount}}
+    cd agents && uv run python -m fund_feeder_cli {{quote(amount)}} --operation-id {{quote(operation_id)}} --reference {{quote(reference)}}
     exit_code=$?
     printf "\n"
     if [ $exit_code -eq 0 ]; then
@@ -392,84 +546,174 @@ fund-feeder amount:
     fi
     printf "\n"
 
+# Fund any registered agent through the platform agent (idempotent on operation_id).
+fund-agent agent_id amount operation_id reference="":
+    #!/usr/bin/env bash
+    printf "\n"
+    printf "\033[0;34m=== Funding Agent {{agent_id}} ===\033[0m\n"
+    printf "\n"
+    cd agents && uv run python -m fund_agent_cli --agent-id {{quote(agent_id)}} --amount {{quote(amount)}} --operation-id {{quote(operation_id)}} {{ if reference == "" { "" } else { "--reference " + quote(reference) } }}
+    exit_code=$?
+    printf "\n"
+    if [ $exit_code -eq 0 ]; then
+        printf "\033[0;32m✓ Agent funded successfully\033[0m\n"
+    else
+        printf "\033[0;31m✗ Failed to fund agent\033[0m\n"
+        exit 1
+    fi
+    printf "\n"
+
+# Install launchd (macOS) or systemd (Linux) units that restart crashed services; stop/start through the supervisor afterwards
+supervise-install:
+    uv run --project agents scripts/supervise.py install
+
+# Remove the supervision units
+supervise-uninstall:
+    uv run --project agents scripts/supervise.py uninstall
+
+# Show supervision unit state
+supervise-status:
+    uv run --project agents scripts/supervise.py status
+
+# Stop the stack and archive all economy state to dest.tar.gz (stack stays stopped; run start-all afterwards)
+backup dest:
+    uv run --project agents scripts/backup.py backup {{quote(dest)}}
+
+# Stop the stack and restore an archive (stack stays stopped; run start-all afterwards)
+restore src:
+    uv run --project agents scripts/backup.py restore {{quote(src)}} --yes
+
+# Print per-worker selection, approval, cost and quality from the agent journals (no scripted winner)
+economy-report:
+    cd agents && uv run python -m economy_report
+
+# Start a classification worker from a named profile (classbot_keyword or classbot_llm)
+start-classbot profile:
+    cd agents && uv run python -m classification_worker {{quote(profile)}} &
+
+# Start the single-container log/trace/health viewer (Grafana on :3000, OTLP on :4318)
+observability-up:
+    docker run -d --name otel-lgtm -p 3000:3000 -p 4318:4318 -p 4317:4317 \
+      -v "$PWD/config/otel/collector.yaml:/otel-lgtm/otelcol-config.yaml:ro" \
+      -v otel-lgtm-data:/data grafana/otel-lgtm
+
+# Stop and remove the observability viewer container (data volume is kept)
+observability-down:
+    docker rm -f otel-lgtm
+
+# Provision the treasury (idempotent genesis for the UI operator account).
+# Q-9 decision: `just start-all` does NOT auto-mint the treasury any more —
+# run this once after the first `just start-all` (and again any time you
+# need to confirm/re-assert genesis; re-running is a safe no-op).
+provision:
+    #!/usr/bin/env bash
+    printf "\n"
+    printf "\033[0;34m=== Provisioning Treasury ===\033[0m\n"
+    printf "\n"
+    cd agents && uv run python -m treasury_provision_cli
+    exit_code=$?
+    printf "\n"
+    if [ $exit_code -eq 0 ]; then
+        printf "\033[0;32m✓ Treasury provisioned successfully\033[0m\n"
+    else
+        printf "\033[0;31m✗ Failed to provision treasury\033[0m\n"
+        exit 1
+    fi
+    printf "\n"
+
+# Explicitly provision every handle in the configured local roster.
+provision-keys:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd agents
+    uv run python -m key_provision_cli provision \
+        --gateway-config ../services/db-gateway/config.yaml
+
+# Validate every configured local keypair without changing key material.
+check-keys:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd agents
+    uv run python -m key_provision_cli check \
+        --gateway-config ../services/db-gateway/config.yaml
+
+# Explicit one-time adoption for valid legacy private keys with permissive modes.
+adopt-key-permissions:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd agents
+    uv run python -m key_provision_cli adopt-permissions \
+        --gateway-config ../services/db-gateway/config.yaml
+
 # Check health status of all services
 status:
     #!/usr/bin/env bash
     printf "\n"
     printf "\033[0;34m=== Service Status ===\033[0m\n"
     printf "\n"
+    failed=0
 
     check_service() {
         local name=$1
         local port=$2
         local health_response
 
-        if health_response=$(curl -s --connect-timeout 2 "http://localhost:${port}/health" 2>/dev/null); then
-            status=$(echo "$health_response" | jq -r '.status // empty' 2>/dev/null)
+        local status
+        local uptime
+        local agents
+
+        if health_response=$(curl --fail --silent --max-time 3 --connect-timeout 2 \
+            "http://localhost:${port}/health" 2>/dev/null); then
+            if ! status=$(printf "%s" "$health_response" | jq -er '.status' 2>/dev/null); then
+                printf "\033[0;31m✗ %s\033[0m (port %s) - malformed health response\n" "$name" "$port"
+                failed=$((failed + 1))
+                return
+            fi
             if [ "$status" = "ok" ]; then
-                uptime=$(echo "$health_response" | jq -r '.uptime_seconds // empty' 2>/dev/null)
-                agents=$(echo "$health_response" | jq -r '.registered_agents // empty' 2>/dev/null)
+                uptime=$(printf "%s" "$health_response" | jq -r '.uptime_seconds // empty')
+                agents=$(printf "%s" "$health_response" | jq -r '.registered_agents // empty')
                 printf "\033[0;32m✓ %s\033[0m (port %s) - ok" "$name" "$port"
                 [ -n "$uptime" ] && printf " (uptime: %ss)" "$uptime"
                 [ -n "$agents" ] && printf " (agents: %s)" "$agents"
                 printf "\n"
             else
-                printf "\033[0;33m⚠ %s\033[0m (port %s) - %s\n" "$name" "$port" "${status:-unknown}"
+                printf "\033[0;31m✗ %s\033[0m (port %s) - %s\n" "$name" "$port" "$status"
+                failed=$((failed + 1))
             fi
         else
             printf "\033[0;31m✗ %s\033[0m (port %s) - not responding\n" "$name" "$port"
+            failed=$((failed + 1))
         fi
     }
 
-    check_service "Identity"     8001
-    check_service "Central Bank" 8002
-    check_service "Task Board"   8003
-    check_service "Reputation"   8004
-    check_service "Court"        8005
-    check_service "DB Gateway"   8007
-    check_service "UI"           8008
-
-    # Check LM Studio if any court judge is configured to use it
-    court_config="services/court/config.yaml"
-    if [ -f "$court_config" ]; then
-        api_base=$(grep -A5 'api_key_env:.*LMSTUDIO' "$court_config" | grep -B5 'api_base:' | grep 'api_base:' | head -1 | awk '{print $2}' | tr -d '"')
-        if [ -z "$api_base" ]; then
-            # Try the other order: api_base before api_key_env
-            api_base=$(grep -B5 'api_key_env:.*LMSTUDIO' "$court_config" | grep 'api_base:' | head -1 | awk '{print $2}' | tr -d '"')
-        fi
-        if [ -n "$api_base" ]; then
-            printf "\n"
-            if curl -s --connect-timeout 2 "${api_base}/models" >/dev/null 2>&1; then
-                printf "\033[0;32m✓ LM Studio\033[0m (%s) - online\n" "$api_base"
-            else
-                printf "\033[0;31m✗ LM Studio\033[0m (%s) - not responding\n" "$api_base"
-            fi
-        fi
-    fi
+    check_service "Identity"     {{port_identity}}
+    check_service "Central Bank" {{port_central_bank}}
+    check_service "Task Board"   {{port_task_board}}
+    check_service "Reputation"   {{port_reputation}}
+    check_service "Court"        {{port_court}}
+    check_service "DB Gateway"   {{port_db_gateway}}
+    check_service "UI"           {{port_ui}}
 
     printf "\n"
-
-# Continuously watch service status (refreshes every 5s)
-watch:
-    #!/usr/bin/env bash
-    while true; do
-        clear
-        just status
-        sleep 5
-    done
+    if [ "$failed" -gt 0 ]; then
+        printf "\033[0;31m✗ %d service(s) unhealthy\033[0m\n" "$failed"
+        exit 1
+    fi
+    printf "\033[0;32m✓ All services healthy\033[0m\n"
+    printf "\n"
 
 # Tail all service logs (color-coded, today by default)
 logs date="":
     #!/usr/bin/env bash
     printf "\n"
-    if [ -n "{{date}}" ]; then
-        python3 scripts/tail_logs.py --date "{{date}}"
+    if [ -n {{quote(date)}} ]; then
+        uv run --project services/db-gateway python scripts/tail_logs.py --date {{quote(date)}}
     else
-        python3 scripts/tail_logs.py
+        uv run --project services/db-gateway python scripts/tail_logs.py
     fi
 
 # Destroy all virtual environments
-destroy-all: stop-all
+destroy-all:
     @echo ""
     @printf "\033[0;34m=== Destroying All Virtual Environments ===\033[0m\n"
     cd services/identity && just destroy
@@ -481,178 +725,42 @@ destroy-all: stop-all
     cd services/ui && just destroy
     cd agents && just destroy
     cd tools && just destroy
+    cd libs/service-auth && just destroy
+    cd libs/service-clients && just destroy
+    cd libs/service-commons && just destroy
     @printf "\033[0;32m✓ All virtual environments removed\033[0m\n"
     @echo ""
 
 # --- Task Generation ---
 
-# Generate math tasks (appends 10,000 tasks to data/math_tasks.jsonl)
+# Generate a replacement set of 10,000 tasks in data/math_tasks.jsonl
 generate-tasks:
     @echo ""
     cd tools && uv run python -m math_task_factory --total 10000
-    @printf "\033[0;32m✓ Tasks appended to data/math_tasks.jsonl\033[0m\n"
+    @printf "\033[0;32m✓ Replaced data/math_tasks.jsonl with generated tasks\033[0m\n"
     @echo ""
 
 # --- Demo ---
 
-# Run quick demo (3 agents, 1 task lifecycle + 1 dispute, ~25s)
+# Run a new quick scenario against the existing stack
 demo:
-    #!/usr/bin/env bash
-    root="$(pwd)"
-    printf "\n"
-    printf "\033[0;34m=== Quick Demo ===\033[0m\n"
-    printf "\n"
-
-    # Check if any services are already running and stop them
-    ports=(8001 8002 8003 8004 8005 8007 8008)
-    running=0
-    for port in "${ports[@]}"; do
-        if lsof -ti :"$port" -sTCP:LISTEN >/dev/null 2>&1; then
-            running=1
-            break
-        fi
-    done
-    if [ "$running" -eq 1 ]; then
-        printf "Stopping running services...\n"
-        just stop-all
-    fi
-
-    printf "Wiping databases...\n"
-    rm -f data/economy.db data/economy.db-wal data/economy.db-shm
-    for svc in services/*/; do
-        rm -f "$svc"data/*.db "$svc"data/*.db-wal "$svc"data/*.db-shm
-    done
-
-    printf "Starting services...\n"
-    just start-all
-
-    # Open UI in browser so user can watch the replay live
-    printf "Opening UI in browser...\n"
-    if command -v open >/dev/null 2>&1; then
-        open "http://localhost:8008"
-    elif command -v xdg-open >/dev/null 2>&1; then
-        xdg-open "http://localhost:8008"
-    fi
-    sleep 1
-
-    printf "\n"
-    printf "\033[0;34m--- Running quick scenario ---\033[0m\n"
-    printf "\n"
+    uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
     cd tools && uv run python -m demo_replay scenarios/quick.yaml
-    exit_code=$?
-    cd "$root"
 
-    printf "\n"
-    if [ $exit_code -eq 0 ]; then
-        printf "\033[0;32m✓ Demo complete — UI at http://localhost:8008\033[0m\n"
-    else
-        printf "\033[0;31m✗ Demo failed (exit code: %d)\033[0m\n" "$exit_code"
-    fi
-    printf "\n"
-    printf "\033[0;33mPress Enter to stop all services...\033[0m"
-    read -r
-    just stop-all
-    printf "\n"
-
-# Run scaled demo (10 agents, multiple task waves, ~60s)
+# Run a new scale scenario against the existing stack
 demo-scale:
-    #!/usr/bin/env bash
-    root="$(pwd)"
-    printf "\n"
-    printf "\033[0;34m=== Scaled Economy Demo ===\033[0m\n"
-    printf "\n"
-
-    # Check if any services are already running and stop them
-    ports=(8001 8002 8003 8004 8005 8007 8008)
-    running=0
-    for port in "${ports[@]}"; do
-        if lsof -ti :"$port" -sTCP:LISTEN >/dev/null 2>&1; then
-            running=1
-            break
-        fi
-    done
-    if [ "$running" -eq 1 ]; then
-        printf "Stopping running services...\n"
-        just stop-all
-    fi
-
-    printf "Wiping databases...\n"
-    rm -f data/economy.db data/economy.db-wal data/economy.db-shm
-    for svc in services/*/; do
-        rm -f "$svc"data/*.db "$svc"data/*.db-wal "$svc"data/*.db-shm
-    done
-
-    printf "Starting services...\n"
-    just start-all
-
-    # Open UI in browser so user can watch the replay live
-    printf "Opening UI in browser...\n"
-    if command -v open >/dev/null 2>&1; then
-        open "http://localhost:8008"
-    elif command -v xdg-open >/dev/null 2>&1; then
-        xdg-open "http://localhost:8008"
-    fi
-    sleep 1
-
-    printf "\n"
-    printf "\033[0;34m--- Running scale scenario ---\033[0m\n"
-    printf "\n"
+    uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
     cd tools && uv run python -m demo_replay scenarios/scale.yaml
-    exit_code=$?
-    cd "$root"
 
-    printf "\n"
-    if [ $exit_code -eq 0 ]; then
-        printf "\033[0;32m✓ Demo complete — UI at http://localhost:8008\033[0m\n"
-    else
-        printf "\033[0;31m✗ Demo failed (exit code: %d)\033[0m\n" "$exit_code"
-    fi
-    printf "\n"
-    printf "\033[0;33mPress Enter to stop all services...\033[0m"
-    read -r
-    just stop-all
-    printf "\n"
+# Resume a quick scenario against the existing stack
+demo-resume run_id:
+    uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
+    cd tools && uv run python -m demo_replay scenarios/quick.yaml --run-id {{quote(run_id)}}
 
-# --- Docker ---
-
-# Start all services with Docker Compose
-docker-up:
-    @echo ""
-    @printf "\033[0;34m=== Starting All Services (Docker) ===\033[0m\n"
-    docker compose up -d
-    @printf "\033[0;32m✓ Services started\033[0m\n"
-    @echo ""
-
-# Start all services in development mode (with hot reload)
-docker-up-dev:
-    @echo ""
-    @printf "\033[0;34m=== Starting All Services (Docker Dev Mode) ===\033[0m\n"
-    docker compose -f docker-compose.yml -f docker-compose.dev.yml up
-    @echo ""
-
-# Stop all services
-docker-down:
-    @echo ""
-    @printf "\033[0;34m=== Stopping All Services ===\033[0m\n"
-    docker compose down
-    @printf "\033[0;32m✓ Services stopped\033[0m\n"
-    @echo ""
-
-# View Docker logs (optionally for a specific service)
-docker-logs service="":
-    @echo ""
-    docker compose logs -f {{service}}
-    @echo ""
-
-# Build all Docker images (destroys existing images first)
-docker-build:
-    @echo ""
-    @printf "\033[0;34m=== Destroying Existing Docker Images ===\033[0m\n"
-    docker compose down --rmi all --volumes 2>/dev/null || true
-    @printf "\033[0;34m=== Building All Docker Images ===\033[0m\n"
-    docker compose build
-    @printf "\033[0;32m✓ Build complete\033[0m\n"
-    @echo ""
+# Resume a scale scenario against the existing stack
+demo-scale-resume run_id:
+    uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
+    cd tools && uv run python -m demo_replay scenarios/scale.yaml --run-id {{quote(run_id)}}
 
 # --- CI & Code Quality ---
 
@@ -706,31 +814,119 @@ test-project-structure:
 
 # Run tests for all services
 test-all:
-    @echo ""
-    @printf "\033[0;34m=== Running All Tests ===\033[0m\n"
-    cd services/identity && just test
-    cd services/central-bank && just test
-    cd services/task-board && just test
-    cd services/reputation && just test
-    cd services/court && just test
-    cd services/db-gateway && just test
-    cd services/ui && just test
-    @printf "\033[0;32m✓ All tests passed\033[0m\n"
-    @echo ""
+    #!/usr/bin/env bash
+    set -euo pipefail
+    root="$(pwd)"
+    printf "\n"
+    printf "\033[0;34m=== Running All Tests ===\033[0m\n"
+    printf "\n"
+    uv run --directory "$root/services/db-gateway" \
+        "$root/scripts/isolated_test_runtime.py" -- \
+        just _test-all-suites
+
+[private]
+_test-all-suites:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    root="$(pwd)"
+    fail=0
+    for svc in identity central-bank task-board reputation court db-gateway ui; do
+        printf "\033[0;34m--- %s ---\033[0m\n" "$svc"
+        cd "$root/services/$svc" && just test || fail=1
+        cd "$root"
+    done
+
+    printf "\n"
+    if [ "$fail" -ne 0 ]; then
+        printf "\033[0;31m✗ Some service test suites failed\033[0m\n"
+        exit 1
+    fi
+    printf "\033[0;32m✓ All tests passed\033[0m\n"
+    printf "\n"
 
 # Run tests for a specific service
 test service:
-    @echo ""
-    cd services/{{service}} && just test
-    @echo ""
+    #!/usr/bin/env bash
+    set -euo pipefail
+    service={{quote(service)}}
+    case "$service" in
+        identity|central-bank|task-board|reputation|court|db-gateway|ui) ;;
+        *) printf "\033[0;31m✗ Unknown service: %s\033[0m\n" "$service" >&2; exit 1 ;;
+    esac
+    printf "\n"
+    cd "services/$service"
+    just test
+    printf "\n"
 
 # Run CI checks for a specific service
 ci-service service:
-    @echo ""
-    cd services/{{service}} && just ci
-    @echo ""
+    #!/usr/bin/env bash
+    set -euo pipefail
+    service={{quote(service)}}
+    case "$service" in
+        identity|central-bank|task-board|reputation|court|db-gateway|ui) ;;
+        *) printf "\033[0;31m✗ Unknown service: %s\033[0m\n" "$service" >&2; exit 1 ;;
+    esac
+    printf "\n"
+    cd "services/$service"
+    just ci
+    printf "\n"
 
-# Run ALL CI checks: services, agents, cross-service integration tests, e2e tests
+# Test and enforce the repository-wide inherited-PATH policy
+code-semgrep-path-policy:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    root="$(pwd)"
+    verification_root="${TMPDIR:?TMPDIR must name writable verification storage}/agent-economy-semgrep"
+    mkdir -p "$verification_root/config" "$verification_root/cache" "$verification_root/uv-cache"
+    if [ -r /etc/ssl/cert.pem ]; then
+        ca_bundle=/etc/ssl/cert.pem
+    elif [ -r /etc/ssl/certs/ca-certificates.crt ]; then
+        ca_bundle=/etc/ssl/certs/ca-certificates.crt
+    else
+        printf 'Semgrep requires a readable system CA bundle.\n' >&2
+        exit 1
+    fi
+    semgrep=(
+        uv run --project "$root/services/db-gateway" --all-extras --frozen
+        semgrep --metrics off
+    )
+    semgrep_environment=(
+        "TMPDIR=$TMPDIR"
+        "UV_CACHE_DIR=$verification_root/uv-cache"
+        "XDG_CONFIG_HOME=$verification_root/config"
+        "XDG_CACHE_HOME=$verification_root/cache"
+        "SEMGREP_SETTINGS_FILE=$verification_root/settings.yml"
+        "SEMGREP_LOG_FILE=$verification_root/semgrep.log"
+        "SEMGREP_SEND_METRICS=off"
+        "SEMGREP_ENABLE_VERSION_CHECK=0"
+        "SSL_CERT_FILE=$ca_bundle"
+    )
+
+    for fixture in \
+        "$root/config/semgrep/tests/no-path-overrides/python.py" \
+        "$root/config/semgrep/tests/no-path-overrides/shell.sh"; do
+        env "${semgrep_environment[@]}" "${semgrep[@]}" --test \
+            --config "$root/config/semgrep/no-path-overrides.yml" "$fixture"
+    done
+
+    targets=(
+        "$root/agents"
+        "$root/libs"
+        "$root/services"
+        "$root/tools"
+        "$root/tests"
+        "$root/scripts"
+        "$root/.githooks"
+    )
+    env "${semgrep_environment[@]}" "${semgrep[@]}" \
+        --config "$root/config/semgrep/no-path-overrides.yml" --error --no-git-ignore \
+        --exclude '**/.venv/**' --exclude '**/node_modules/**' \
+        --exclude '**/build/**' --exclude '**/dist/**' \
+        --exclude '**/__pycache__/**' "${targets[@]}"
+    printf '\033[0;32m✓ Repository PATH policy passed\033[0m\n'
+
+# Run ALL CI checks: services, agents, tools, cross-service integration tests, e2e tests
 ci:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -743,30 +939,54 @@ ci:
     printf "\033[0;34m--- Phase 0: Project structure ---\033[0m\n"
     cd "$root" && just test-project-structure
 
-    # Phase 1: Per-service CI (format, lint, types, security, deps, spell, semgrep, audit, tests, pyright)
-    printf "\033[0;34m--- Phase 1: Service CI ---\033[0m\n"
+    printf "\033[0;34m--- Phase 0b: Repository PATH policy ---\033[0m\n"
+    cd "$root" && just code-semgrep-path-policy
+
+    # Phase 1: Libs CI (format, lint, types, security, spell, unit tests)
+    printf "\033[0;34m--- Phase 1: Libs CI ---\033[0m\n"
+    libs=(service-commons service-clients service-auth)
+    for lib in "${libs[@]}"; do
+        cd "$root/libs/$lib" && just ci
+    done
+
+    # Phase 2: Per-service CI (format, lint, types, security, deps, spell, semgrep, audit, tests, pyright)
+    printf "\033[0;34m--- Phase 2: Service CI ---\033[0m\n"
     services=(identity central-bank task-board reputation court db-gateway ui)
     for svc in "${services[@]}"; do
         cd "$root/services/$svc" && just ci
     done
 
-    # Phase 2: Agents CI (format, lint, types, security, spell, unit tests)
-    printf "\033[0;34m--- Phase 2: Agents CI ---\033[0m\n"
+    # Phase 3: Per-service integration tests (T-071/GAP-F1; live stack, stack-up
+    # pattern from commit 2a907b1)
+    printf "\033[0;34m--- Phase 3: Per-service integration tests ---\033[0m\n"
+    cd "$root" && just test-integration-all
+
+    # Phase 4: Agents CI (format, lint, types, security, spell, unit tests)
+    printf "\033[0;34m--- Phase 4: Agents CI ---\033[0m\n"
     cd "$root/agents" && just ci
 
-    # Phase 3: Cross-service integration tests (DB Gateway writes, offline gateway)
-    printf "\033[0;34m--- Phase 3: Cross-service integration tests ---\033[0m\n"
-    cd "$root"
-    PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
-        pytest "$root/tests/integration/" -v --tb=short
+    # Phase 5: Tools CI (format, lint, types, security, spell, unit tests)
+    printf "\033[0;34m--- Phase 5: Tools CI ---\033[0m\n"
+    cd "$root/tools" && just ci
 
-    # Phase 4: E2E tests (restarts services, runs full lifecycle tests)
-    printf "\033[0;34m--- Phase 4: E2E tests ---\033[0m\n"
+    # Phase 6: Cross-service and isolated-runtime acceptance tests
+    printf "\033[0;34m--- Phase 6: Cross-service and runtime integration tests ---\033[0m\n"
+    cd "$root"
+    PYTHONPATH="$root:$root/tests" uv run --directory "$root/services/db-gateway" \
+        pytest "$root/tests/integration/" "$root/tests/runtime/" -v --tb=short
+
+    # Phase 7: UI Playwright e2e (self-contained; no live stack)
+    printf "\033[0;34m--- Phase 7: UI Playwright e2e ---\033[0m\n"
+    cd "$root"
+    just test-ui-e2e
+
+    # Phase 8: E2E tests (restarts services, runs full lifecycle tests)
+    printf "\033[0;34m--- Phase 8: E2E tests ---\033[0m\n"
     cd "$root"
     just test-e2e
 
     printf "\n"
-    printf "\033[0;32m✓ Full CI passed (services + agents + integration + e2e)\033[0m\n"
+    printf "\033[0;32m✓ Full CI passed (libs + services + agents + tools + integration + ui-e2e + e2e)\033[0m\n"
     printf "\n"
 
 # Run ALL CI checks quietly
@@ -781,38 +1001,63 @@ ci-quiet:
     printf "\033[0;34m--- Phase 0: Project structure ---\033[0m\n"
     cd "$root" && just test-project-structure
 
-    # Phase 1: Per-service CI
-    printf "\033[0;34m--- Phase 1: Service CI ---\033[0m\n"
+    printf "\033[0;34m--- Phase 0b: Repository PATH policy ---\033[0m\n"
+    cd "$root" && just code-semgrep-path-policy
+
+    # Phase 1: Libs CI
+    printf "\033[0;34m--- Phase 1: Libs CI ---\033[0m\n"
+    libs=(service-commons service-clients service-auth)
+    for lib in "${libs[@]}"; do
+        printf "Checking %s...\n" "$lib"
+        cd "$root/libs/$lib" && just ci-quiet
+    done
+
+    # Phase 2: Per-service CI
+    printf "\033[0;34m--- Phase 2: Service CI ---\033[0m\n"
     services=(identity central-bank task-board reputation court db-gateway ui)
     for svc in "${services[@]}"; do
         printf "Checking %s...\n" "$svc"
         cd "$root/services/$svc" && just ci-quiet
     done
 
-    # Phase 2: Agents CI
-    printf "\033[0;34m--- Phase 2: Agents CI ---\033[0m\n"
+    # Phase 3: Per-service integration tests (T-071/GAP-F1; live stack, stack-up
+    # pattern from commit 2a907b1)
+    printf "\033[0;34m--- Phase 3: Per-service integration tests ---\033[0m\n"
+    cd "$root" && just test-integration-all
+
+    # Phase 4: Agents CI
+    printf "\033[0;34m--- Phase 4: Agents CI ---\033[0m\n"
     cd "$root/agents" && just ci-quiet
 
-    # Phase 3: Cross-service integration tests
-    printf "\033[0;34m--- Phase 3: Cross-service integration tests ---\033[0m\n"
-    cd "$root"
-    PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
-        pytest "$root/tests/integration/" -v --tb=short
+    # Phase 5: Tools CI
+    printf "\033[0;34m--- Phase 5: Tools CI ---\033[0m\n"
+    cd "$root/tools" && just ci-quiet
 
-    # Phase 4: E2E tests
-    printf "\033[0;34m--- Phase 4: E2E tests ---\033[0m\n"
+    # Phase 6: Cross-service and isolated-runtime acceptance tests
+    printf "\033[0;34m--- Phase 6: Cross-service and runtime integration tests ---\033[0m\n"
+    cd "$root"
+    PYTHONPATH="$root:$root/tests" uv run --directory "$root/services/db-gateway" \
+        pytest "$root/tests/integration/" "$root/tests/runtime/" -v --tb=short
+
+    # Phase 7: UI Playwright e2e (self-contained; no live stack)
+    printf "\033[0;34m--- Phase 7: UI Playwright e2e ---\033[0m\n"
+    cd "$root"
+    just test-ui-e2e
+
+    # Phase 8: E2E tests
+    printf "\033[0;34m--- Phase 8: E2E tests ---\033[0m\n"
     cd "$root"
     just test-e2e
 
     printf "\n"
-    printf "\033[0;32m✓ Full CI passed (services + agents + integration + e2e)\033[0m\n"
+    printf "\033[0;32m✓ Full CI passed (libs + services + agents + tools + integration + ui-e2e + e2e)\033[0m\n"
     printf "\n"
 
 # CI hook for Claude Code — blocks git commit if CI fails
 ci-quiet-hook:
     @bash scripts/ci-quiet-hook.sh
 
-# Run cross-service integration tests (DB Gateway writes, offline gateway)
+# Run cross-service integration and isolated-runtime acceptance tests
 test-integration:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -820,53 +1065,83 @@ test-integration:
     printf "\n"
     printf "\033[0;34m=== Running Cross-Service Integration Tests ===\033[0m\n"
     printf "\n"
-    PYTHONPATH="$root/tests" uv run --directory "$root/services/db-gateway" \
-        pytest "$root/tests/integration/" -v --tb=short
+    PYTHONPATH="$root:$root/tests" uv run --directory "$root/services/db-gateway" \
+        pytest "$root/tests/integration/" "$root/tests/runtime/" -v --tb=short
     printf "\n"
     printf "\033[0;32m✓ Cross-service integration tests passed\033[0m\n"
     printf "\n"
 
-# Run e2e tests (restarts all services with clean data, then runs tests)
-test-e2e:
+# Run every service's tests/integration/ suite against a disposable live stack.
+# Most suites are self-contained; DB Gateway's suite consumes the generated
+# DB_GATEWAY_URL from this run.
+test-integration-all:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    root="$(pwd)"
+    printf "\n"
+    printf "\033[0;34m=== Running Per-Service Integration Tests ===\033[0m\n"
+    printf "\n"
+    uv run --directory "$root/services/db-gateway" \
+        "$root/scripts/isolated_test_runtime.py" -- \
+        just _test-integration-suites
+
+[private]
+_test-integration-suites:
     #!/usr/bin/env bash
     set -uo pipefail
+    root="$(pwd)"
+    fail=0
+    services=(identity central-bank task-board reputation court db-gateway ui)
+    for svc in "${services[@]}"; do
+        printf "\033[0;34m--- %s ---\033[0m\n" "$svc"
+        cd "$root/services/$svc" && just test-integration || fail=1
+        cd "$root"
+    done
+
+    printf "\n"
+    if [ "$fail" -ne 0 ]; then
+        printf "\033[0;31m✗ Some per-service integration suites failed\033[0m\n"
+        exit 1
+    fi
+    printf "\033[0;32m✓ Per-service integration tests passed\033[0m\n"
+    printf "\n"
+
+# Run the UI service's Playwright E2E suite (browser-based; fully self-contained
+# — its own conftest spins up a temp DB + a UI server subprocess on a random
+# port, so it needs no live stack and does not call start-all/stop-all)
+test-ui-e2e:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    printf "\n"
+    printf "\033[0;34m=== Running UI Playwright E2E Tests ===\033[0m\n"
+    printf "\n"
+
+    root="$(pwd)"
+    cd "$root/services/ui"
+
+    just test-prerequisites
+
+    uv run pytest tests/e2e -v --tb=short
+
+    printf "\n"
+    printf "\033[0;32m✓ UI Playwright E2E tests passed\033[0m\n"
+    printf "\n"
+
+# Run e2e tests against a disposable isolated stack, then tear down only that stack.
+test-e2e:
+    #!/usr/bin/env bash
+    set -euo pipefail
     printf "\n"
     printf "\033[0;34m=== Running E2E Tests ===\033[0m\n"
     printf "\n"
 
     root="$(pwd)"
-
-    cleanup() {
-        printf "\n"
-        printf "\033[0;34m--- Stopping all services ---\033[0m\n"
-        cd "$root" && just stop-all
-    }
-    trap cleanup EXIT
-
-    printf "\033[0;34m--- Stopping all services ---\033[0m\n"
-    just stop-all
-
-    printf "\033[0;34m--- Wiping service databases ---\033[0m\n"
-    for svc in services/*/; do
-        rm -f "$svc"data/*.db "$svc"data/*.db-wal "$svc"data/*.db-shm
-    done
-    printf "\033[0;32m✓ Service databases wiped\033[0m\n"
-
-    printf "\033[0;34m--- Starting all services ---\033[0m\n"
-    just start-all
-
-    printf "\033[0;34m--- Running e2e tests ---\033[0m\n"
-    test_exit=0
-    cd agents && just test-e2e || test_exit=$?
-
+    uv run --directory "$root/services/db-gateway" \
+        "$root/scripts/isolated_test_runtime.py" --provision -- \
+        just --justfile "$root/agents/justfile" --working-directory "$root/agents" test-e2e
     printf "\n"
-    if [ "$test_exit" -eq 0 ]; then
-        printf "\033[0;32m✓ E2E tests passed\033[0m\n"
-    else
-        printf "\033[0;31m✗ E2E tests failed (exit code: %d)\033[0m\n" "$test_exit"
-    fi
+    printf "\033[0;32m✓ E2E tests passed\033[0m\n"
     printf "\n"
-    exit "$test_exit"
 
 # Show lines of code across the project
 stats:
