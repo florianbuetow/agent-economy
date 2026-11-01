@@ -9,7 +9,7 @@ The shipped three-judge panel decided all five declared cases inside their expec
   - judge-1 `google/gemma-4-26b-a4b`
   - judge-2 `mistralai/ministral-3-14b-reasoning`
 - Host: one 64 GiB Mac. The three models do not fit in memory together, so the run goes judge by judge to load each model once.
-- Command, from `services/court` with `COURT_JUDGE_API_KEY` set:
+- Command, from `services/court` with `LMSTUDIO_API_KEY` set:
 
 ```
 uv run python -m court_service.judge_eval --out <result.json>

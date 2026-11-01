@@ -124,6 +124,8 @@ async def test_replay_uses_only_the_configured_platform_pair(
             state_directory=tmp_path / "state",
             max_record_bytes=1_048_576,
             diagnostic_limit=16,
+            http_timeout_seconds=30,
+            ruling_timeout_seconds=1200,
         ),
         effective_delay_seconds=0.0,
     )
