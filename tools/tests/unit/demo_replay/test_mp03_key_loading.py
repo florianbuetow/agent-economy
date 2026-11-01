@@ -126,6 +126,7 @@ async def test_replay_uses_only_the_configured_platform_pair(
             diagnostic_limit=16,
             http_timeout_seconds=30,
             ruling_timeout_seconds=1200,
+            ruling_poll_seconds=5,
         ),
         effective_delay_seconds=0.0,
     )

@@ -48,6 +48,7 @@ class DemoReplayConfig(BaseModel):
     http_timeout_seconds: StrictInt
     # A real Court ruling waits on the whole judge panel, minutes on local models.
     ruling_timeout_seconds: StrictInt
+    ruling_poll_seconds: StrictInt
 
     @field_validator("environment_id")
     @classmethod
@@ -58,7 +59,11 @@ class DemoReplayConfig(BaseModel):
         return value
 
     @field_validator(
-        "max_record_bytes", "diagnostic_limit", "http_timeout_seconds", "ruling_timeout_seconds"
+        "max_record_bytes",
+        "diagnostic_limit",
+        "http_timeout_seconds",
+        "ruling_timeout_seconds",
+        "ruling_poll_seconds",
     )
     @classmethod
     def validate_positive_integer(cls, value: int) -> int:

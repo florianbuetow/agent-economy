@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 import hashlib
 import uuid
 from pathlib import Path
@@ -1073,9 +1074,7 @@ class ReplayEngine:
         )
         stored_intent = dict(cast("Mapping[str, object]", current.intent))
         if current.state == "dispatching":
-            observed = await clients.get_dispute(
-                http, self._config.court_url, cast("str", stored_intent["dispute_id"])
-            )
+            observed = await self._await_ruling(http, cast("str", stored_intent["dispute_id"]))
             if observed.get("status") == "ruled":
                 store.finish_step(
                     index=index,
@@ -1094,9 +1093,7 @@ class ReplayEngine:
             raise RuntimeError(f"Durable step {index} requires operator attention")
         if current.state in {"attention_required", "definitive_rejection"}:
             raise RuntimeError(f"Durable step {index} requires operator attention")
-        observed = await clients.get_dispute(
-            http, self._config.court_url, cast("str", stored_intent["dispute_id"])
-        )
+        observed = await self._await_ruling(http, cast("str", stored_intent["dispute_id"]))
         if observed.get("status") == "ruled":
             current = store.mark_dispatching(index=index, expected_revision=current.revision)
             store.finish_step(
@@ -1127,9 +1124,7 @@ class ReplayEngine:
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code != 409:
                 raise
-            observed = await clients.get_dispute(
-                http, self._config.court_url, cast("str", stored_intent["dispute_id"])
-            )
+            observed = await self._await_ruling(http, cast("str", stored_intent["dispute_id"]))
             if observed.get("status") != "ruled":
                 self._mark_attention(index, current, "ambiguous_ruling")
                 raise RuntimeError(f"Durable step {index} requires operator attention") from exc
@@ -1145,6 +1140,17 @@ class ReplayEngine:
             f"  [green]Court ruled[/green] dispute={dispute_id}"
             f" worker_pct={result.get('worker_pct', '?')}"
         )
+
+    async def _await_ruling(self, http: httpx.AsyncClient, dispute_id: str) -> dict[str, Any]:
+        """Wait while another trigger (Task Board's periodic one) is judging this dispute."""
+        if self._demo_config is None:
+            raise RuntimeError("Durable demo configuration is not bound")
+        deadline = time.monotonic() + self._demo_config.ruling_timeout_seconds
+        while True:
+            observed = await clients.get_dispute(http, self._config.court_url, dispute_id)
+            if observed.get("status") != "judging" or time.monotonic() >= deadline:
+                return observed
+            await asyncio.sleep(self._demo_config.ruling_poll_seconds)
 
     async def _do_feedback(self, http: httpx.AsyncClient, step: dict[str, Any]) -> None:
         self._require_store()

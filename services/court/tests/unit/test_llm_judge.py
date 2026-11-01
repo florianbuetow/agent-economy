@@ -65,6 +65,7 @@ def _judge() -> LLMJudge:
         timeout_seconds=5.0,
         api_base="http://mock-llm.invalid",
         api_key="test-key",
+        prompt_suffix=None,
     )
 
 
@@ -190,3 +191,21 @@ def test_rubric_never_rewards_non_delivery_under_a_vague_spec() -> None:
     guidance = build_system_prompt("nonce").split("=== SCORING GUIDANCE ===", 1)[1]
     assert "Vagueness never rewards non-delivery" in guidance
     assert "0-20" in guidance
+
+
+async def test_configured_prompt_suffix_ends_the_user_message() -> None:
+    """Qwen3's '/no_think' switch keeps small local judges from reasoning past the timeout."""
+    mock_acompletion = AsyncMock(return_value=_completion_response(_reply(50, "Split")))
+    judge = LLMJudge(
+        judge_id="judge-0",
+        model="test-model",
+        temperature=0.0,
+        timeout_seconds=5.0,
+        api_base="http://mock-llm.invalid",
+        api_key="test-key",
+        prompt_suffix="/no_think",
+    )
+    with patch("court_service.judges.llm_judge.litellm.acompletion", new=mock_acompletion):
+        await judge.evaluate(_context())
+    user_message = mock_acompletion.call_args.kwargs["messages"][1]["content"]
+    assert user_message.endswith("\n/no_think")

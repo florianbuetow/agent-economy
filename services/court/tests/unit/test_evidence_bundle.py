@@ -306,6 +306,7 @@ async def test_llm_judge_uses_fresh_nonce_and_states_evidence_is_data() -> None:
         api_base=None,
         api_key=None,
         timeout_seconds=5.0,
+        prompt_suffix=None,
     )
     with patch("court_service.judges.llm_judge.litellm.acompletion", new=completion):
         await judge.evaluate(_context(_INJECTION))

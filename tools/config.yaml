@@ -18,3 +18,5 @@ demo_replay:
   http_timeout_seconds: 30
   # Covers the three-judge panel (each judge has a 300 s timeout in Court config).
   ruling_timeout_seconds: 1200
+  # How often to re-read a dispute another trigger is already judging.
+  ruling_poll_seconds: 5

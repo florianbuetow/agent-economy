@@ -73,6 +73,7 @@ def build_judges(settings: Settings) -> list[Judge]:
                 api_base=judge_cfg.api_base,
                 api_key=api_key,
                 timeout_seconds=judge_cfg.timeout_seconds,
+                prompt_suffix=judge_cfg.prompt_suffix,
             )
         )
 

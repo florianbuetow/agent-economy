@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
@@ -92,23 +94,47 @@ async def test_ruling_post_409_rereads_and_adopts_exact_completion(
     assert stored is not None and stored.state == "completed"
 
 
+def _conflict() -> httpx.HTTPStatusError:
+    request = httpx.Request("POST", "https://court.invalid/disputes/clm-demo/rule")
+    conflict = httpx.Response(409, json={"error": "dispute_not_ready"}, request=request)
+    return httpx.HTTPStatusError("conflict", request=request, response=conflict)
+
+
 @pytest.mark.asyncio
-async def test_ruling_post_409_with_unresolved_evidence_requires_attention(
+async def test_ruling_post_409_while_judging_waits_for_the_ruling(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Task Board's periodic trigger may already be judging; the demo waits for that ruling."""
+    engine, ruling = await _prepared_engine(monkeypatch)
+    pending = {"dispute_id": "clm-demo", "task_id": TASK, "status": "rebuttal_pending"}
+    judging = {"dispute_id": "clm-demo", "task_id": TASK, "status": "judging"}
+    get_dispute = AsyncMock(side_effect=[pending, judging, judging, _ruled()])
+    monkeypatch.setattr(clients, "get_dispute", get_dispute)
+    monkeypatch.setattr(clients, "trigger_ruling", AsyncMock(side_effect=_conflict()))
+    monkeypatch.setattr(asyncio, "sleep", AsyncMock())
+
+    await engine._execute_step(MagicMock(), ruling)
+
+    assert get_dispute.await_count == 4
+    stored = engine._require_store().step(len(engine._scenario_steps) - 1)
+    assert stored is not None and stored.state == "completed"
+
+
+@pytest.mark.asyncio
+async def test_ruling_still_judging_at_the_timeout_requires_attention(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     engine, ruling = await _prepared_engine(monkeypatch)
     pending = {"dispute_id": "clm-demo", "task_id": TASK, "status": "rebuttal_pending"}
     judging = {"dispute_id": "clm-demo", "task_id": TASK, "status": "judging"}
-    request = httpx.Request("POST", "https://court.invalid/disputes/clm-demo/rule")
-    conflict = httpx.Response(409, json={"error": "conflict"}, request=request)
-    monkeypatch.setattr(clients, "get_dispute", AsyncMock(side_effect=[pending, judging]))
+    replies = iter([pending])
     monkeypatch.setattr(
-        clients,
-        "trigger_ruling",
-        AsyncMock(
-            side_effect=httpx.HTTPStatusError("conflict", request=request, response=conflict)
-        ),
+        clients, "get_dispute", AsyncMock(side_effect=lambda *_a: next(replies, judging))
     )
+    monkeypatch.setattr(clients, "trigger_ruling", AsyncMock(side_effect=_conflict()))
+    clock = iter(range(0, 10_000, 600))
+    monkeypatch.setattr(time, "monotonic", lambda: float(next(clock)))
+    monkeypatch.setattr(asyncio, "sleep", AsyncMock())
 
     with pytest.raises(RuntimeError, match="operator attention"):
         await engine._execute_step(MagicMock(), ruling)
@@ -134,5 +160,25 @@ async def test_fresh_ruling_allows_reserved_rebuttal_submitted_state(
     await engine._execute_step(MagicMock(), ruling)
 
     trigger.assert_awaited_once()
+    stored = engine._require_store().step(len(engine._scenario_steps) - 1)
+    assert stored is not None and stored.state == "completed"
+
+
+@pytest.mark.asyncio
+async def test_dispute_already_judging_before_the_trigger_waits_for_the_ruling(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The periodic trigger can start judging before the demo's own trigger step runs."""
+    engine, ruling = await _prepared_engine(monkeypatch)
+    judging = {"dispute_id": "clm-demo", "task_id": TASK, "status": "judging"}
+    get_dispute = AsyncMock(side_effect=[judging, judging, _ruled()])
+    trigger = AsyncMock()
+    monkeypatch.setattr(clients, "get_dispute", get_dispute)
+    monkeypatch.setattr(clients, "trigger_ruling", trigger)
+    monkeypatch.setattr(asyncio, "sleep", AsyncMock())
+
+    await engine._execute_step(MagicMock(), ruling)
+
+    trigger.assert_not_awaited()
     stored = engine._require_store().step(len(engine._scenario_steps) - 1)
     assert stored is not None and stored.state == "completed"

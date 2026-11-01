@@ -53,6 +53,7 @@ judges:
       api_key_env: "LMSTUDIO_API_KEY"
       temperature: 0.2
       timeout_seconds: 300
+      prompt_suffix: "/no_think"
     - id: "judge-1"
       provider: "llm"
       model: "openai/qwen3-0.6b-mlx"
@@ -60,6 +61,7 @@ judges:
       api_key_env: "LMSTUDIO_API_KEY"
       temperature: 0.2
       timeout_seconds: 300
+      prompt_suffix: "/no_think"
     - id: "judge-2"
       provider: "llm"
       model: "openai/qwen3-0.6b-mlx"
@@ -67,6 +69,7 @@ judges:
       api_key_env: "LMSTUDIO_API_KEY"
       temperature: 0.2
       timeout_seconds: 300
+      prompt_suffix: "/no_think"
 
 # Plan 3.1: evidence handed to judges is never truncated or leniently decoded.
 # Files over max_file_bytes, files beyond max_total_bytes, unsupported formats and
