@@ -40,6 +40,8 @@ demo_replay:
   state_directory: "../state/demo"
   max_record_bytes: 1048576
   diagnostic_limit: 16
+  http_timeout_seconds: 30
+  ruling_timeout_seconds: 1200
 """,
         encoding="utf-8",
     )

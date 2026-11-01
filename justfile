@@ -742,23 +742,31 @@ generate-tasks:
 
 # --- Demo ---
 
+# Stop with one line when the stack is down, instead of a wall of connection errors
+_require-stack:
+    #!/usr/bin/env bash
+    if ! just status > /dev/null 2>&1; then
+        printf "\033[0;31m✗ The stack is not running. Start it with: just start-all\033[0m\n"
+        exit 1
+    fi
+
 # Run a new quick scenario against the existing stack
-demo:
+demo: _require-stack
     uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
     cd tools && uv run python -m demo_replay scenarios/quick.yaml
 
 # Run a new scale scenario against the existing stack
-demo-scale:
+demo-scale: _require-stack
     uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
     cd tools && uv run python -m demo_replay scenarios/scale.yaml
 
 # Resume a quick scenario against the existing stack
-demo-resume run_id:
+demo-resume run_id: _require-stack
     uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
     cd tools && uv run python -m demo_replay scenarios/quick.yaml --run-id {{quote(run_id)}}
 
 # Resume a scale scenario against the existing stack
-demo-scale-resume run_id:
+demo-scale-resume run_id: _require-stack
     uv run --project services/db-gateway python scripts/open_ui.py --url http://localhost:{{port_ui}}
     cd tools && uv run python -m demo_replay scenarios/scale.yaml --run-id {{quote(run_id)}}
 

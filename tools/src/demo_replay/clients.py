@@ -456,6 +456,7 @@ async def trigger_ruling(
     platform: DemoAgent,
     dispute_id: str,
     court_url: str,
+    timeout_seconds: int,
 ) -> dict[str, Any]:
     """Trigger a Court ruling with a platform-signed token."""
     url = f"{court_url}/disputes/{dispute_id}/rule"
@@ -464,7 +465,7 @@ async def trigger_ruling(
         audience="court",
         resource=f"POST /disputes/{dispute_id}/rule",
     )
-    resp = await client.post(url, json={"token": token})
+    resp = await client.post(url, json={"token": token}, timeout=timeout_seconds)
     resp.raise_for_status()
     return resp.json()  # type: ignore[no-any-return]
 

@@ -15,3 +15,6 @@ demo_replay:
   state_directory: "../data/demo-replay"
   max_record_bytes: 1048576
   diagnostic_limit: 16
+  http_timeout_seconds: 30
+  # Covers the three-judge panel (each judge has a 300 s timeout in Court config).
+  ruling_timeout_seconds: 1200

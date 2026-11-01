@@ -45,6 +45,9 @@ class DemoReplayConfig(BaseModel):
     state_directory: Path
     max_record_bytes: StrictInt
     diagnostic_limit: StrictInt
+    http_timeout_seconds: StrictInt
+    # A real Court ruling waits on the whole judge panel, minutes on local models.
+    ruling_timeout_seconds: StrictInt
 
     @field_validator("environment_id")
     @classmethod
@@ -54,7 +57,9 @@ class DemoReplayConfig(BaseModel):
             raise ValueError(msg)
         return value
 
-    @field_validator("max_record_bytes", "diagnostic_limit")
+    @field_validator(
+        "max_record_bytes", "diagnostic_limit", "http_timeout_seconds", "ruling_timeout_seconds"
+    )
     @classmethod
     def validate_positive_integer(cls, value: int) -> int:
         if value <= 0:

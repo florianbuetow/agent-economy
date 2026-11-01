@@ -194,3 +194,5 @@ class TestDispatchUsesConfigResolvedUrls:
 
         mock_ruling.assert_awaited_once()
         assert mock_ruling.call_args[0][3] == "http://court.test"
+        # The ruling waits on the whole judge panel, so it gets the configured long timeout.
+        assert mock_ruling.call_args[0][4] == 1200

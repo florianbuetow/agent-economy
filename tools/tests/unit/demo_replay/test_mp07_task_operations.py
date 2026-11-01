@@ -23,7 +23,7 @@ from service_auth.financial_identity import operation_id_for
 
 from demo_replay import clients
 from demo_replay import engine as engine_module
-from demo_replay.config import PlatformConfig
+from demo_replay.config import DemoReplayConfig, PlatformConfig
 from demo_replay.engine import ReplayEngine, load_scenario
 from demo_replay.run_store import ActorDefinition, RunEnvironment, RunStore
 from demo_replay.task_operations import TaskIntent, canonical_json
@@ -284,6 +284,14 @@ def _engine(steps: list[dict[str, Any]]) -> ReplayEngine:
     }
     engine = ReplayEngine(scenario, config)
     state = Path(tempfile.mkdtemp(prefix="mp05-native-unit-")).resolve()
+    engine._demo_config = DemoReplayConfig(
+        environment_id="native-unit",
+        state_directory=state,
+        max_record_bytes=1_048_576,
+        diagnostic_limit=32,
+        http_timeout_seconds=30,
+        ruling_timeout_seconds=1200,
+    )
     store = RunStore.open(
         state_directory=state,
         run_id=f"run-{UUID(int=id(engine) % (1 << 128))}",

@@ -5,7 +5,7 @@ evidence case, applies Court's own median aggregation, and records each vote, th
 panel decision, latency and the expectation it was checked against. One extra run
 points a judge at a closed port to record an explicit unavailable-provider result.
 
-Usage (from services/court, with COURT_JUDGE_API_KEY set):
+Usage (from services/court, with LMSTUDIO_API_KEY set):
     uv run python -m court_service.judge_eval --out <result.json>
 This is release evidence for real models, not a deterministic CI test.
 """

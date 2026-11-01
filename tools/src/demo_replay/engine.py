@@ -393,8 +393,16 @@ class ReplayEngine:
             await self._run_in_store(store)
             self._store = None
 
+    def _timeouts(self) -> tuple[int, int]:
+        if self._demo_config is None:
+            raise RuntimeError("Durable demo configuration is not bound")
+        return (
+            self._demo_config.http_timeout_seconds,
+            self._demo_config.ruling_timeout_seconds,
+        )
+
     async def _run_in_store(self, store: RunStore) -> None:
-        async with httpx.AsyncClient(timeout=30.0) as http:
+        async with httpx.AsyncClient(timeout=self._timeouts()[0]) as http:
             for agent in self.agents.values():
                 agent.configure_task_board(http, self._config.task_board_url)
             # Register platform agent first
@@ -1114,6 +1122,7 @@ class ReplayEngine:
                 self.platform,
                 cast("str", stored_intent["dispute_id"]),
                 self._config.court_url,
+                self._timeouts()[1],
             )
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code != 409:
