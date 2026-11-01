@@ -103,6 +103,8 @@ class JudgeConfig(BaseModel):
     api_key_env: str | None = None
     temperature: float | None = None
     timeout_seconds: float | None = None
+    # Appended to the evaluation prompt, e.g. Qwen3's "/no_think" switch.
+    prompt_suffix: str | None = None
 
 
 class JudgesConfig(BaseModel):

@@ -291,6 +291,7 @@ def _engine(steps: list[dict[str, Any]]) -> ReplayEngine:
         diagnostic_limit=32,
         http_timeout_seconds=30,
         ruling_timeout_seconds=1200,
+        ruling_poll_seconds=5,
     )
     store = RunStore.open(
         state_directory=state,

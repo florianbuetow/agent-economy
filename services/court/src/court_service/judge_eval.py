@@ -191,6 +191,7 @@ async def evaluate(out: Path) -> int:
         api_base="http://127.0.0.1:9/v1",
         api_key="unused",
         timeout_seconds=30.0,
+        prompt_suffix=None,
     )
     unavailable_vote = await _vote(unavailable, contexts[CORPUS[0].case_id])
     _write(

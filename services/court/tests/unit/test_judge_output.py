@@ -102,6 +102,7 @@ async def test_llm_judge_returns_both_quality_findings() -> None:
         api_base=None,
         api_key=None,
         timeout_seconds=5.0,
+        prompt_suffix=None,
     )
     with patch(
         "court_service.judges.llm_judge.litellm.acompletion", new=AsyncMock(return_value=reply)
@@ -122,6 +123,7 @@ async def test_llm_judge_legacy_payout_only_reply_fails() -> None:
         api_base=None,
         api_key=None,
         timeout_seconds=5.0,
+        prompt_suffix=None,
     )
     with (
         patch(

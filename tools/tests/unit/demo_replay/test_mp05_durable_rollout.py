@@ -42,6 +42,7 @@ demo_replay:
   diagnostic_limit: 16
   http_timeout_seconds: 30
   ruling_timeout_seconds: 1200
+  ruling_poll_seconds: 5
 """,
         encoding="utf-8",
     )

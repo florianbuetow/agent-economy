@@ -81,11 +81,13 @@ class LLMJudge(Judge):
         api_base: str | None,
         api_key: str | None,
         timeout_seconds: float,
+        prompt_suffix: str | None,
     ) -> None:
         self._judge_id = judge_id
         self._model = model
         self._temperature = temperature
         self._timeout_seconds = timeout_seconds
+        self._prompt_suffix = prompt_suffix
         self._api_base = api_base
         self._api_key = api_key
 
@@ -93,12 +95,15 @@ class LLMJudge(Judge):
         """Evaluate dispute context and return a vote."""
         # A fresh random nonce per evaluation: party text cannot forge a delimiter.
         nonce = secrets.token_hex(16)
+        user_prompt = build_evaluation_prompt(context, nonce)
+        if self._prompt_suffix is not None:
+            user_prompt = f"{user_prompt}\n{self._prompt_suffix}"
         try:
             response = await litellm.acompletion(
                 model=self._model,
                 messages=[
                     {"role": "system", "content": build_system_prompt(nonce)},
-                    {"role": "user", "content": build_evaluation_prompt(context, nonce)},
+                    {"role": "user", "content": user_prompt},
                 ],
                 temperature=self._temperature,
                 api_base=self._api_base,

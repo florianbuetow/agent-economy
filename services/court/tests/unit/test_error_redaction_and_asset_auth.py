@@ -42,6 +42,7 @@ async def test_llm_judge_failure_message_is_generic() -> None:
         timeout_seconds=5.0,
         api_base="http://10.0.0.5:1234",
         api_key="sk-live-SECRET",
+        prompt_suffix=None,
     )
     with (
         patch(

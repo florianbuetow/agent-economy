@@ -72,6 +72,7 @@ class TestVaguenessRubricReachesTheLLMCall:
             timeout_seconds=5.0,
             api_base=None,
             api_key=None,
+            prompt_suffix=None,
         )
         bundle = build_evidence_bundle(
             {"spec": "Write something", "deliverables": []},
