@@ -214,6 +214,9 @@ def _write_inputs(
         "state_directory": "../demo-setup/state",
         "max_record_bytes": 1_048_576,
         "diagnostic_limit": 16,
+        "http_timeout_seconds": 30,
+        "ruling_timeout_seconds": 1200,
+        "ruling_poll_seconds": 5,
     }
     config_path = runtime.run_dir / "configs" / "demo-setup-tools.yaml"
     config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")

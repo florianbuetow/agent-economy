@@ -17,8 +17,31 @@ from pathlib import Path
 from typing import cast
 from uuid import uuid4
 
-from demo_replay.config import load_demo_settings, load_platform_settings
+import httpx
+
+from demo_replay.config import PlatformConfig, load_demo_settings, load_platform_settings
 from demo_replay.engine import ReplayEngine, load_scenario
+
+
+def _require_stack(config: PlatformConfig, timeout_seconds: int) -> None:
+    """Stop with one line when a service is down, instead of a wall of tracebacks."""
+    for url in (
+        config.identity_url,
+        config.bank_url,
+        config.task_board_url,
+        config.reputation_url,
+        config.court_url,
+    ):
+        try:
+            healthy = httpx.get(f"{url}/health", timeout=timeout_seconds).status_code == 200
+        except httpx.HTTPError:
+            healthy = False
+        if not healthy:
+            print(
+                f"✗ The stack is not running ({url} is down). Start it with: just start-all",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -72,6 +95,7 @@ def main() -> None:
 
     config = load_platform_settings()
     demo_config = load_demo_settings()
+    _require_stack(config, demo_config.http_timeout_seconds)
     engine = ReplayEngine(scenario, config)
     engine.bind_durable_run(
         run_id=_resolve_run_id(args.run_id),

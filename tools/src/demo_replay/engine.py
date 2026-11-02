@@ -1074,7 +1074,10 @@ class ReplayEngine:
         )
         stored_intent = dict(cast("Mapping[str, object]", current.intent))
         if current.state == "dispatching":
-            observed = await self._await_ruling(http, cast("str", stored_intent["dispute_id"]))
+            # An interrupted dispatch of our own is ambiguous: adopt only a finished ruling.
+            observed = await clients.get_dispute(
+                http, self._config.court_url, cast("str", stored_intent["dispute_id"])
+            )
             if observed.get("status") == "ruled":
                 store.finish_step(
                     index=index,
