@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import time
 import uuid
 from contextlib import closing, suppress
 from json import JSONDecodeError
@@ -183,6 +184,10 @@ async def app(
     carol_keypair: tuple[Ed25519PrivateKey, str],
 ) -> AsyncIterator[Any]:
     """Use real isolated persistence behind controllable external transport boundaries."""
+    # Business-clock freezes must not make asyncio's long maintenance timers due.
+    # Capture the real clock before freezegun replaces time.monotonic in tests.
+    real_monotonic = time.monotonic
+    monkeypatch.setattr(asyncio.get_running_loop(), "time", real_monotonic)
     db_path = tmp_path / "test.db"
     provision_keypair("gateway-task-board", tmp_path)
     agent_config_path = _write_platform_agent_config(tmp_path)

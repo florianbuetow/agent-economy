@@ -1,0 +1,38 @@
+[
+  {
+    "stage": "finalize_event_inserted",
+    "thread": 6114144256,
+    "event_id": 9
+  },
+  {
+    "stage": "bank_replay_error",
+    "thread": 8377458304,
+    "type": "OperationalError",
+    "message": "cannot start a transaction within a transaction"
+  },
+  {
+    "stage": "finalize_resumed",
+    "event_still_present": 0
+  },
+  {
+    "stage": "finalize_event_inserted",
+    "thread": 6114144256,
+    "event_id": 9
+  },
+  {
+    "stage": "finalize_resumed",
+    "event_still_present": 1
+  },
+  {
+    "results": [
+      {
+        "type": "dict",
+        "message": "{'task_id': 't-00000000-0000-4000-8000-000000000401', 'poster_id': 'a-poster', 'title': 't-00000000-0000-4000-8000-000000000401', 'spec': 'Explicit deadline fixture terms', 'reward': 100, 'bidding_deadline_seconds': 1, 'deadline_seconds': 1, 'review_deadline_seconds': 1, 'status': 'expired', 'escrow_id': 'esc-t-00000000-0000-4000-8000-000000000401', 'bid_count': 0, 'worker_id': None, 'accepted_bid_id': None, 'created_at': '2026-10-18T12:00:00.000000Z', 'accepted_at': None, 'submitted_at': None, 'approved_at': None, 'cancelled_at': None, 'disputed_at': None, 'dispute_reason': None, 'dispute_id': None, 'rebuttal_deadline': None, 'rebuttal_submitted_at': None, 'ruling_id': None, 'ruled_at': None, 'worker_pct': None, 'ruling_summary': None, 'expired_at': '2026-10-18T12:00:05Z', 'escrow_pending': 0, 'lifecycle_version': 1, 'timing_contract_version': 2, 'acceptance_window_seconds': 1, 'bidding_cutoff_us': 1792324801000000, 'acceptance_cutoff_us': 1792324802000000, 'execution_cutoff_us': None, 'review_cutoff_us': None, 'accepted_reward': None, 'accepted_bid_amount': None, 'worker_payment': 0, 'poster_refund': 100, 'pending_transition': None, 'legacy_reconciliations': [], 'financial_effect': {'schema_version': 1, 'settlement_state': 'complete', 'receipt_state': 'confirmed', 'outcome': 'poster_refunded', 'operation_id': 'op-f6eac243-ef9b-5612-ab62-d65132f7c82b', 'receipt_reference': 'op-f6eac243-ef9b-5612-ab62-d65132f7c82b', 'business_projection_pending': False, 'pending_target_status': None}}"
+      },
+      {
+        "type": "IntegrityError",
+        "message": "FOREIGN KEY constraint failed"
+      }
+    ]
+  }
+]

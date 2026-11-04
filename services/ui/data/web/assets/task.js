@@ -38,7 +38,7 @@
     if (!task) return 0;
     var s = task.status;
     var bidCount = Number.isInteger(task.bid_count) ? task.bid_count : (task.bids ? task.bids.length : 0);
-    var assetCount = task.assets ? task.assets.length : 0;
+    var assetCount = outputAssets(task).length;
 
     if (s === 'open' && bidCount === 0) return 0;
     if (s === 'open' && bidCount > 0) return 1;
@@ -118,7 +118,9 @@
     if (!effect) return 'Payment status unavailable';
     if (effect.receipt_state === 'confirmed') {
       return {worker_paid: 'Paid to the worker', poster_refunded: 'Refunded to the poster',
-        split: 'Split between worker and poster by the court ruling'}[effect.outcome];
+        split: task.dispute && task.dispute.ruling ?
+          'Split between worker and poster by the court ruling' :
+          'Paid to the worker, with remaining funds refunded to the poster'}[effect.outcome];
     }
     if (effect.receipt_state === 'historical') return 'Paid to the worker';
     if (effect.settlement_state === 'locked') {
@@ -147,7 +149,7 @@
   function durationField(id, label, hint) {
     return '<div class="form-group">' +
       '<label class="form-label" for="' + id + '">' + label + ' (seconds)</label>' +
-      '<input class="form-input" id="' + id + '" type="number" min="1" step="1" aria-describedby="' + id + '-hint">' +
+      '<input class="form-input" id="' + id + '" type="number" min="1" step="1" required aria-describedby="' + id + '-hint">' +
       '<span class="form-hint" id="' + id + '-hint">' + hint + ' Enter whole seconds: 60 is one minute, 3600 is one hour.</span>' +
       '</div>';
   }
@@ -161,20 +163,21 @@
     return '<div class="card">' +
       '<div class="card-header"><span class="card-label">Create New Task</span></div>' +
       '<div class="card-body">' +
+      '<p class="form-hint" style="margin-bottom:14px">All fields are required except input files. Amounts are in platform credits (&copy;).</p>' +
       '<div class="form-group">' +
         '<label class="form-label" for="f-title">Title</label>' +
-        '<input class="form-input" id="f-title" type="text" placeholder="Task title" maxlength="200">' +
+        '<input class="form-input" id="f-title" required type="text" placeholder="Task title" maxlength="200">' +
       '</div>' +
       '<div class="form-group">' +
         '<label class="form-label" for="f-spec">Specification</label>' +
-        '<textarea class="form-textarea" id="f-spec" placeholder="Detailed task specification..." maxlength="10000"></textarea>' +
+        '<textarea class="form-textarea" id="f-spec" required placeholder="Detailed task specification..." maxlength="10000"></textarea>' +
       '</div>' +
       '<div class="form-note"><strong id="f-balance">' + esc(balanceText()) + '</strong><br>' +
         'The reward is locked in escrow when you post. It is paid to the worker when you approve the delivery, ' +
         'and returned to you if nobody completes the task.</div>' +
       '<div class="form-group">' +
         '<label class="form-label" for="f-reward">Reward (&copy;)</label>' +
-        '<input class="form-input" id="f-reward" type="number" min="1" step="1">' +
+        '<input class="form-input" id="f-reward" required type="number" min="1" step="1">' +
       '</div>' +
       '<div class="form-row">' +
         durationField('f-bid-dl', 'Bidding window', 'How long workers can place bids, counted from posting.') +
@@ -191,7 +194,7 @@
       '</div>' +
       '<div style="margin-top:14px">' +
         '<button class="btn btn-cyan solid" id="btn-post-task">Post Task</button>' +
-        '<span id="post-error" style="color:var(--red);font-size:11px;margin-left:12px"></span>' +
+        '<span id="post-error" role="alert" style="color:var(--red);font-size:11px;margin-left:12px"></span>' +
       '</div>' +
       '</div></div>';
   }
@@ -340,9 +343,13 @@
       '</div></div>';
   }
 
+  function outputAssets(task) {
+    return (task.assets || []).filter(function(asset) { return asset.role !== 'input'; });
+  }
+
   function workerDeliveryControls(task) {
     if (!isWorker(task) || task.status !== 'accepted') return '';
-    var mine = (task.assets || []).filter(function(asset) { return asset.uploader_id === state.myAgentId; });
+    var mine = outputAssets(task).filter(function(asset) { return asset.uploader_id === state.myAgentId; });
     var selected = state.selectedUpload ? 'Selected: ' + state.selectedUpload.file.name : 'No file selected';
     return '<div class="operator-action"><span class="operator-action-label">You are the worker on this task</span>' +
       '<label class="form-label" for="f-upload-file">Deliverable file</label>' +
@@ -356,7 +363,7 @@
   }
 
   function renderDeliverPhase(task) {
-    var assets = task.assets || [];
+    var assets = outputAssets(task);
     var html = '<div class="card"><div class="card-header">' +
       '<span class="card-label">&#128230; Assets Delivered</span>' +
       '<span style="font-size:9px;color:var(--text-dim)">' + assets.length + ' file' + (assets.length !== 1 ? 's' : '') + '</span>' +
@@ -376,7 +383,7 @@
     var html = '';
 
     // Show assets/deliverable
-    var assets = task.assets || [];
+    var assets = outputAssets(task);
     if (assets.length > 0) {
       html += '<div class="card"><div class="card-header"><span class="card-label">&#128230; Deliverable</span></div><div class="card-body">';
       assets.forEach(function(a) {
@@ -410,7 +417,7 @@
     // Dispute form
     if (isMyTask && task.status === 'submitted') {
       html += '<div id="dispute-form" style="display:none;padding:12px 16px">' +
-        '<div class="form-group"><label class="form-label">Dispute Reason</label>' +
+        '<div class="form-group"><label class="form-label" for="f-dispute-reason">Dispute Reason</label>' +
         '<textarea class="form-textarea" id="f-dispute-reason" data-preserve placeholder="Explain why the deliverable is unsatisfactory..."></textarea></div>' +
         '<button class="btn btn-red" id="btn-submit-dispute">Submit Dispute</button>' +
         '<span id="dispute-error" style="color:var(--red);font-size:11px;margin-left:12px"></span>' +
@@ -598,7 +605,7 @@
       var name = typeof file.filename === 'string' ? file.filename : 'Unnamed file';
       var path = assetPath(task.task_id, String(file.asset_id));
       html += '<div class="document-entry document-file" data-task-input="' + esc(String(file.asset_id)) + '">' +
-        '<a class="document-title" href="' + esc(path) + '" download="' + esc(name) + '">' + esc(name) + '</a>' +
+        '<a class="document-title" aria-label="Download input ' + esc(name) + '" href="' + esc(path) + '" download="' + esc(name) + '">' + esc(name) + '</a>' +
         '<div class="document-meta">' + esc(String(file.content_type)) + ' · ' + esc(formatAssetSize(file)) + '</div>' +
         '<details class="document-hash"><summary>SHA-256</summary><code>' + esc(String(file.content_sha256)) + '</code></details></div>';
     });
@@ -634,8 +641,8 @@
     loadTaskInputs(task.task_id);
     var html = documentText('Task specification', task.spec);
     html += inputFilesHtml(task);
-    var assets = Array.isArray(task.assets) ? task.assets : [];
-    html += '<div class="document-entry"><div class="document-title">Uploaded files</div>';
+    var assets = outputAssets(task);
+    html += '<div class="document-entry"><div class="document-title">Uploaded files</div><p class="form-hint">Output files uploaded for this job. Uploading alone does not submit work for review; check the task status above.</p>';
     if (assets.length === 0) {
       html += '<div class="documents-empty" style="margin-top:8px">No files have been uploaded.</div>';
     } else {
@@ -1203,6 +1210,9 @@
     var steps = document.querySelectorAll('.phase-step');
     steps.forEach(function(el, i) {
       el.className = 'phase-step';
+      el.setAttribute('role', i <= state.maxPhase ? 'button' : 'note');
+      el.setAttribute('tabindex', i <= state.maxPhase ? '0' : '-1');
+      el.setAttribute('aria-label', PHASE_LABELS[i] + (i > state.maxPhase ? ' (not reached yet)' : ''));
       el.innerHTML = el.innerHTML.replace(/<span class="phase-check">.*<\/span>/, '');
       if (i < state.maxPhase) {
         el.classList.add('completed');
@@ -1241,7 +1251,7 @@
     }
 
     if (state.mode === 'create') {
-      panelTitle.textContent = '&#128221; Post a New Task';
+      panelTitle.textContent = 'Post a New Task';
       statusEl.textContent = 'DRAFT';
       statusEl.className = 'status-badge status-open';
       content.innerHTML = renderCreateForm();
@@ -1299,8 +1309,35 @@
     });
   }
 
+  function taskOrientation(task) {
+    var role = isPoster(task) ? 'Poster' : isWorker(task) ? 'Assigned worker' :
+      state.myAgentId && task.status === 'open' ? 'Potential bidder' : 'Observer';
+    var next = 'Check the task history and payment status below.';
+    if (task.status === 'open') next = isPoster(task) ?
+      'Inspect bids and choose a worker. Accepting a bid starts the delivery deadline at the agreed price.' :
+      'Read the specification and input files before placing a binding bid. Bid details are visible only to the poster.';
+    if (task.status === 'accepted') next = isWorker(task) ?
+      'Download the inputs, upload your output files, then submit them for review before the delivery deadline.' :
+      'Waiting for the assigned worker to submit output files before the delivery deadline.';
+    if (task.status === 'submitted') next = isPoster(task) ?
+      'Inspect the output files, then approve payment or dispute the delivery before the review deadline. No response means automatic approval.' :
+      'Waiting for the poster to approve or dispute the delivery. The review deadline is shown below.';
+    if (task.status === 'disputed') next = isWorker(task) && task.dispute && !task.dispute.rebuttal ?
+      'Read the claim and submit your rebuttal using the control below. The Court will decide the outcome.' :
+      'Read the claim and any rebuttal below. Waiting for the Court ruling and confirmed settlement.';
+    if (task.status === 'cancelled' || task.status === 'expired') next =
+      'This job no longer accepts bids. Check the refund status below or browse other jobs.';
+    if (feedbackForm(task)) next = 'Leave feedback using the form below, and check the payment status.';
+    if (!state.myAgentId) next = 'Your acting identity could not be loaded. Reload the page to check which actions are available.';
+    return '<section class="task-orientation" id="task-orientation" aria-label="Job overview">' +
+      '<h1>' + esc(task.title) + '</h1><p><strong>Acting as:</strong> ' +
+      (state.myAgentId ? agentLink(state.myAgentId, state.myAgentId) : 'Identity unavailable') +
+      ' · ' + role + '</p><p><strong>What happens now:</strong> ' + next + '</p>' +
+      '<p><a class="agent-link" href="#documents">Input files and uploaded outputs</a></p></section>';
+  }
+
   function renderOverview(task, maxPhase) {
-    var html = escrowBar(task);
+    var html = taskOrientation(task) + escrowBar(task);
     for (var i = 0; i <= maxPhase; i++) {
       var body = RENDERERS[i](task);
       if (!body) continue;
@@ -1343,6 +1380,14 @@
     var phase = parseInt(step.getAttribute('data-phase'), 10);
     if (isNaN(phase)) return;
     navigateToPhase(phase);
+  });
+
+  document.getElementById('phase-strip').addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var step = e.target.closest('.phase-step');
+    if (!step) return;
+    e.preventDefault();
+    navigateToPhase(Number(step.getAttribute('data-phase')));
   });
 
   // ── Form bindings ──────────────────────────────────────────

@@ -331,19 +331,20 @@ class NativeTaskFixture:
         operation_id: str,
         source_reference: str,
     ) -> dict[str, Any]:
-        escrow = self.store.reader.get_escrow(escrow_id)
-        assert escrow is not None
-        return self.store.writer.escrow_release(
-            {
-                "operation_id": operation_id,
-                "escrow_id": escrow_id,
-                "recipient_account_id": recipient_account_id,
-                "source_reference": source_reference,
-                "tx_id": f"tx-{operation_id}",
-                "resolved_at": self.clock.iso(),
-                "event": self.event("central-bank", "escrow.released", str(escrow["task_id"])),
-            }
-        )
+        with self.store.connection_access():
+            escrow = self.store.reader.get_escrow(escrow_id)
+            assert escrow is not None
+            return self.store.writer.escrow_release(
+                {
+                    "operation_id": operation_id,
+                    "escrow_id": escrow_id,
+                    "recipient_account_id": recipient_account_id,
+                    "source_reference": source_reference,
+                    "tx_id": f"tx-{operation_id}",
+                    "resolved_at": self.clock.iso(),
+                    "event": self.event("central-bank", "escrow.released", str(escrow["task_id"])),
+                }
+            )
 
     def evaluator(self, platform_agent: PlatformAgent | None) -> DeadlineEvaluator:
         return DeadlineEvaluator(

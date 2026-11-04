@@ -59,7 +59,7 @@
   .lb-metric { text-align: right; flex-shrink: 0; }
   .lb-metric .amount { font-size: 15px; font-weight: 700; }
   .lb-metric .label-sm { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
-  .lb-empty { padding: 24px; text-align: center; color: var(--text-dim); font-size: 12px; }
+  .lb-empty, .agent-loading { padding: 24px; text-align: center; color: var(--text-dim); font-size: 12px; }
 
   /* ── Profile header ───────────────────────────────────────── */
   .profile-header { display: flex; align-items: center; gap: 16px; padding: 18px; }
@@ -125,7 +125,7 @@
   .act-time { color: var(--text-dim); font-size: 10px; flex-shrink: 0; }
 </style>
 </head>
-<body>
+<body data-page="agent">
 
 <!-- ═══ TOP NAV ════════════════════════════════════════════════ -->
 <nav class="topnav">
@@ -147,6 +147,7 @@
 <!-- ═══ PAGE ═══════════════════════════════════════════════════ -->
 <div class="page-wrap" id="page-wrap">
   <!-- Rendered by agent.js: leaderboard view (no ?agent_id) or profile view (?agent_id=X) -->
+  <div id="agent-status" class="agent-loading" role="status">Loading agents...</div>
   <div id="agent-content"></div>
 </div>
 

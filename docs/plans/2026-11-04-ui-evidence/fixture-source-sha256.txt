@@ -1,0 +1,3 @@
+8469856cb392fb6d37d6f28890f95782b11555304ee46ba22e4f9f764925a857  services/task-board/tests/fakes/gateway_task_store.py
+3e69d0d56925cc979e4007785b945edd27ea37bcf1579c1893993a2a63c8e3a5  services/task-board/tests/fakes/native_task_fixture.py
+39c8de15d36da840361ba64d986bd4898703ceef45964f4ed11e1773855291db  services/task-board/tests/unit/test_gateway_fixture_serialization.py

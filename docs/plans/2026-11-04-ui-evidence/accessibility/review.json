@@ -1,0 +1,72 @@
+{
+  "contrast": {
+    "colors": {
+      "body": "rgb(11, 14, 20)",
+      "card": "rgb(17, 22, 32)",
+      "input": "rgb(11, 14, 20)",
+      "text": "#e2e8f0",
+      "textMid": "#8b99b0",
+      "textDim": "#94a3b8",
+      "cyan": "#00e5ff"
+    },
+    "ratios": {
+      "text_on_body": 15.66914558751566,
+      "text_mid_on_body": 6.6975404034466335,
+      "text_dim_on_body": 7.533666295676796,
+      "text_dim_on_card": 7.063833351195583,
+      "cyan_focus_on_body": 12.557397260616003
+    }
+  },
+  "desktop_200_percent": {
+    "method": "Chromium CDP Emulation.setPageScaleFactor(2) at a 1440x900 layout viewport",
+    "metrics": {
+      "innerWidth": 1440,
+      "innerHeight": 900,
+      "visualWidth": 720,
+      "visualHeight": 450,
+      "visualScale": 2,
+      "scrollWidth": 1440,
+      "scrollHeight": 900,
+      "orientation": {
+        "x": 0,
+        "y": 156,
+        "width": 1079,
+        "height": 139.078125,
+        "top": 156,
+        "right": 1079,
+        "bottom": 295.078125,
+        "left": 0
+      },
+      "focused": ""
+    },
+    "limit": "This is Chromium's real page-scale emulation (visual viewport 720x450), not the browser chrome's per-origin desktop zoom preference. Separate 720x450 layout-viewport evidence covers reflow equivalence."
+  },
+  "keyboard_error_retention": {
+    "title": "Keyboard retention proof",
+    "spec": "",
+    "reward": "42",
+    "bidding": "3600",
+    "acceptance": "3600",
+    "execution": "7200",
+    "review": "3600",
+    "errorText": "All fields are required.",
+    "errorRole": "alert",
+    "errorLive": null,
+    "activeId": "btn-post-task",
+    "outlineStyle": "solid",
+    "outlineWidth": "2px",
+    "outlineColor": "rgb(0, 229, 255)",
+    "focusVisible": true,
+    "matchedFocusRules": [
+      {
+        "selector": ":where(a, button, input, textarea, select, summary, [role=\"button\"]):focus-visible",
+        "cssText": "outline: 2px solid var(--cyan); outline-offset: 3px;"
+      }
+    ],
+    "tabPathFromReviewField": [
+      "f-inputs",
+      "btn-post-task"
+    ],
+    "outlineContrastAgainstBody": 12.557397260616003
+  }
+}

@@ -103,7 +103,11 @@
     var rowsEl = document.getElementById('lb-rows');
     if (!rowsEl) return;
     var data = await fetchLeaderboard(state.sortBy);
-    var agents = data && data.agents ? data.agents : [];
+    if (!data) {
+      rowsEl.innerHTML = '<div class="lb-empty" role="alert">Agents could not be loaded. <a class="back-link" href="/agent.html">Reload agents</a></div>';
+      return;
+    }
+    var agents = data.agents;
     rowsEl.innerHTML = renderLeaderboardRows(agents, state.sortBy);
   }
 
@@ -111,11 +115,12 @@
   async function fetchProfile(agentId) {
     try {
       var resp = await fetch('/api/agents/' + encodeURIComponent(agentId));
-      if (!resp.ok) return null;
+      if (resp.status === 404) return null;
+      if (!resp.ok) return { loadError: true };
       return await resp.json();
     } catch (e) {
       console.warn('[agent] fetchProfile error:', e.message);
-      return null;
+      return { loadError: true };
     }
   }
 
@@ -347,9 +352,14 @@
     var content = document.getElementById('agent-content');
     var profile = await fetchProfile(agentId);
 
+    if (profile && profile.loadError) {
+      content.innerHTML = '<div class="lb-empty" role="alert">Agent profile could not be loaded. ' +
+        '<a class="back-link" href="/agent.html?agent_id=' + encodeURIComponent(agentId) + '">Reload profile</a></div>';
+      return;
+    }
     if (!profile) {
       content.innerHTML = '<a class="back-link" id="back-to-leaderboard" href="/agent.html">← Back to Leaderboard</a>' +
-        '<div class="card"><div class="card-body lb-empty">Agent not found.</div></div>';
+        '<div class="card"><div class="card-body lb-empty" role="status">Agent not found.</div></div>';
       return;
     }
 
@@ -442,7 +452,7 @@
         fetchAgentTasks(agentId, 'worked', 0),
         fetchAgentFeed(agentId, feed.filters, null)
       ]);
-      if (fresh[0]) profile = fresh[0];
+      if (fresh[0] && !fresh[0].loadError) profile = fresh[0];
       if (fresh[1]) earnings = fresh[1];
       ['posted', 'worked'].forEach(function(role, i) {
         var page = fresh[2 + i];
@@ -497,6 +507,8 @@
       await loadLeaderboard();
     }
 
+    document.getElementById('agent-status').textContent = '';
+    document.getElementById('agent-status').hidden = true;
     ATE.startMetricsPolling(function() {
       buildTicker();
     }, 10000);

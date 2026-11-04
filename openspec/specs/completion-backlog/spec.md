@@ -1135,3 +1135,48 @@ The commit hook SHALL run a gate that can complete within its timeout. Source: p
 - **WHEN** T-213 has evidence
 - **THEN** the hook runs the component `ci-quiet` gates for the components touched by the staged paths, exits 0 quickly for documentation-only commits, and blocks on any failure
 - **AND** root CI remains the closure gate for every item
+
+### Requirement: Understandable and accessible existing UI journeys
+The existing UI SHALL preserve its service contracts while exposing readable,
+keyboard-accessible navigation and task controls at supported viewports.
+
+#### Scenario: T-217 Prove UI navigation and task comprehension barriers
+- **WHEN** the existing pages are used at 1440, 768 and 390 pixels wide or with a keyboard
+- **THEN** browser evidence records clipped navigation and task fields, unannounced required inputs, and inaccessible home navigation
+- **Status:** CLOSED 2026-11-04 — failing-first layout, semantics, state and file evidence retained; final root `just ci-quiet` exited 0. [Evidence](../../../docs/plans/2026-11-04-ui-evidence/acceptance.md).
+
+#### Scenario: T-218 Resolve bounded UI usability barriers
+- **WHEN** T-217 has failing evidence
+- **THEN** navigation and controls remain reachable, labels and action context are readable, and task status, identity, terms and next steps are understandable without changing service contracts
+- **AND** responsive, keyboard, real-service file lifecycle and payment checks, independent review, UI CI and isolated root CI pass
+- **Status:** CLOSED 2026-11-04 — bounded UX improvements, real file/payment journeys, responsive/keyboard/contrast checks and independent review passed; final root CI exited 0 with 364 UI browser and 115 live E2E tests. [Evidence](../../../docs/plans/2026-11-04-ui-evidence/acceptance.md).
+
+### Requirement: Serialized shared-connection Gateway test fixtures
+The test-only Gateway adapter SHALL model serialized connection access when a
+simulated Bank callback overlaps a threaded task finalization.
+
+#### Scenario: T-219 Prove the shared Gateway fixture connection race
+- **WHEN** a simulated Bank replay overlaps a task finalization on the fixture's shared SQLite connection
+- **THEN** a deterministic regression records the rollback interference without weakening the existing two-delivery, one-settlement and one-event assertions
+- **Status:** CLOSED 2026-11-04 — deterministic repository regression reproduced the exact shared-connection foreign-key failure before repair; final root CI exited 0. [Evidence](../../../docs/plans/2026-11-04-ui-evidence/root-ci-blocker.md).
+
+#### Scenario: T-220 Serialize test-only Gateway and Bank connection access
+- **WHEN** T-219 has failing-first evidence and the owner authorizes this extension beyond UI-WORK
+- **THEN** the test adapter and simulated Bank callback use the same per-connection synchronization, preserving production behavior and every existing assertion
+- **AND** the deterministic regression, existing deadline suite and final root CI pass before closure
+- **Status:** CLOSED 2026-11-04 — authorized test-only connection guard preserves every existing assertion; focused 23 tests, independent review and final root CI passed. No production code changed. [Evidence](../../../docs/plans/2026-11-04-ui-evidence/root-ci-blocker.md).
+
+### Requirement: Independent business and elapsed time in router fixtures
+Router deadline tests SHALL freeze business wall time without advancing asyncio
+scheduling or racing unrelated periodic maintenance against a single request.
+
+#### Scenario: T-221 Prove router wall-clock freezes wake elapsed timers
+- **WHEN** a router test freezes business time at a future deadline
+- **THEN** a deterministic regression proves an elapsed-time timer incorrectly wakes immediately, explaining the observed concurrent expiry/version-conflict failure
+- **Status:** CLOSED 2026-11-04 — new regression failed first when a business-time freeze immediately fired a one-hour elapsed timer; final root CI exited 0. [Evidence](../../../docs/plans/2026-11-04-ui-evidence/router-clock-repair.md).
+
+#### Scenario: T-222 Preserve real elapsed scheduling in the router fixture
+- **WHEN** T-221 has failing-first proof
+- **THEN** the fixture preserves the running event loop's real monotonic clock while business time remains freezeable, leaving periodic sweep functionality and existing cutoff assertions unchanged
+- **AND** the new regression, existing deadline cases, independent review and root CI pass
+- **Status:** CLOSED 2026-11-04 — authorized fixture clock isolation preserves real sweeps and unchanged cutoff assertions; focused 43 tests, independent review and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-ui-evidence/router-clock-repair.md).

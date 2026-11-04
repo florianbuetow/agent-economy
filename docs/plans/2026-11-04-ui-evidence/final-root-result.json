@@ -1,0 +1,23 @@
+{
+  "command": "just ci-quiet",
+  "cwd": "/Users/flo/Developer/github/agent-economy",
+  "exit_code": 0,
+  "verification_owner": "parent independent verification lane",
+  "tool_session_id": 1752,
+  "log": "root-ci-final.log",
+  "log_sha256": "350f0eb90ee0e1264a0f1f8341be98a65f1f0c2c7580e994a2473da70c473533",
+  "source_manifest": "final-root-source.json",
+  "source_manifest_sha256": "dcf068179855fa75ca4c556390d6a0638c1e96402c327e3d7e87f5c93d59254c",
+  "recorded_at_utc": "2026-11-04T17:37:45.019816+00:00",
+  "path_policy": "normal PATH; no fake executables or skipped gates",
+  "isolation": "existing root recipes own disposable integration and E2E runtimes",
+  "results": {
+    "cross_service_runtime_passed": 495,
+    "ui_browser_passed": 364,
+    "live_e2e_passed": 115,
+    "all_library_service_agent_tool_ci_passed": true
+  },
+  "existing_agent_ci_skips": 3,
+  "existing_agent_ci_e2e_deselected": 115,
+  "note": "The 115 agent E2E cases are run in the final live E2E phase. Historical failed gates are retained separately."
+}

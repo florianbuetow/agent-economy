@@ -1,0 +1,29 @@
+
+[0;34m=== Checking Code Style ===[0m
+All checks passed!
+
+220 files already formatted
+
+[0;32m✓ Style checks passed[0m
+
+
+[0;34m=== Running Type Checks ===[0m
+Success: no issues found in 49 source files
+
+[0;32m✓ Type checks passed[0m
+
+
+[0;34m=== Running Pyright Type Checks ===[0m
+0 errors, 0 warnings, 0 informations
+WARNING: there is a new pyright version available (v1.1.408 -> v1.1.414).
+Please install the new version or set PYRIGHT_PYTHON_FORCE_VERSION to `latest`
+
+
+[0;32m✓ Pyright checks passed[0m
+  Report: reports/pyright/pyright.txt
+
+
+[0;34m=== Checking Spelling ===[0m
+
+[0;32m✓ Spelling checks passed[0m
+
