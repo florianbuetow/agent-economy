@@ -48,7 +48,7 @@ judges:
   judges:
     - id: "judge-0"
       provider: "llm"
-      model: "openai/qwen3-0.6b-mlx"
+      model: "openai/qwen3-0.6b"
       api_base: "http://localhost:1234/v1"
       api_key_env: "LMSTUDIO_API_KEY"
       temperature: 0.2
@@ -56,7 +56,7 @@ judges:
       prompt_suffix: "/no_think"
     - id: "judge-1"
       provider: "llm"
-      model: "openai/qwen3-0.6b-mlx"
+      model: "openai/qwen3-0.6b"
       api_base: "http://localhost:1234/v1"
       api_key_env: "LMSTUDIO_API_KEY"
       temperature: 0.2
@@ -64,7 +64,7 @@ judges:
       prompt_suffix: "/no_think"
     - id: "judge-2"
       provider: "llm"
-      model: "openai/qwen3-0.6b-mlx"
+      model: "openai/qwen3-0.6b"
       api_base: "http://localhost:1234/v1"
       api_key_env: "LMSTUDIO_API_KEY"
       temperature: 0.2
