@@ -27,6 +27,23 @@ This correction supersedes the previous GOAL.md and copied prompts wherever they
 required a second physical machine, SSH access, or a new agent discovery stream.
 The canonical issue tracker remains `openspec/specs/completion-backlog/spec.md`.
 
+## Current checkpoint — 2026-11-04
+
+The runtime, strict-response, UI file/submission, external-agent input, restore,
+and classification fixes have focused verification and independent review. Real
+isolated browser poster and worker journeys now reach approval and conserved
+payment. Full repository `just ci-quiet` passed on the integrated tree on
+2026-11-04; all 1,497 recorded source/config/test inputs were unchanged during
+the run. Do not reimplement these fixes.
+
+The configured Qwen3-0.6B Court panel fails the declared judgment-quality cases.
+Bounded general prompt repairs did not pass, so the original prompt and requested
+model remain unchanged. This is the remaining unmet judge-readiness criterion;
+a passing code gate must not be presented as proof that it passed.
+
+See [acceptance evidence](docs/plans/2026-11-04-completion-evidence/acceptance.md)
+and [current CI status](docs/plans/2026-11-04-completion-evidence/root-ci-run.md).
+
 ## Work to finish
 
 1. **Fix demonstrated robustness defects.** Finish Task Board's blocking Gateway

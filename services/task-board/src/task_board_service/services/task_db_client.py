@@ -32,7 +32,9 @@ from task_board_service.posting_recovery_contract import (
 from task_board_service.services.errors import AssetInsertRejectedError, DuplicateBidError
 from task_board_service.services.protocol import RecoveryFinalizeResponse
 from task_board_service.task_contract_projection import (
+    GatewayAsset,
     GatewayBid,
+    GatewayTaskFields,
     TaskContractProjection,
     validate_task_projection,
 )
@@ -160,14 +162,11 @@ class TaskDbClient:
     def _now(self) -> str:
         return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
-    def _json(self, response: httpx.Response) -> dict[str, Any]:
-        try:
-            data = response.json()
-            if isinstance(data, dict):
-                return data
-            return {}
-        except Exception:
-            return {}
+    @staticmethod
+    def _count(value: object) -> int:
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise invalid_gateway_response()
+        return value
 
     def _build_event(
         self,
@@ -192,6 +191,15 @@ class TaskDbClient:
 
     def _normalize_task(self, data: dict[str, Any]) -> dict[str, Any]:
         return {column: data.get(column) for column in self._TASK_COLUMNS}
+
+    def _validate_task_read(self, data: dict[str, Any]) -> None:
+        validate_task_projection(data)
+        try:
+            GatewayTaskFields.model_validate(
+                {key: data[key] for key in GatewayTaskFields.model_fields if key in data}
+            )
+        except ValidationError as exc:
+            raise invalid_gateway_response() from exc
 
     def _strict_json(self, response: httpx.Response) -> dict[str, Any]:
         try:
@@ -646,7 +654,7 @@ class TaskDbClient:
         if response.status_code != 200:
             self._raise_gateway_error(response)
         data = self._strict_json(response)
-        validate_task_projection(data)
+        self._validate_task_read(data)
         if data.get("task_id") != task_id:
             raise invalid_gateway_response()
         return self._normalize_task(data)
@@ -706,8 +714,7 @@ class TaskDbClient:
 
         response = self._request("GET", "/board/tasks", json=None, params=params)
         if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+            self._raise_gateway_error(response)
         items = self._strict_json(response).get("tasks")
         if not isinstance(items, list):
             raise invalid_gateway_response()
@@ -715,24 +722,22 @@ class TaskDbClient:
         for item in items:
             if not isinstance(item, dict):
                 raise invalid_gateway_response()
-            validate_task_projection(item)
+            self._validate_task_read(item)
             tasks.append(self._normalize_task(item))
         return tasks
 
     def count_tasks(self) -> int:
         response = self._request("GET", "/board/tasks/count", json=None, params=None)
         if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
-        return int(self._json(response)["count"])
+            self._raise_gateway_error(response)
+        return self._count(self._strict_json(response).get("count"))
 
     def count_tasks_by_status(self) -> dict[str, int]:
         response = self._request("GET", "/board/tasks/count-by-status", json=None, params=None)
         if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
-        data = self._json(response)
-        return {str(key): int(value) for key, value in data.items()}
+            self._raise_gateway_error(response)
+        data = self._strict_json(response)
+        return {key: self._count(value) for key, value in data.items()}
 
     def insert_bid(self, bid_data: dict[str, Any]) -> None:
         amount = int(bid_data["amount"])
@@ -863,58 +868,50 @@ class TaskDbClient:
         if response.status_code == 404:
             return None
         if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+            self._raise_gateway_error(response)
 
-        data = self._json(response)
-        return {
-            "asset_id": str(data["asset_id"]),
-            "task_id": str(data["task_id"]),
-            "uploader_id": str(data["uploader_id"]),
-            "filename": str(data["filename"]),
-            "content_type": str(data["content_type"]),
-            "size_bytes": int(data["size_bytes"]),
-            "storage_path": str(data["storage_path"]),
-            "content_hash": (
-                str(data["content_hash"]) if data.get("content_hash") is not None else ""
-            ),
-            "uploaded_at": str(data["uploaded_at"]),
-        }
+        try:
+            asset = GatewayAsset.model_validate(self._strict_json(response))
+        except ValidationError as exc:
+            raise invalid_gateway_response() from exc
+        if asset.asset_id != asset_id or asset.task_id != task_id:
+            raise invalid_gateway_response()
+        result = asset.model_dump()
+        # The current Gateway schema permits absent hashes. Preserve the public
+        # metadata representation; downloads still enforce artifact integrity.
+        if asset.content_hash is None:
+            result["content_hash"] = ""
+        return result
 
     def get_assets_for_task(self, task_id: str) -> list[dict[str, Any]]:
         response = self._request("GET", f"/board/tasks/{task_id}/assets", json=None, params=None)
         if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
+            self._raise_gateway_error(response)
 
-        items = self._json(response).get("assets", [])
+        items = self._strict_json(response).get("assets")
         if not isinstance(items, list):
-            return []
-        return [
-            {
-                "asset_id": str(item["asset_id"]),
-                "task_id": str(item["task_id"]),
-                "uploader_id": str(item["uploader_id"]),
-                "filename": str(item["filename"]),
-                "content_type": str(item["content_type"]),
-                "size_bytes": int(item["size_bytes"]),
-                "content_hash": str(item["content_hash"])
-                if item.get("content_hash") is not None
-                else "",
-                "uploaded_at": str(item["uploaded_at"]),
-            }
-            for item in items
-            if isinstance(item, dict)
-        ]
+            raise invalid_gateway_response()
+        assets: list[dict[str, Any]] = []
+        for item in items:
+            try:
+                asset = GatewayAsset.model_validate(item)
+            except ValidationError as exc:
+                raise invalid_gateway_response() from exc
+            if asset.task_id != task_id:
+                raise invalid_gateway_response()
+            result = asset.model_dump(exclude={"storage_path"})
+            if asset.content_hash is None:
+                result["content_hash"] = ""
+            assets.append(result)
+        return assets
 
     def count_assets(self, task_id: str) -> int:
         response = self._request(
             "GET", f"/board/tasks/{task_id}/assets/count", json=None, params=None
         )
         if response.status_code != 200:
-            msg = f"Gateway error: {response.status_code} {response.text}"
-            raise RuntimeError(msg)
-        return int(self._json(response)["count"])
+            self._raise_gateway_error(response)
+        return self._count(self._strict_json(response).get("count"))
 
     # ------------------------------------------------------------------
     # V6 artifact uploads, manifests, recovery and archive (ArtifactStore)

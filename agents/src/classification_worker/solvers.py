@@ -85,8 +85,10 @@ class KeywordSolver:
 
 SYSTEM_PROMPT = (
     "You are a careful text classifier. Assign exactly one allowed label to every input. "
-    'Reply with only one JSON object: {"labels": {"<id>": "<label>"}, '
-    '"rationale": {"<id>": "<one short sentence>"}}.'
+    'Reply with only one JSON object with top-level keys "labels" and "rationale". '
+    "The user message states the exact required keys for both objects. Preserve every key "
+    "exactly: labels maps each key to one allowed label, and rationale maps each key to one "
+    "short sentence. Do not emit placeholder keys or omit, rename, or combine input ids."
 )
 
 _JSON_OBJECT = re.compile(r"\{.*\}", re.DOTALL)
@@ -95,7 +97,14 @@ _JSON_OBJECT = re.compile(r"\{.*\}", re.DOTALL)
 def build_prompt(task: ClassificationTaskData) -> str:
     """User prompt listing the allowed labels and every input."""
     items = "\n".join(f"[{item_id}] {text}" for item_id, text in task.inputs)
-    return f"Allowed labels: {', '.join(task.labels)}\n\nInputs:\n{items}"
+    required_keys = json.dumps(list(task.input_ids), ensure_ascii=False)
+    return (
+        f"Allowed labels: {', '.join(task.labels)}\n\n"
+        f"Inputs:\n{items}\n\n"
+        "Required output structure:\n"
+        f"Required labels keys (exactly): {required_keys}\n"
+        f"Required rationale keys (exactly): {required_keys}"
+    )
 
 
 class LLMSolver:

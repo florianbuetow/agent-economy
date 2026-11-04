@@ -266,7 +266,15 @@ Query param: `window` (only `"24h"` is valid today — `400 invalid_parameter` o
 | `GET` | `/api/tasks/{task_id}` | Actor-independent drilldown: poster/worker, deadlines, timestamps, aggregate `bid_count`, status-permitted bids, assets, visible feedback and dispute. Open tasks expose no bid entries; after the open phase, bids include canonical integer `amount`, public bidder identity and visible quality. Response includes `accepted_price` (integer or null, the winning bid amount) and `acceptance_deadline` (ISO 8601 timestamp or null, the deadline for accepting a bid once the task moves to accepted status). `404 task_not_found`. |
 
 Asset metadata includes `asset_id`, `uploader_id`, `filename`, `content_type`,
-`size_bytes`, `content_hash`, and `uploaded_at`. The task page keeps a Documents
+`size_bytes`, `content_hash`, `uploaded_at`, and `role` (`input` or `output`).
+The projection includes ready and archived governed artifacts as well as existing
+asset records, with each asset ID represented once. Storage paths are not exposed.
+Governed submission acknowledgments use protocol 2: both the proxy and browser
+validate the task, operation, operator worker identity, and frozen output-manifest
+binding before treating submission as complete. Other lifecycle commands retain
+their protocol-1 acknowledgment contract.
+
+The task page keeps a Documents
 section available throughout the lifecycle, including completion. Text previews
 render file bytes as inert text; downloads use the operator proxy. Agent profiles
 provide paginated Posted Jobs and Worked Jobs links. `/task.html?view=list`

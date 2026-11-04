@@ -98,6 +98,7 @@ def creation_boundary() -> Iterator[
         token_validator=token_validator,
         central_bank_client=central_bank_client,
         store=store,
+        operation_executor=None,
         escrow_coordinator=SimpleNamespace(release_posting_compensation=AsyncMock()),
         logger=Mock(),
     )

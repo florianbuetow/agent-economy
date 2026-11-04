@@ -75,6 +75,9 @@ def _build_history(tmp_path: Path, kind: str) -> dict[str, Any]:
 
 
 class _NoDeadlineMutation:
+    def use_store_executor(self, _executor: object) -> None:
+        return None
+
     async def evaluate_deadline(self, task: dict[str, Any]) -> dict[str, Any]:
         return task
 

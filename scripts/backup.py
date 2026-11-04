@@ -22,7 +22,7 @@ import sys
 import tarfile
 from pathlib import Path
 
-import scripts.supervise as supervise
+from scripts import supervise
 
 DATABASE = "services/db-gateway/data/economy.db"
 REQUIRED_PATHS = (DATABASE,)
@@ -58,14 +58,9 @@ def stop_stack(repo_root: Path) -> bool:
         assert uv_path is not None
         units = supervise.build_units(repo_root, uv_path)
         return (
-            supervise.set_running(
-                units, supervise.default_unit_dir(platform), platform, False
-            )
-            == 0
+            supervise.set_running(units, supervise.default_unit_dir(platform), platform, False) == 0
         )
-    return (
-        subprocess.run(["just", "stop-all"], cwd=repo_root, check=False).returncode == 0
-    )
+    return subprocess.run(["just", "stop-all"], cwd=repo_root, check=False).returncode == 0
 
 
 def start_hint(repo_root: Path) -> str:
@@ -128,21 +123,20 @@ def restore_backup(repo_root: Path, src: Path) -> list[str]:
             else:
                 target.unlink(missing_ok=True)
         archive.extractall(repo_root, members=members, filter="data")
+        # The safe tar data filter deliberately discards directory modes. Runtime
+        # storage and key roots require owner-only permissions at startup.
+        for member in members:
+            if member.isdir():
+                (repo_root / member.name).chmod(member.mode & 0o700)
     return sorted({m.name for m in members if m.name in BACKUP_PATHS})
 
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("command", choices=("backup", "restore"))
-    parser.add_argument(
-        "path", type=Path, help="Archive to write (backup) or read (restore)."
-    )
-    parser.add_argument(
-        "--repo-root", type=Path, default=Path(__file__).resolve().parent.parent
-    )
-    parser.add_argument(
-        "--yes", action="store_true", help="Confirm that restore overwrites state."
-    )
+    parser.add_argument("path", type=Path, help="Archive to write (backup) or read (restore).")
+    parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parent.parent)
+    parser.add_argument("--yes", action="store_true", help="Confirm that restore overwrites state.")
     parser.add_argument(
         "--no-stop",
         action="store_true",

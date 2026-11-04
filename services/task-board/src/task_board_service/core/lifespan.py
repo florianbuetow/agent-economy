@@ -141,6 +141,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         recovery_store: TaskDbClient | None = None
         task_manager = None
         asset_manager: AssetManager | None = None
+        deadline_evaluator: DeadlineEvaluator | None = None
         try:
             # db_gateway configuration is required by Settings and has no fallback.
             gateway_signer = GatewayRequestSigner(
@@ -334,6 +335,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 recovery_store.close()
             await _stop_loop(state.posting_recovery_task)
             await _stop_loop(state.deadline_sweep_task)
+            if deadline_evaluator is not None:
+                deadline_evaluator.close()
             await _stop_loop(state.artifact_maintenance_task)
             if asset_manager is not None:
                 asset_manager.close()

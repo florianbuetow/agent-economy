@@ -13,13 +13,14 @@ from typing import TYPE_CHECKING, Any
 from service_commons.exceptions import ServiceError
 from service_commons.telemetry import annotate
 
+from task_board_service.services.async_store import store_call, store_read
 from task_board_service.services.task_db_client import PlatformHttpError
 from task_board_service.services.task_helpers import is_valid_worker_pct
 from task_board_service.services.task_operations import (
     accepted_task_arguments,
+    async_operation_response,
     complete_bank_operation,
     complete_court_operation,
-    operation_response,
     public_operation_identity,
 )
 
@@ -63,26 +64,38 @@ class TaskRulingCoordinator:
             raise ServiceError(
                 "invalid_reason", "Dispute reason must be 1 to 10,000 characters", 400, {}
             )
-        task = manager.store.get_task(task_id)
+        task = await store_read(lambda: manager.store.get_task(task_id))
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
         arguments = accepted_task_arguments(task, expected_version, "submitted")
         arguments["reason"] = reason
-        envelope = manager.store.claim_task_operation(
-            {
-                "protocol_version": 1,
-                "operation_id": operation_id,
-                "task_id": task_id,
-                "command": "dispute_task",
-                "expected_status": "submitted",
-                "expected_lifecycle_version": expected_version,
-                "actor_kind": "agent",
-                "actor_id": signer_id,
-                "arguments": arguments,
-            }
+        envelope = await store_call(
+            lambda: manager.store.claim_task_operation(
+                {
+                    "protocol_version": 1,
+                    "operation_id": operation_id,
+                    "task_id": task_id,
+                    "command": "dispute_task",
+                    "expected_status": "submitted",
+                    "expected_lifecycle_version": expected_version,
+                    "actor_kind": "agent",
+                    "actor_id": signer_id,
+                    "arguments": arguments,
+                }
+            ),
+            executor=manager.operation_executor,
         )
-        finalized = await complete_court_operation(manager.store, platform_agent, envelope)
-        return operation_response(manager.store, finalized)
+        finalized = await complete_court_operation(
+            manager.store,
+            platform_agent,
+            envelope,
+            store_executor=manager.operation_executor,
+        )
+        return await async_operation_response(
+            manager.store,
+            finalized,
+            store_executor=manager.operation_executor,
+        )
 
     async def submit_rebuttal(
         self,
@@ -133,7 +146,7 @@ class TaskRulingCoordinator:
         if signer_id != payload["worker_id"]:
             raise ServiceError("forbidden", "Signer does not match worker_id", 403, {})
 
-        task = manager.store.get_task(task_id)
+        task = await store_read(lambda: manager.store.get_task(task_id))
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
 
@@ -229,7 +242,7 @@ class TaskRulingCoordinator:
             raise ServiceError(
                 "invalid_worker_pct", "worker_pct must be an integer between 0 and 100", 400, {}
             )
-        task = manager.store.get_task(task_id)
+        task = await store_read(lambda: manager.store.get_task(task_id))
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
         arguments = accepted_task_arguments(task, expected_version, "disputed")
@@ -241,20 +254,30 @@ class TaskRulingCoordinator:
                 "source_reference": f"task:{task_id}:ruling:{ruling_id}",
             }
         )
-        envelope = manager.store.claim_task_operation(
-            {
-                "protocol_version": 1,
-                "operation_id": operation_id,
-                "task_id": task_id,
-                "command": "record_ruling",
-                "expected_status": "disputed",
-                "expected_lifecycle_version": expected_version,
-                "actor_kind": "platform",
-                "actor_id": signer_id,
-                "arguments": arguments,
-            }
+        envelope = await store_call(
+            lambda: manager.store.claim_task_operation(
+                {
+                    "protocol_version": 1,
+                    "operation_id": operation_id,
+                    "task_id": task_id,
+                    "command": "record_ruling",
+                    "expected_status": "disputed",
+                    "expected_lifecycle_version": expected_version,
+                    "actor_kind": "platform",
+                    "actor_id": signer_id,
+                    "arguments": arguments,
+                }
+            ),
+            executor=manager.operation_executor,
         )
         finalized = await complete_bank_operation(
-            manager.store, manager.escrow_coordinator, envelope
+            manager.store,
+            manager.escrow_coordinator,
+            envelope,
+            store_executor=manager.operation_executor,
         )
-        return operation_response(manager.store, finalized)
+        return await async_operation_response(
+            manager.store,
+            finalized,
+            store_executor=manager.operation_executor,
+        )

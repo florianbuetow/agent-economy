@@ -1,6 +1,15 @@
 # Feature completeness inventory
 
-> **Review 2026-10-30:** all twenty gaps below were re-verified against the code; none is closed. The consolidated verdict, confirmed bugs, and the ordered completion plan are in [`docs/plans/2026-10-30-completion-plan.md`](docs/plans/2026-10-30-completion-plan.md), with the eight audit reports in `docs/plans/2026-10-30-review-findings/`. Follow that plan; this inventory remains the gap reference.
+> **Current status — 2026-11-04:** the tables below preserve the October review
+> baseline, not twenty features still missing today. Subsequent commits delivered
+> pricing, artifact/input flows, Court recovery, quality scoring, UI participation,
+> SDK and observability work. Follow the corrected [GOAL.md](GOAL.md) and
+> [current verification evidence](docs/plans/2026-11-04-completion-evidence/acceptance.md).
+> Do not reimplement historical gaps or require a second machine/agent event API.
+> Final integrated root CI passed on 2026-11-04. The scanning and prompt-contract
+> defects found in the classification run are repaired and verified. The configured
+> Qwen3-0.6B Court judgment-quality check still fails; no overall readiness claim
+> follows from the passing code gate.
 
 Updated 2026-10-23 from the current worktree. This is the product-level inventory for the [master plan](MASTERPLAN-TO-COMPLETE-THE-PROJECT.md), covering all seven services, public SDK, autonomous agents, human UI, operations, and the economic Vision.
 

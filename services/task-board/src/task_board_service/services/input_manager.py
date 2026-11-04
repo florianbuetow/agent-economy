@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from service_auth.financial_identity import operation_id_for
 from service_commons.exceptions import ServiceError
 
+from task_board_service.services.async_store import store_read
 from task_board_service.task_operation_contract import validate_operation_id
 
 if TYPE_CHECKING:
@@ -189,7 +190,11 @@ class PosterInputCoordinator:
         }
         for field in _DURATION_FIELDS:
             request[field] = payload[field]
-        return self._store.admit_prepublication(self._uploader.artifact_policy(), request)
+        return await store_read(
+            self._store.admit_prepublication,
+            self._uploader.artifact_policy(),
+            request,
+        )
 
     async def upload_input(
         self,
@@ -211,7 +216,7 @@ class PosterInputCoordinator:
         _exact(payload, _UPLOAD_FIELDS)
         _path_match(payload, publication_id)
         poster_id = _poster(payload)
-        publication = self._store.get_prepublication(publication_id, poster_id)
+        publication = await store_read(self._store.get_prepublication, publication_id, poster_id)
         if publication["publication_state"] != "awaiting_inputs":
             raise ServiceError("invalid_status", "Publication is not accepting inputs", 409, {})
         return await self._uploader.upload_input_artifact(
@@ -244,13 +249,14 @@ class PosterInputCoordinator:
         poster_id = _poster(payload)
         task_id = payload["task_id"]
         escrow = await self._tokens.validate_escrow_jws_token(escrow_token)
-        publication = self._store.get_prepublication(publication_id, poster_id)
+        publication = await store_read(self._store.get_prepublication, publication_id, poster_id)
         if publication["task_id"] != task_id:
             raise _invalid("task_id does not match the publication")
         self._validate_escrow(escrow, publication, poster_id)
         state = publication["publication_state"]
         if state == "awaiting_inputs":
-            publication = self._store.freeze_prepublication_inputs(
+            publication = await store_read(
+                self._store.freeze_prepublication_inputs,
                 {
                     "protocol_version": 2,
                     "freeze_operation_id": operation_id_for("task-input-freeze", (publication_id,)),
@@ -260,11 +266,12 @@ class PosterInputCoordinator:
                     "action": "task_publication_inputs_freeze",
                     "resource": f"POST /task-publications/{publication_id}/inputs/freeze",
                     "input_manifest_id": publication["input_manifest_id"],
-                }
+                },
             )
             state = publication["publication_state"]
         if state == "awaiting_publish":
-            publication = self._store.authorize_prepublication_publish(
+            publication = await store_read(
+                self._store.authorize_prepublication_publish,
                 {
                     "protocol_version": 2,
                     "publish_operation_id": operation_id_for("task-publish", (publication_id,)),
@@ -275,7 +282,7 @@ class PosterInputCoordinator:
                     "resource": "POST /tasks",
                     "lock_operation_id": lock_operation_id(task_id, poster_id),
                     "publication_contract_sha256": publication["publication_contract_sha256"],
-                }
+                },
             )
             state = publication["publication_state"]
         if state == "published":
@@ -287,17 +294,22 @@ class PosterInputCoordinator:
                 409,
                 {"publication": publication},
             )
-        status, reconciled = self._store.reconcile_prepublication(publication_id)
+        status, reconciled = await store_read(
+            self._store.reconcile_prepublication,
+            publication_id,
+        )
         if status == 201:
             return status, reconciled
         try:
             await self._bank.escrow_lock(escrow_token)
         except ServiceError as bank_error:
-            status, reconciled = self._store.reconcile_prepublication(publication_id)
+            status, reconciled = await store_read(
+                self._store.reconcile_prepublication, publication_id
+            )
             if status == 201 or bank_error.status_code >= 500:
                 return status, reconciled
             raise
-        return self._store.reconcile_prepublication(publication_id)
+        return await store_read(self._store.reconcile_prepublication, publication_id)
 
     @staticmethod
     def _validate_escrow(

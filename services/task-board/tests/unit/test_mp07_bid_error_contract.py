@@ -32,6 +32,7 @@ async def test_bid_claim_error_keeps_the_public_contract(
 ) -> None:
     task_id = "t-00000000-0000-4000-8000-000000000123"
     manager = MagicMock()
+    manager.operation_executor = None
     manager.token_validator.validate_jws_token = AsyncMock(
         return_value={
             "_signer_id": "a-worker",

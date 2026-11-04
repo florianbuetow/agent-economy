@@ -405,6 +405,7 @@ class AssetItem(BaseModel):
     size_bytes: int
     content_hash: str | None
     uploaded_at: str
+    role: Literal["input", "output"]
 
 
 class FeedbackDetail(BaseModel):

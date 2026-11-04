@@ -1070,7 +1070,9 @@
     var operation = value.operation;
     if (!operation || typeof operation !== 'object' || Array.isArray(operation) ||
         Object.keys(operation).sort().join(',') !== OPERATION_FIELDS.slice().sort().join(',')) return false;
-    if (operation.protocol_version !== 1 || operation.operation_id !== intent.operation_id ||
+    var protocolMatches = operation.protocol_version === 1 ||
+      (intent.action === 'submit_deliverable' && operation.protocol_version === 2);
+    if (!protocolMatches || operation.operation_id !== intent.operation_id ||
         operation.task_id !== intent.task_id || operation.command !== intent.action ||
         !/^op-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(operation.operation_id) ||
         !/^[0-9a-f]{64}$/.test(operation.request_sha256) ||
@@ -1085,11 +1087,29 @@
         operation.event_id === null && operation.result === null &&
         value.lifecycle_version === operation.source_lifecycle_version;
     }
-    return operation.event_id !== null && Number.isSafeInteger(operation.event_id) &&
+    var completed = operation.event_id !== null && Number.isSafeInteger(operation.event_id) &&
       operation.result && typeof operation.result === 'object' &&
       ((operation.effect_kind === 'none' && operation.effect_state === 'none') ||
        (operation.effect_kind !== 'none' && operation.effect_state === 'succeeded')) &&
       value.lifecycle_version >= operation.target_lifecycle_version;
+    if (!completed) return false;
+    if (operation.protocol_version === 2) {
+      var result = operation.result;
+      var expectedResultFields = [
+        'task_id', 'command', 'status', 'lifecycle_version', 'event_id',
+        'worker_id', 'manifest_id', 'manifest_sha256'
+      ];
+      return Object.keys(result).sort().join(',') === expectedResultFields.sort().join(',') &&
+        result.task_id === intent.task_id && result.command === intent.action &&
+        result.status === operation.target_status &&
+        result.lifecycle_version === operation.target_lifecycle_version &&
+        result.event_id === operation.event_id &&
+        result.worker_id === intent.operator_agent_id &&
+        typeof result.manifest_id === 'string' && result.manifest_id.length > 0 &&
+        typeof result.manifest_sha256 === 'string' &&
+        /^[0-9a-f]{64}$/.test(result.manifest_sha256);
+    }
+    return true;
   }
 
   function updateIntent(intent, intentState, message) {

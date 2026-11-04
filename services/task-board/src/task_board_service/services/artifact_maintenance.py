@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from service_commons.exceptions import ServiceError
 
 from task_board_service.logging import get_logger
+from task_board_service.services.async_store import store_read
 from task_board_service.services.task_db_client import PlatformHttpError
 
 if TYPE_CHECKING:
@@ -49,7 +50,7 @@ class ArtifactMaintenance:
         startup = True
         while True:
             try:
-                counts = await asyncio.to_thread(self.run_once, startup=startup)
+                counts = await store_read(self.run_once, startup=startup)
                 if any(counts.values()):
                     logger.info("Artifact maintenance cycle", extra=counts)
             except (PlatformHttpError, ServiceError, OSError, RuntimeError):

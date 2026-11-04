@@ -56,11 +56,15 @@ async def test_approval_and_pending_retry_reuse_one_financial_intent(
         "central_bank_unavailable", "injected", 502, {}
     )
     with pytest.raises(ServiceError):
-        await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+        await complete_bank_operation(
+            native_tasks.store, native_tasks.escrow, claimed, store_executor=None
+        )
     assert native_tasks.task(_TASK)["status"] == "submitted"
     assert native_tasks.task(_TASK)["pending_transition"]["operation_id"] == operation_id
     native_tasks.bank.escrow_release.side_effect = native_tasks.persist_release
-    await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+    await complete_bank_operation(
+        native_tasks.store, native_tasks.escrow, claimed, store_executor=None
+    )
     expected = {
         "escrow_id": f"esc-{_TASK}",
         "recipient_account_id": native_tasks.worker_id,
@@ -90,7 +94,9 @@ async def test_opposing_task_settlements_have_distinct_financial_intents(
     cancel_id = "op-00000000-0000-4000-8000-000000000902"
     expiry_id = "op-00000000-0000-4000-8000-000000000903"
     claimed = claim_approval(native_tasks, _APPROVE, approval_id)
-    await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+    await complete_bank_operation(
+        native_tasks.store, native_tasks.escrow, claimed, store_executor=None
+    )
     task = native_tasks.task(_CANCEL)
     cancel = native_tasks.command(
         _CANCEL,
@@ -115,7 +121,9 @@ async def test_opposing_task_settlements_have_distinct_financial_intents(
     assert native_tasks.bank.escrow_release.await_count == 1
     cancel["operation_id"] = cancel_id
     cancel_claim = native_tasks.store.claim_task_operation(cancel)
-    await complete_bank_operation(native_tasks.store, native_tasks.escrow, cancel_claim)
+    await complete_bank_operation(
+        native_tasks.store, native_tasks.escrow, cancel_claim, store_executor=None
+    )
 
     # Actual locked funds without a published Board row model failed publication.
     native_tasks.store.writer.escrow_lock(
@@ -147,7 +155,9 @@ async def test_opposing_task_settlements_have_distinct_financial_intents(
 
     native_tasks.clock.at_seconds(3600)
     expiry_claim = claim_expiry(native_tasks, _EXPIRE, expiry_id)
-    await complete_bank_operation(native_tasks.store, native_tasks.escrow, expiry_claim)
+    await complete_bank_operation(
+        native_tasks.store, native_tasks.escrow, expiry_claim, store_executor=None
+    )
     calls = native_tasks.bank.escrow_release.await_args_list
     assert [call.kwargs["operation_id"] for call in calls] == [
         approval_id,
@@ -205,7 +215,9 @@ async def test_ruling_release_and_split_retain_the_claimed_operation_identity(
     request.update({"actor_kind": "platform", "operation_id": operation_id})
     claimed = native_tasks.store.claim_task_operation(request)
     assert claimed["effect_operation_id"] == operation_id
-    completed = await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+    completed = await complete_bank_operation(
+        native_tasks.store, native_tasks.escrow, claimed, store_executor=None
+    )
     assert completed["operation_state"] == "completed"
     delivery = (
         native_tasks.bank.escrow_split if worker_pct == 50 else native_tasks.bank.escrow_release

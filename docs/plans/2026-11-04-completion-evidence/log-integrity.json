@@ -1,0 +1,38 @@
+{
+  "gateway-reads-red.log.gz": {
+    "raw_bytes": 11924,
+    "raw_sha256": "9af1f8f00882288a5693a888287f6fb8286004c2f9ae3e7e5efd791e6c12d0f7"
+  },
+  "gateway-review-red.log.gz": {
+    "raw_bytes": 3969,
+    "raw_sha256": "027f64c0a883164b96a2280f6ad77178be5b11c82f5e579681a3712ac49a116f"
+  },
+  "restore-startup-red.log.gz": {
+    "raw_bytes": 968,
+    "raw_sha256": "9373720c15581a836f3da57ed65ef1741ba5998a01cc3618053aa336567dc9b1"
+  },
+  "root-ci-r1.log.gz": {
+    "raw_bytes": 144101,
+    "raw_sha256": "697bf2d7c7e698659ee14fa40fd4c4260601805c4661d3510b5d62f1c33e9f5b"
+  },
+  "root-ci-r2.log.gz": {
+    "raw_bytes": 157077,
+    "raw_sha256": "70e98635fe91b3e0201ad51203223e20c8c4eb4fe40e2054fcbea7b0c8400d94"
+  },
+  "root-ci-r3.log.gz": {
+    "raw_bytes": 302670,
+    "raw_sha256": "16a3f8147332b9304f81cb2608e7ba4868d585586eedb67416f938f977aa73ee"
+  },
+  "root-ci-r4.log.gz": {
+    "raw_bytes": 210905,
+    "raw_sha256": "452a7071ac7fb585f737ad14bf7354f4ad4a273a8e01a2e8df84ca2152cb5af6"
+  },
+  "root-ci-r5.log.gz": {
+    "raw_bytes": 450218,
+    "raw_sha256": "b55794c61781444d5299290a80234f3173b990cee739513384cf50d41b4a4584"
+  },
+  "root-ci-r6.log.gz": {
+    "raw_bytes": 493865,
+    "raw_sha256": "c6148d42cfea7723313983a17180013d33e04b06ea7b930788bfcd88c10196b8"
+  }
+}

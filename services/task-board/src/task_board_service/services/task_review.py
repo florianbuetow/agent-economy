@@ -12,10 +12,11 @@ from typing import TYPE_CHECKING, Any
 from service_commons.exceptions import ServiceError
 from service_commons.telemetry import annotate
 
+from task_board_service.services.async_store import store_call, store_read
 from task_board_service.services.task_operations import (
     accepted_task_arguments,
+    async_operation_response,
     complete_bank_operation,
-    operation_response,
     public_operation_identity,
 )
 
@@ -74,23 +75,36 @@ class TaskReviewCoordinator:
         # it once every accepted task is governed (all posting is protocol 2).
         # Governed (V6) tasks submit with protocol 2: the Gateway freezes the exact
         # ready-upload manifest bound to the accepted terms in the same transaction.
-        governed_arguments = manager.asset_manager.submission_arguments(task_id, signer_id)
-        envelope = manager.store.claim_task_operation(
-            {
-                "protocol_version": 1 if governed_arguments is None else 2,
-                "operation_id": operation_id,
-                "task_id": task_id,
-                "command": "submit_deliverable",
-                "expected_status": "accepted",
-                "expected_lifecycle_version": expected_version,
-                "actor_kind": "agent",
-                "actor_id": signer_id,
-                "arguments": (
-                    {"worker_id": signer_id} if governed_arguments is None else governed_arguments
-                ),
-            }
+        governed_arguments = await store_read(
+            manager.asset_manager.submission_arguments,
+            task_id,
+            signer_id,
         )
-        return operation_response(manager.store, envelope)
+        envelope = await store_call(
+            lambda: manager.store.claim_task_operation(
+                {
+                    "protocol_version": 1 if governed_arguments is None else 2,
+                    "operation_id": operation_id,
+                    "task_id": task_id,
+                    "command": "submit_deliverable",
+                    "expected_status": "accepted",
+                    "expected_lifecycle_version": expected_version,
+                    "actor_kind": "agent",
+                    "actor_id": signer_id,
+                    "arguments": (
+                        {"worker_id": signer_id}
+                        if governed_arguments is None
+                        else governed_arguments
+                    ),
+                }
+            ),
+            executor=manager.operation_executor,
+        )
+        return await async_operation_response(
+            manager.store,
+            envelope,
+            store_executor=manager.operation_executor,
+        )
 
     async def approve_task(self, task_id: str, token: str) -> dict[str, Any]:
         """
@@ -136,28 +150,36 @@ class TaskReviewCoordinator:
             raise ServiceError("forbidden", "Signer does not match poster_id", 403, {})
 
         # Load immutable command facts. Gateway owns mutable eligibility and actor entitlement.
-        task = manager.store.get_task(task_id)
+        task = await store_read(lambda: manager.store.get_task(task_id))
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
         arguments = accepted_task_arguments(task, expected_version, "submitted")
         arguments["source_reference"] = f"task:{task_id}:approved"
 
-        envelope = manager.store.claim_task_operation(
-            {
-                "protocol_version": 1,
-                "operation_id": operation_id,
-                "task_id": task_id,
-                "command": "approve_task",
-                "expected_status": "submitted",
-                "expected_lifecycle_version": expected_version,
-                "actor_kind": "agent",
-                "actor_id": signer_id,
-                "arguments": arguments,
-            }
+        envelope = await store_call(
+            lambda: manager.store.claim_task_operation(
+                {
+                    "protocol_version": 1,
+                    "operation_id": operation_id,
+                    "task_id": task_id,
+                    "command": "approve_task",
+                    "expected_status": "submitted",
+                    "expected_lifecycle_version": expected_version,
+                    "actor_kind": "agent",
+                    "actor_id": signer_id,
+                    "arguments": arguments,
+                }
+            ),
+            executor=manager.operation_executor,
         )
         completed = await complete_bank_operation(
             manager.store,
             manager.escrow_coordinator,
             envelope,
+            store_executor=manager.operation_executor,
         )
-        return operation_response(manager.store, completed)
+        return await async_operation_response(
+            manager.store,
+            completed,
+            store_executor=manager.operation_executor,
+        )

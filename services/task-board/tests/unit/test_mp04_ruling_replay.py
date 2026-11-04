@@ -105,6 +105,7 @@ async def stored_ruling(
         manager.platform_agent_id = "a-platform"
         manager.token_validator = validator
         manager.escrow_coordinator = scenario.escrow
+        manager.operation_executor = None
         coordinator = TaskRulingCoordinator(cast("TaskManager", manager))
         payload = {
             "action": "record_ruling",

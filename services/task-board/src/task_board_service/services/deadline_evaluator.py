@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import Executor, ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
@@ -10,6 +11,7 @@ from service_auth.financial_identity import operation_id_for
 from service_commons.exceptions import ServiceError
 
 from task_board_service.logging import get_logger
+from task_board_service.services.async_store import store_call
 from task_board_service.services.task_db_client import PlatformHttpError
 from task_board_service.services.task_operations import complete_bank_operation
 from task_board_service.task_operation_contract import MAX_INTEGER, invalid_gateway_response
@@ -70,6 +72,26 @@ class DeadlineEvaluator:
         self._escrow_coordinator = escrow_coordinator
         self._platform_agent = platform_agent
         self._deadline_actor_id = deadline_actor_id
+        self._claim_lock = asyncio.Lock()
+        self._store_executor: Executor = ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="task-board-deadlines",
+        )
+        self._owns_store_executor = True
+
+    def use_store_executor(self, executor: Executor) -> None:
+        """Share Task Manager's ordered mutation worker after construction."""
+        if executor is self._store_executor:
+            return
+        if self._owns_store_executor:
+            self._store_executor.shutdown(wait=True, cancel_futures=False)
+        self._store_executor = executor
+        self._owns_store_executor = False
+
+    def close(self) -> None:
+        """Release the deadline evaluator's thread-affine storage worker."""
+        if self._owns_store_executor:
+            self._store_executor.shutdown(wait=True, cancel_futures=False)
 
     @staticmethod
     def compute_deadline(base_timestamp: str | None, seconds: int) -> str | None:
@@ -93,7 +115,7 @@ class DeadlineEvaluator:
         task_id = _required_text(task, "task_id")
         name: str | None = None
         try:
-            command = self._automatic_command(task, _now_us())
+            command = await self._automatic_command(task, _now_us())
             if command is None:
                 return task
             name, cutoff_us, arguments = command
@@ -102,23 +124,27 @@ class DeadlineEvaluator:
                 "task-deadline",
                 (task_id, name, str(lifecycle_version), str(cutoff_us)),
             )
-            envelope = self._store.claim_task_operation(
-                {
-                    "protocol_version": 1,
-                    "operation_id": operation_id,
-                    "task_id": task_id,
-                    "command": name,
-                    "expected_status": str(task["status"]),
-                    "expected_lifecycle_version": lifecycle_version,
-                    "actor_kind": "system",
-                    "actor_id": self._deadline_actor_id,
-                    "arguments": arguments,
-                }
-            )
+            async with self._claim_lock:
+                envelope = await store_call(
+                    self._store.claim_task_operation,
+                    {
+                        "protocol_version": 1,
+                        "operation_id": operation_id,
+                        "task_id": task_id,
+                        "command": name,
+                        "expected_status": str(task["status"]),
+                        "expected_lifecycle_version": lifecycle_version,
+                        "actor_kind": "system",
+                        "actor_id": self._deadline_actor_id,
+                        "arguments": arguments,
+                    },
+                    executor=self._store_executor,
+                )
             await complete_bank_operation(
                 self._store,
                 self._escrow_coordinator,
                 envelope,
+                store_executor=self._store_executor,
             )
         except (PlatformHttpError, ServiceError) as exc:
             if isinstance(exc, ServiceError) and exc.error == "invalid_gateway_response":
@@ -127,12 +153,16 @@ class DeadlineEvaluator:
                 "Automatic task transition did not complete; current state will be re-read",
                 extra={"task_id": task_id, "command": name, "error": str(exc)},
             )
-        refreshed = self._store.get_task(task_id)
+        refreshed = await store_call(
+            self._store.get_task,
+            task_id,
+            executor=self._store_executor,
+        )
         if refreshed is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
         return refreshed
 
-    def _automatic_command(
+    async def _automatic_command(
         self,
         task: dict[str, Any],
         now_us: int,
@@ -145,7 +175,13 @@ class DeadlineEvaluator:
             bidding_cutoff = _required_integer(task, "bidding_cutoff_us", positive=False)
             if now_us < bidding_cutoff:
                 return None
-            has_bid = bool(self._store.get_bids_for_task(task_id))
+            has_bid = bool(
+                await store_call(
+                    self._store.get_bids_for_task,
+                    task_id,
+                    executor=self._store_executor,
+                )
+            )
             if has_bid:
                 acceptance_cutoff = _required_integer(task, "acceptance_cutoff_us", positive=False)
                 if now_us < acceptance_cutoff:
@@ -242,7 +278,11 @@ class DeadlineEvaluator:
                 },
             )
 
-        refreshed = self._store.get_task(str(task["task_id"]))
+        refreshed = await store_call(
+            self._store.get_task,
+            str(task["task_id"]),
+            executor=self._store_executor,
+        )
         return refreshed if refreshed is not None else task
 
     async def evaluate_deadlines_batch(self, tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -277,12 +317,14 @@ class DeadlineEvaluator:
             await asyncio.sleep(interval_seconds)
             for status in _SWEEPABLE_STATUSES:
                 try:
-                    tasks = self._store.list_tasks(
+                    tasks = await store_call(
+                        self._store.list_tasks,
                         status=status,
                         poster_id=None,
                         worker_id=None,
                         limit=None,
                         offset=None,
+                        executor=self._store_executor,
                     )
                 except (PlatformHttpError, ServiceError):
                     logger.exception(

@@ -120,10 +120,15 @@ class ClassificationWorkerLoop(MathWorkerLoop):
     async def _phase_scanning(self) -> str | None:
         known = {task_id for task_id, _job in self._commands.jobs.all()}
         candidates: list[tuple[int, str]] = []
-        for task in await self._agent.list_tasks(status="open"):
-            task_id = task.get("task_id")
+        for summary in await self._agent.list_tasks(status="open"):
+            task_id = summary.get("task_id")
+            if not isinstance(task_id, str) or task_id in known:
+                continue
+            task = await self._agent.get_task(task_id)
             reward = task.get("reward")
-            if not isinstance(task_id, str) or task_id in known or type(reward) is not int:
+            if task.get("task_id") != task_id or task.get("status") != "open":
+                continue
+            if type(reward) is not int:
                 continue
             if not self._config.min_reward <= reward <= self._config.max_reward:
                 continue

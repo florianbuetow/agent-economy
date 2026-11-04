@@ -150,7 +150,7 @@ async def enrich_authorized_bids(
 
 
 async def _load_assets(db: aiosqlite.Connection, task_id: str) -> list[dict[str, Any]]:
-    """Load uploaded deliverable assets for a task."""
+    """Load legacy and governed task artifacts without duplicate asset ids."""
     asset_rows = await execute_fetchall(
         db,
         "SELECT asset_id, uploader_id, filename, content_type, size_bytes, "
@@ -159,7 +159,7 @@ async def _load_assets(db: aiosqlite.Connection, task_id: str) -> list[dict[str,
         "ORDER BY uploaded_at ASC",
         (task_id,),
     )
-    return [
+    assets = [
         {
             "asset_id": ar[0],
             "uploader_id": ar[1],
@@ -168,9 +168,39 @@ async def _load_assets(db: aiosqlite.Connection, task_id: str) -> list[dict[str,
             "size_bytes": ar[4],
             "content_hash": ar[5],
             "uploaded_at": ar[6],
+            "role": "output",
         }
         for ar in asset_rows
     ]
+    governed_rows = await execute_fetchall(
+        db,
+        "SELECT artifact_id, actor_id, display_filename, media_type, "
+        "declared_size_bytes, content_sha256, "
+        "strftime('%Y-%m-%dT%H:%M:%SZ', finalized_at_us / 1000000, 'unixepoch'), "
+        "manifest_kind "
+        "FROM board_artifact_uploads "
+        "WHERE task_id = ? AND state IN ('ready', 'archived') "
+        "ORDER BY finalized_at_us ASC",
+        (task_id,),
+    )
+    assets.extend(
+        {
+            "asset_id": f"asset-{row[0]}",
+            "uploader_id": row[1],
+            "filename": row[2],
+            "content_type": row[3],
+            "size_bytes": row[4],
+            "content_hash": row[5],
+            "uploaded_at": row[6],
+            "role": "input" if row[7] == "input" else "output",
+        }
+        for row in governed_rows
+    )
+    by_asset_id = {str(asset["asset_id"]): asset for asset in assets}
+    return sorted(
+        by_asset_id.values(),
+        key=lambda asset: (str(asset["uploaded_at"]), str(asset["asset_id"])),
+    )
 
 
 async def _load_feedback(db: aiosqlite.Connection, task_id: str) -> list[dict[str, Any]]:
