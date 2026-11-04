@@ -1,7 +1,13 @@
 # Agent Economy completion result — 2026-11-04
 
-The software repairs pass the complete root CI gate. The overall goal remains
-unmet because the requested Qwen3-0.6B Court profile fails judgment-quality cases.
+> Later owner update: Court now uses `qwen/qwen3.6-35b-a3b`; all five panel cases
+> and a fresh root CI run passed. Publication is pending the permitted Git window.
+> The small-model findings below describe the earlier completion snapshot. See
+> [the new model evaluation](2026-11-04-qwen36-judge-evaluation.md) for current results.
+
+At the earlier checkpoint, software repairs passed root CI but the Qwen3-0.6B
+Court profile failed judgment-quality cases. That model limitation was subsequently
+resolved by the owner's model change, as recorded above.
 
 ## Delivered and verified
 
@@ -53,7 +59,7 @@ Evidence: [acceptance record](2026-11-04-completion-evidence/acceptance.md),
 [UI journeys](2026-11-04-completion-evidence/ui-worker-live.md),
 [classification run](2026-11-04-classification-runtime-evaluation.md).
 
-## Remaining criterion
+## Earlier unmet criterion (resolved by the later model change)
 
 The actual `qwen3-0.6b` Court panel with `/no_think` underpaid the vague good-faith
 case and awarded full payment after the injected rebuttal in the unchanged declared

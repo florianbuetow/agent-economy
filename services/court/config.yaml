@@ -43,12 +43,12 @@ judges:
   mock_worker_pct: 50
   mock_spec_quality: "satisfied"
   mock_delivery_quality: "satisfied"
-  # Local testing panel: one small model for all three judges (fast, fits easily).
+  # Local judging panel: the owner-selected Qwen3.6 model for all three judges.
   # The evaluated three-model panel is in docs/plans/2026-10-31-judge-evaluation.md.
   judges:
     - id: "judge-0"
       provider: "llm"
-      model: "openai/qwen3-0.6b"
+      model: "openai/qwen/qwen3.6-35b-a3b"
       api_base: "http://localhost:1234/v1"
       api_key_env: "LMSTUDIO_API_KEY"
       temperature: 0.2
@@ -56,7 +56,7 @@ judges:
       prompt_suffix: "/no_think"
     - id: "judge-1"
       provider: "llm"
-      model: "openai/qwen3-0.6b"
+      model: "openai/qwen/qwen3.6-35b-a3b"
       api_base: "http://localhost:1234/v1"
       api_key_env: "LMSTUDIO_API_KEY"
       temperature: 0.2
@@ -64,7 +64,7 @@ judges:
       prompt_suffix: "/no_think"
     - id: "judge-2"
       provider: "llm"
-      model: "openai/qwen3-0.6b"
+      model: "openai/qwen/qwen3.6-35b-a3b"
       api_base: "http://localhost:1234/v1"
       api_key_env: "LMSTUDIO_API_KEY"
       temperature: 0.2

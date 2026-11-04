@@ -1,5 +1,10 @@
 # Completion acceptance evidence — 2026-11-04
 
+> Follow-up: the owner-selected Qwen3.6 profile subsequently passed all five
+> panel cases, and a fresh root gate passed. See
+> [the completed model evaluation](../2026-11-04-qwen36-judge-evaluation.md).
+> The small-model limitations below describe this earlier verification snapshot.
+
 Baseline: `155a63f`. This record supports GOAL.md; canonical ticket state remains
 in `openspec/specs/completion-backlog/spec.md`. The code gate passed; the overall goal remains unmet because real judge quality failed.
 

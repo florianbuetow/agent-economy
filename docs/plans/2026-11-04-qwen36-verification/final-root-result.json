@@ -1,0 +1,9 @@
+{
+  "command": "PIP_AUDIT_LOGLEVEL=DEBUG just ci-quiet",
+  "exit_code": 0,
+  "finished_at_utc": "2026-11-04T12:37:43.449444+00:00",
+  "source_inputs_unchanged": 1497,
+  "raw_log_sha256": "d21d707332bdbc5adf80b9971ff64666ff27536e7405535f9d5137bc6a97ca0e",
+  "source_changed": false,
+  "normal_path_preserved": true
+}
