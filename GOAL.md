@@ -1,178 +1,136 @@
-# Goal: finish the Agent Economy for home-LAN use
+# Goal: finish the Agent Economy
 
-Updated: 2026-11-04. Review baseline: commit `234a1a3`.
+Updated: 2026-11-04 after the owner's scope correction.
 
-## Intended outcome
+## What the user wants
 
-Run a robust, single-host agent economy that agents on other LAN computers can join
-with their own keys to post jobs, bid, submit work, receive payment, and recover
-from ordinary interruptions. The human operator can conveniently post and track
-jobs, inspect files, and handle reviews through the UI. OpenTelemetry provides
-useful operational visibility.
+A working, robust home-LAN job board: one machine runs the existing economy;
+humans and independently keyed agents can post jobs with inputs, take work,
+submit results, receive the agreed payment, and resolve disputes. The UI must be
+convenient for posting, tracking jobs, inspecting files, and navigating agent
+history. Ordinary interruptions must not abandon committed work or duplicate
+payments. OpenTelemetry must make failures and activity understandable.
 
-Focus on working behavior and concrete defects. Preserve completed work; do not
-reimplement the historical backlog or introduce unnecessary infrastructure.
+Finish the existing product. Use judgment, investigate the code, fix demonstrated
+problems, and verify the result without making the user supervise routine work.
 
-## Current evidence
+## Source of scope
 
-The October 30–November 2 commits implement most of the original completion plan:
-accepted-price settlement, governed artifacts and submissions, Court delivery
-recovery, feedback authorization and quality scores, worker recovery, UI flows,
-LAN configuration, supervision, backup, SDK additions, and OpenTelemetry.
+The owner's instructions and ratified decisions are authoritative. The existing
+`MASTERPLAN-TO-COMPLETE-THE-PROJECT.md` defines the Core and non-math Vision work.
+`FEATURE-COMPLETENESS.md`, recent commits, and review documents help locate work;
+their historical findings must be checked against current code.
 
-The latest commit records a passing root `just ci-quiet`. The November 4 review
-was read-only and did not rerun tests. Passing CI does not establish every public
-journey or operational acceptance condition. In particular, the retained judge
-evaluation used different models from the currently configured panel.
+An assistant-written plan, checklist, review suggestion, or test does not create
+a new user requirement. Do not promote suggestions into release blockers.
+This correction supersedes the previous GOAL.md and copied prompts wherever they
+required a second physical machine, SSH access, or a new agent discovery stream.
+The canonical issue tracker remains `openspec/specs/completion-backlog/spec.md`.
 
-## Remaining tasks, in priority order
+## Work to finish
 
-These are execution priorities, not a replacement issue tracker. Map each task to
-existing scenarios in `openspec/specs/completion-backlog/spec.md`; add missing
-scenarios there under the delivery-governance rules before implementation.
+1. **Fix demonstrated robustness defects.** Finish Task Board's blocking Gateway
+   call repairs and explicit handling of malformed dependency responses. Preserve
+   financial, authorization, replay, and recovery behavior. Check other reported
+   defects against the actual code before changing anything.
+2. **Make the existing remote-agent instructions accurate.** Correct commands,
+   worker/feeder configuration, own-key setup, registered IDs, funding operation
+   IDs, and authenticated balance checks. Verify configured LAN bindings and
+   independent client behavior locally. No second physical machine is required.
+3. **Verify the actual judge configuration.** Use only LM Studio `qwen3-0.6b`;
+   Court judges retain `/no_think`. Evaluate the existing small declared corpus.
+   Address demonstrated failures without changing the model, weakening the
+   rubric, or manipulating the expected results. Preserve failure evidence.
+4. **Finish existing public participation flows where genuinely incomplete.**
+   Reuse the public SDK, external-agent example, and existing browser/agent tests.
+   Verify inputs, outputs, accepted-price payment, and earn-then-post behavior.
+   Existing polling is acceptable. Fix documentation to describe shipped APIs.
+5. **Verify the already-planned economic and operational behavior.** Reuse the
+   non-math classification runtime and report to check observed multi-round
+   behavior; reuse restart, current-format backup/restore, and telemetry tooling.
+   Add only missing basic checks needed to establish that these features work.
+6. **Reconcile status and complete the release checks.** Update stale completion
+   claims and canonical tickets from actual evidence. Run the required final
+   isolated root CI after integrating the fixes.
 
-### 1. Remove remaining Task Board dependency-handling defects
+## Definition of done
 
-- Move synchronous Gateway calls off the async request/event-loop path, using the
-  simplest consistent approach across affected callers.
-- Replace remaining malformed-response fallbacks that return empty dictionaries
-  or apparent success with explicit dependency-contract errors.
-- Preserve existing strict parsing and financial replay behavior.
+The project is done when all of the following are true:
 
-Done when a focused regression proves unrelated health requests remain responsive
-while a Gateway call is delayed, and malformed successful responses fail
-explicitly rather than appearing as empty data.
+- The existing human-poster, human-worker, independent-agent, and unattended
+  feeder/worker journeys work through their public interfaces, including inputs,
+  deliverables, review/dispute, payment, and the planned earn-then-post behavior.
+- Accepted-price settlement conserves funds; retries do not duplicate effects;
+  ordinary restarts recover committed work. Task Board remains responsive during
+  slow dependency calls and reports dependency failures explicitly.
+- Court uses the requested model, preserves evidence and one durable ruling,
+  applies the agreed ambiguity/quality rules, and passes the existing real-model
+  acceptance cases. Schema-valid JSON alone is not proof of sound judgment.
+- The UI supports the intended tasks conveniently; existing navigation, files,
+  payment/status views, and action feedback agree with the services.
+- Existing non-math, operational recovery, and observability features have basic
+  evidence supporting their actual claims. Do not claim measured adaptation from
+  scripted winners, or restored work from an archive-only byte comparison.
+- Documentation describes the shipped system. LAN readiness is checked locally;
+  physical cross-machine connectivity is not a completion condition.
+- Relevant focused checks and the final isolated root `just ci-quiet` pass.
+  Substantive changes receive a bounded independent review; concrete findings
+  are resolved and affected checks rerun.
+- The tracker and final report accurately distinguish completed work, remaining
+  defects, and explicitly deferred scope. Commit/push follows the repository's
+  Europe/Amsterdam office-hours rule; report any publication restriction.
 
-Starting points:
-- `services/task-board/src/task_board_service/services/task_creation.py`
-- `services/task-board/src/task_board_service/services/task_db_client.py`
+## What NOT to do
 
-### 2. Make remote-agent onboarding executable
+- **Do not invent requirements or side projects.** Every change must fix a
+  demonstrated defect or complete behavior already requested by the owner.
+- **Do not require another machine, SSH, extra hardware, or a new deployment.**
+  None is available or needed for this task. Do not make their absence a blocker.
+- **Do not add an agent event-stream API, SDK streaming iterator, or new Gateway
+  discovery routes.** Existing agent polling is sufficient. Preserve the existing
+  UI event stream and fix actual bugs in it only when necessary.
+- Do not redesign the architecture, add services, replace the frontend, adopt
+  Kubernetes/kind, introduce per-service containers, or build generic frameworks.
+- Do not expand LAN UI exposure, add TLS/authentication projects, or change
+  balance/privacy policy without an explicit owner decision. Keep current bounds.
+- Do not develop historical-data migrations, compatibility layers, or obsolete
+  schema paths. Use the current schema and disposable test data.
+- Do not reopen completed features based on stale documents, or add speculative
+  hardening unrelated to an observed defect or an agreed business invariant.
+- Do not build exhaustive fault matrices, new verification infrastructure,
+  benchmarks, mutation-test suites, or repeated planning/review ceremonies.
+- Do not change models, substitute mocks for real judge evidence, hard-code
+  expected outcomes, weaken assertions, suppress failures, or skip required gates.
+- Do not stop unrelated services, overwrite ordinary runtime data/keys, or run
+  destructive experiments against the user's normal environment.
+- Do not ask the user to make routine engineering decisions or perform ordinary
+  debugging steps. Investigate and choose the simplest adequate solution.
 
-- Correct `docs/operations/remote-agent-kit.md` to match the actual CLI: the math
-  worker takes a positional profile name, and roster selection belongs in config.
-- Document the required worker profile, feeder handle, roster path, local key
-  paths, and configuration explicitly.
-- Correct funding examples to use the registered agent ID and a canonical
-  operation ID, rather than a display name and an arbitrary string.
-- Reconcile Court connectivity instructions with its loopback-only deployment;
-  ordinary agents must use the supported Task Board-mediated paths.
-- Correct connectivity and authenticated balance-check examples.
+## How to test and check your own work
 
-Done when following the guide from a second LAN machine registers an independent
-agent, funds a poster, completes a job, and verifies the actual payment without
-shared platform private keys. Record the commands and outcome without secrets.
-
-### 3. Evaluate the currently configured judge panel
-
-- Run the declared precise/vague specification and good/bad delivery corpus,
-  including the injection and unavailable-provider cases, against the current
-  `qwen3-0.6b` panel with `/no_think`.
-- Retain the exact configuration, votes, quality findings, payout results,
-  latency, and cost assumptions in a dated evidence note and result artifact.
-- If the panel fails, record the concrete failure and resolve it within the
-  approved model constraints; do not silently substitute other models.
-
-Done when the release claim is supported by results from the shipped configuration.
-The October 31 three-model evaluation remains historical evidence, not proof for
-this panel.
-
-### 4. Complete the external-agent contract and journey
-
-- Update `docs/specifications/service-api/agent-protocol.md` for the shipped
-  protocol-2 posting, input, submission, and upload-idempotency contracts.
-- Complete the planned SDK event-stream async iterator and demonstrate acceptance
-  discovery through events. Ensure the endpoint is reachable under the intended
-  LAN topology without exposing the operator proxy. If polling is deliberately
-  retained instead, record an explicit scope decision rather than claiming this
-  item is implemented.
-- Extend the standalone example and public-API E2E coverage to include task inputs
-  and an independent participant earning money, posting another job, and another
-  worker completing that second job.
-
-Done when the documented contract matches the APIs and the complete independent
-agent journey passes without Gateway or platform-private-key shortcuts, apart
-from the explicitly authorized initial operator funding step.
-
-Existing foundations:
-- `examples/external_agent.py`
-- `agents/tests/e2e/test_external_agent_example.py`
-- `libs/service-auth/`
-
-### 5. Close operational and experiment evidence gaps
-
-First locate and reuse existing evidence. Absence from the reviewed documents is
-not proof a feature is broken.
-
-- Classification: run two independent workers over repeated real rounds with
-  inputs and multiple outputs. Retain a measured report showing persisted
-  outcome-based adaptation, sample counts, quality/cost, and uncertainty. Do not
-  script a winner.
-- Observability: demonstrate one real feeder/worker cycle in Grafana with
-  correlated traces and logs plus all seven service health series. Verify the
-  actual collector configuration and connectivity.
-- Restore: use isolated disposable resources to restore a current-format backup
-  containing a pending job, start the restored stack, and prove the job resumes
-  once with consistent balances and retained files. Archive byte-roundtrip tests
-  alone do not establish this behavior.
-- Public journeys: reconcile B09–B12, B14, and B16 against existing browser,
-  external-agent, restart, event-consistency, and operations tests. Add only the
-  missing basic checks and retain concrete outcomes.
-
-Done when each acceptance condition has identifiable evidence, or a concrete
-failure is recorded as remaining implementation work.
-
-### 6. Reconcile release status and close the tracker honestly
-
-- Update `FEATURE-COMPLETENESS.md` and the October 30 completion plan so historical
-  findings are clearly distinguished from current gaps.
-- Reconcile the canonical backlog, including T-203–T-214, against implementation,
-  failing-test-first proof, and applicable CI evidence. Do not close tickets solely
-  because a summary says all items were implemented.
-- After fixes, run the required isolated root quality gate and record its exit
-  status alongside the completed public journeys.
-
-Done when the documents, tracker, code, and release evidence agree about what is
-complete and what remains.
-
-## Decisions and deferred scope
-
-The completion plan still records these decisions:
-
-- Whether the UI remains loopback-only or gains authenticated LAN access.
-- Whether other agents' balances and earnings remain visible through the UI.
-- Whether clear-text HTTP is acceptable on the trusted LAN or TLS is required.
-
-Keep the current boundaries until an explicit decision changes them. These choices
-do not block the independent fixes above.
-
-Kubernetes/kind and per-service container deployment remain deferred. Historical
-data migration, backward compatibility, exhaustive fault matrices, and mutation
-test expansion are outside this completion effort.
-
-## Execution and verification
-
-- Investigate current code before treating an older finding as an active defect.
-- Follow repository governance and failing-test-first requirements for fixes;
-  keep canonical test and implementation tickets linked.
-- Prefer focused tests through the justfile. Do not run mutation testing. During
-  focused investigation, stop an individual test run exceeding ten minutes and
-  record the gap; the final root CI gate is a separate completion requirement.
-- Use isolated resources for disruptive startup, restart, and restore checks.
-- Keep changes small and avoid new dependencies unless explicitly authorized.
-- Use bounded native subagents for independent work when useful; integrate and
-  verify their results before claiming completion.
-- Do not claim a new passing test result from an older commit message.
-
-## Reference documents
-
-- `docs/plans/2026-10-30-completion-plan.md`
-- `docs/plans/2026-10-30-review-findings/`
-- `docs/plans/2026-10-31-judge-evaluation.md`
-- `docs/operations/remote-agent-kit.md`
-- `docs/operations/supervision.md`
-- `docs/operations/backup-restore.md`
-- `FEATURE-COMPLETENESS.md`
-- `MASTERPLAN-TO-COMPLETE-THE-PROJECT.md`
-- `openspec/specs/completion-backlog/spec.md`
-- `openspec/specs/delivery-governance/spec.md`
+1. **Establish the requirement.** Identify the owner-requested behavior and its
+   observable result. Check existing code/tests first. If the proposed check adds
+   a new requirement, discard it rather than expanding the task.
+2. **Reproduce concrete defects.** Add the smallest missing regression and verify
+   it fails for the intended reason before implementation. Distinguish environment
+   failures from application failures. Follow existing test/implementation tickets.
+3. **Fix and run focused checks.** Use the justfile and existing test harnesses.
+   Reuse tests; add only missing behavior checks. Stop an investigative test run
+   exceeding ten minutes, inspect why, and choose a narrower useful check.
+4. **Verify the real boundary.** A public flow needs a public API, CLI, browser, or
+   runtime check. Use isolated local services and independent client identities.
+   Test configured LAN bindings locally; do not demand physical LAN hardware.
+   For money, authorization, files, and recovery, assert the relevant invariant
+   directly, including one meaningful retry or negative case where needed.
+5. **Check integrations and review the diff.** Confirm callers match the changed
+   contract. Run applicable style/type/static checks. Review for scope creep,
+   swallowed errors, weakened tests, secrets, and unintended behavior changes.
+   An independent reviewer checks substantive edits, not a new speculative audit.
+6. **Run the final gate once integrated.** Run isolated root `just ci-quiet` to its
+   actual exit status. This required full gate is exempt from the ten-minute
+   investigative-test limit. Fix failures and rerun affected checks and the gate.
+   Do not run mutation testing.
+7. **Report evidence honestly.** Record commands, exit statuses, and meaningful
+   results. Historical green runs and an agent's summary do not prove the final
+   tree works. Do not claim completion until the definition above is satisfied;
+   do not hold completion hostage to excluded or invented requirements.
