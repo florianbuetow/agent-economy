@@ -8,8 +8,11 @@
 > Do not reimplement historical gaps or require a second machine/agent event API.
 > Final integrated root CI passed on 2026-11-04. The scanning and prompt-contract
 > defects found in the classification run are repaired and verified. The configured
-> Qwen3-0.6B Court judgment-quality check still fails; no overall readiness claim
-> follows from the passing code gate.
+> Court profile has since been changed by the owner to `qwen/qwen3.6-35b-a3b`.
+> All five declared panel cases now pass after retrying only LM Studio transport
+> failures; valid original votes were preserved. Fresh root CI also passed on the
+> new configuration; publication is pending the permitted Git window. See
+> [the current model evaluation](docs/plans/2026-11-04-qwen36-judge-evaluation.md).
 
 Updated 2026-10-23 from the current worktree. This is the product-level inventory for the [master plan](MASTERPLAN-TO-COMPLETE-THE-PROJECT.md), covering all seven services, public SDK, autonomous agents, human UI, operations, and the economic Vision.
 

@@ -36,10 +36,15 @@ payment. Full repository `just ci-quiet` passed on the integrated tree on
 2026-11-04; all 1,497 recorded source/config/test inputs were unchanged during
 the run. Do not reimplement these fixes.
 
-The configured Qwen3-0.6B Court panel fails the declared judgment-quality cases.
-Bounded general prompt repairs did not pass, so the original prompt and requested
-model remain unchanged. This is the remaining unmet judge-readiness criterion;
-a passing code gate must not be presented as proof that it passed.
+The earlier Qwen3-0.6B Court panel failed the declared judgment-quality cases.
+The owner has now selected `qwen/qwen3.6-35b-a3b` for all Court judges, and Court
+has restarted with it. Court service CI passed. After transport-only retries of
+failed LM Studio calls, all five unchanged evaluation cases pass. Every valid
+original vote was preserved. The temporary extra model instance created during
+reload was removed. The earlier small-model failures remain historical evidence.
+Worker-agent profiles remain unchanged. Final root verification for this model
+configuration passed on 2026-11-04 at 12:37:43 UTC, with all 1,497 recorded inputs
+unchanged. Publication during allowed Git hours is the remaining release step.
 
 See [acceptance evidence](docs/plans/2026-11-04-completion-evidence/acceptance.md)
 and [current CI status](docs/plans/2026-11-04-completion-evidence/root-ci-run.md).
@@ -54,7 +59,8 @@ and [current CI status](docs/plans/2026-11-04-completion-evidence/root-ci-run.md
    worker/feeder configuration, own-key setup, registered IDs, funding operation
    IDs, and authenticated balance checks. Verify configured LAN bindings and
    independent client behavior locally. No second physical machine is required.
-3. **Verify the actual judge configuration.** Use only LM Studio `qwen3-0.6b`;
+3. **Verify the actual judge configuration.** Use LM Studio `qwen/qwen3.6-35b-a3b`
+   for the Court judges, as explicitly selected by the owner;
    Court judges retain `/no_think`. Evaluate the existing small declared corpus.
    Address demonstrated failures without changing the model, weakening the
    rubric, or manipulating the expected results. Preserve failure evidence.

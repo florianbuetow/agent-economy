@@ -2,7 +2,7 @@
 
 > **Completion reconciliation — 2026-11-04:** The integrated root gate passed.
 > See [current result](../../../docs/plans/2026-11-04-completion-result.md) for
-> verified scope and the remaining real-judge limitation. Historical entries
+> verified scope and the subsequent successful Qwen3.6 evaluation. Historical entries
 > without closure evidence, including the earlier wave tickets, remain open;
 > a green aggregate gate alone does not close them or call for reimplementing
 > already delivered behavior. The owner's current `GOAL.md` excludes second-host,
@@ -765,13 +765,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-25 is selected
 - **THEN** the acceptance proof demonstrates the gap: The baseline real panel is evaluated against predeclared precise/vague, compliant/noncompliant and malicious-evidence cases; fixed mock output is excluded from quality proof.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** IN PROGRESS 2026-11-04 — Current qwen3-0.6b profile was evaluated against the unchanged corpus. Quality failures and bounded unsuccessful general repairs are retained. Code CI passes, but the real-panel quality gate does not. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
+- **Status:** CLOSED 2026-11-04 — All five unchanged Qwen3.6 panel cases passed after transport-only retries, preserving every valid original vote and failed-call history. Fresh full root CI passed on the selected profile. [Evidence](../../../docs/plans/2026-11-04-qwen36-judge-evaluation.md).
 
 #### Scenario: T-159 Deliver empirical real judge readiness
 - **WHEN** T-158 is red-proven and the prerequisites are satisfied: MP-10, MP-11, MP-14
 - **THEN** A configured three-judge real profile satisfies predeclared quality/robustness and operating-budget criteria with traceable immutable evidence, valid output, recoverable provider failure and independently verified retry stability.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN 2026-11-04 — Requested qwen3-0.6b with /no_think fails semantic judgment acceptance, including injected evidence. Original prompt retained after bounded unsuccessful repairs; no model substitution or weakened expectation. Overall judge readiness is not achieved. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
+- **Status:** CLOSED 2026-11-04 — Owner-selected qwen/qwen3.6-35b-a3b is configured for all Court judges, Court restarted healthy, all declared panel bands passed, and full root CI passed. No rubric/parser weakening or valid-vote reroll. [Evidence](../../../docs/plans/2026-11-04-qwen36-judge-evaluation.md).
 
 ### Requirement: MP-26 Consistent specifications and evidence
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-26. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -1135,6 +1135,23 @@ The commit hook SHALL run a gate that can complete within its timeout. Source: p
 - **WHEN** T-213 has evidence
 - **THEN** the hook runs the component `ci-quiet` gates for the components touched by the staged paths, exits 0 quickly for documentation-only commits, and blocks on any failure
 - **AND** root CI remains the closure gate for every item
+
+### Requirement: Reliable vulnerability-audit request bounds
+Service vulnerability audits SHALL retain their full dependency and advisory
+coverage while using an explicit request timeout suitable for the observed PyPI
+latency. Source: repeated root CI ReadTimeout failures on 2026-11-04.
+
+#### Scenario: T-215 Record the dependency-audit timeout failure
+- **WHEN** the unchanged service audit queries PyPI with its implicit 15-second timeout
+- **THEN** preserve the actual nonzero root-gate output and distinguish the network failure from a vulnerability finding
+- **AND** verify the supported auditor timeout option without suppressing checks
+- **Status:** CLOSED 2026-11-04 — Actual 15-second PyPI audit timeout failures retained; supported timeout/logging options verified. Audit coverage and failure propagation remained unchanged, and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-qwen36-judge-evaluation.md).
+
+#### Scenario: T-216 Make audit request timeout explicit
+- **WHEN** T-215 has failing evidence
+- **THEN** all seven identical service recipes use an explicit 60-second request timeout and preserve their existing cache, dependency coverage, advisory policy, and nonzero failure behavior
+- **AND** the actual audit, recipe-consistency checks and final root CI pass before closure
+- **Status:** CLOSED 2026-11-04 — All seven identical audit recipes use explicit timeout60 with the existing cache/advisory policy. Actual recipe audit, consistency checks, independent review and full root CI passed. Transient network outages are not represented as permanently eliminated. [Evidence](../../../docs/plans/2026-11-04-qwen36-judge-evaluation.md).
 
 ### Requirement: Understandable and accessible existing UI journeys
 The existing UI SHALL preserve its service contracts while exposing readable,
