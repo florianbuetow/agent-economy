@@ -67,7 +67,7 @@ shared platform private keys. Record the commands and outcome without secrets.
 
 - Run the declared precise/vague specification and good/bad delivery corpus,
   including the injection and unavailable-provider cases, against the current
-  `qwen3-0.6b-mlx` panel with `/no_think`.
+  `qwen3-0.6b` panel with `/no_think`.
 - Retain the exact configuration, votes, quality findings, payout results,
   latency, and cost assumptions in a dated evidence note and result artifact.
 - If the panel fails, record the concrete failure and resolve it within the
