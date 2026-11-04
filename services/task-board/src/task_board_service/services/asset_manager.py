@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
 
+from task_board_service.services.async_store import store_read
 from task_board_service.services.errors import AssetInsertRejectedError
 from task_board_service.services.streaming_upload import (
     AssetStorageQuota,
@@ -447,7 +448,7 @@ class AssetManager:
         return remaining
 
     async def _check_upload_eligibility(self, task_id: str, signer_id: str) -> int:
-        task = self._store.get_task(task_id)
+        task = await store_read(self._store.get_task, task_id)
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
         task = await self._deadline_evaluator.evaluate_deadline(task)
@@ -465,7 +466,7 @@ class AssetManager:
                 403,
                 {},
             )
-        if self.count_assets(task_id) >= self._max_files_per_task:
+        if await store_read(self._store.count_assets, task_id) >= self._max_files_per_task:
             raise ServiceError(
                 "too_many_assets",
                 f"Maximum of {self._max_files_per_task} assets per task reached",
@@ -647,7 +648,8 @@ class AssetManager:
             size_bytes=len(file_content),
             content_hash=content_hash,
         )
-        self._persist_published_asset(
+        await store_read(
+            self._persist_published_asset,
             asset,
             expected_lifecycle_version=lifecycle_version,
         )
@@ -671,7 +673,7 @@ class AssetManager:
         if idempotency_key is not None:
             _validate_idempotency_key(idempotency_key)
         signer_id = await self._authenticate_upload(task_id, token)
-        governed = self._governed_context(task_id)
+        governed = await store_read(self._governed_context, task_id)
         if governed is not None:
             return await self._upload_governed(
                 task_id=task_id,
@@ -691,7 +693,7 @@ class AssetManager:
             artifact_uuid = uuid.uuid5(
                 _IDEMPOTENCY_NAMESPACE, f"{task_id}\x00{signer_id}\x00{idempotency_key}"
             )
-            existing = self._store.get_asset(f"asset-{artifact_uuid}", task_id)
+            existing = await store_read(self._store.get_asset, f"asset-{artifact_uuid}", task_id)
             if existing is not None and existing.get("uploader_id") == signer_id:
                 return self._asset_response(existing)
         lifecycle_version = await self._check_upload_eligibility(task_id, signer_id)
@@ -785,7 +787,8 @@ class AssetManager:
                 content_hash=parsed.content_hash,
             )
             metadata_attempted = True
-            self._persist_published_asset(
+            await store_read(
+                self._persist_published_asset,
                 asset,
                 expected_lifecycle_version=lifecycle_version,
             )
@@ -830,7 +833,7 @@ class AssetManager:
     # ------------------------------------------------------------------
 
     async def _check_governed_eligibility(self, task_id: str, signer_id: str) -> int:
-        task = self._store.get_task(task_id)
+        task = await store_read(self._store.get_task, task_id)
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
         task = await self._deadline_evaluator.evaluate_deadline(task)
@@ -988,10 +991,14 @@ class AssetManager:
         artifacts, _policy = self._require_artifacts()
         operation_id = _upload_operation_id(task_id, signer_id, idempotency_key)
         if idempotency_key is not None:
-            existing = artifacts.get_artifact_upload(operation_id)
+            existing = await store_read(artifacts.get_artifact_upload, operation_id)
             if existing is not None and existing.get("state") == "ready":
                 return self._artifact_response(
-                    self._governed_artifact(task_id, str(existing["artifact_id"]))
+                    await store_read(
+                        self._governed_artifact,
+                        task_id,
+                        str(existing["artifact_id"]),
+                    )
                 )
             if existing is not None and existing.get("state") != "reserved":
                 raise ServiceError(
@@ -1003,11 +1010,9 @@ class AssetManager:
         lifecycle_version = await self._check_governed_eligibility(task_id, signer_id)
         staging_name = f"{operation_id}.{uuid.uuid4().hex}.upload"
         parsed = await self._stage_governed_body(staging_name, request, limits, quota, signer_id)
-        reservation = self._commit_staged(
-            operation_id,
-            staging_name,
-            parsed,
-            lambda evidence_format: {
+
+        def build_request(evidence_format: str) -> dict[str, Any]:
+            return {
                 "protocol_version": 1,
                 "upload_operation_id": operation_id,
                 "resource": _RESERVE_RESOURCE,
@@ -1022,10 +1027,21 @@ class AssetManager:
                 "expected_lifecycle_version": lifecycle_version,
                 "accepted_binding_kind": str(context["accepted_binding_kind"]),
                 "accepted_binding_sha256": str(context["accepted_binding_sha256"]),
-            },
+            }
+
+        reservation = await store_read(
+            self._commit_staged,
+            operation_id,
+            staging_name,
+            parsed,
+            build_request,
         )
         return self._artifact_response(
-            self._governed_artifact(task_id, str(reservation["artifact_id"]))
+            await store_read(
+                self._governed_artifact,
+                task_id,
+                str(reservation["artifact_id"]),
+            )
         )
 
     def _commit_staged(
@@ -1110,7 +1126,7 @@ class AssetManager:
         artifacts, _policy = self._require_artifacts()
         operation_id = _upload_operation_id(task_id, poster_id, idempotency_key)
         if idempotency_key is not None:
-            existing = artifacts.get_artifact_upload(operation_id)
+            existing = await store_read(artifacts.get_artifact_upload, operation_id)
             if existing is not None and existing.get("state") == "ready":
                 return {
                     "artifact_id": str(existing["artifact_id"]),
@@ -1129,11 +1145,9 @@ class AssetManager:
                 )
         staging_name = f"{operation_id}.{uuid.uuid4().hex}.upload"
         parsed = await self._stage_governed_body(staging_name, request, limits, quota, poster_id)
-        reservation = self._commit_staged(
-            operation_id,
-            staging_name,
-            parsed,
-            lambda evidence_format: {
+
+        def build_request(evidence_format: str) -> dict[str, Any]:
+            return {
                 "protocol_version": 2,
                 "upload_operation_id": operation_id,
                 "resource": f"POST /task-publications/{publication_operation_id}/inputs",
@@ -1147,7 +1161,14 @@ class AssetManager:
                 "evidence_format": evidence_format,
                 "declared_size_bytes": parsed.size_bytes,
                 "content_sha256": parsed.content_hash,
-            },
+            }
+
+        reservation = await store_read(
+            self._commit_staged,
+            operation_id,
+            staging_name,
+            parsed,
+            build_request,
         )
         return {
             "artifact_id": str(reservation["artifact_id"]),
@@ -1360,7 +1381,7 @@ class AssetManager:
                 400,
                 {},
             )
-        task = self._store.get_task(task_id)
+        task = await store_read(self._store.get_task, task_id)
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
         if is_platform:
@@ -1402,7 +1423,7 @@ class AssetManager:
             resource=f"GET /tasks/{task_id}/assets/{asset_id}",
             asset_id=asset_id,
         )
-        if not participant and not self._is_input_artifact(task_id, asset_id):
+        if not participant and not await store_read(self._is_input_artifact, task_id, asset_id):
             raise _read_forbidden()
         return await self._download_asset(task_id, asset_id, allow_terminal=True)
 
@@ -1418,6 +1439,10 @@ class AssetManager:
 
     async def list_assets(self, task_id: str) -> dict[str, Any]:
         """List all assets for a task without authorization (internal callers)."""
+        return await store_read(self._list_assets, task_id)
+
+    def _list_assets(self, task_id: str) -> dict[str, Any]:
+        """Synchronous asset projection executed through ``store_read``."""
         if self._store.get_task(task_id) is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
 
@@ -1458,9 +1483,10 @@ class AssetManager:
         )
         if self._artifacts is None:
             return {"task_id": task_id, "manifests": []}
+        listing = await store_read(self._artifacts.list_task_artifacts, task_id)
         manifests = [
             item
-            for item in self._artifacts.list_task_artifacts(task_id).get("manifests", [])
+            for item in listing.get("manifests", [])
             if participant or item.get("kind") == "input"
         ]
         return {"task_id": task_id, "manifests": manifests}
@@ -1477,6 +1503,21 @@ class AssetManager:
         allow_terminal: bool,
     ) -> tuple[bytes, str, str]:
         """Read one task-bound asset with shared storage and integrity enforcement."""
+        return await store_read(
+            self._download_asset_sync,
+            task_id,
+            asset_id,
+            allow_terminal=allow_terminal,
+        )
+
+    def _download_asset_sync(
+        self,
+        task_id: str,
+        asset_id: str,
+        *,
+        allow_terminal: bool,
+    ) -> tuple[bytes, str, str]:
+        """Synchronous Gateway and filesystem read, called through ``store_read``."""
         root_descriptor = self._borrow_root_descriptor()
         try:
             task = self._store.get_task(task_id)

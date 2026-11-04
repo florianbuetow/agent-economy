@@ -84,7 +84,12 @@ def _manager(store: _Store, escrow: _Escrow) -> TaskManager:
     value = type(
         "ManagerDouble",
         (),
-        {"store": store, "escrow_coordinator": escrow, "token_validator": validator},
+        {
+            "store": store,
+            "escrow_coordinator": escrow,
+            "token_validator": validator,
+            "operation_executor": None,
+        },
     )()
     return cast("TaskManager", value)
 

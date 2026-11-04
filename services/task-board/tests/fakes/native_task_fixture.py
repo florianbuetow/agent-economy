@@ -260,7 +260,12 @@ class NativeTaskFixture:
         claimed = self.store.claim_task_operation(
             self.command(task_id, "approve_task", "submitted", 2, self.poster_id, arguments)
         )
-        result = await complete_bank_operation(self.store, self.escrow, claimed)
+        result = await complete_bank_operation(
+            self.store,
+            self.escrow,
+            claimed,
+            store_executor=None,
+        )
         assert result["operation_state"] == "completed"
         assert self.task(task_id)["status"] == "approved"
 

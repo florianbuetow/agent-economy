@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import importlib
 from dataclasses import dataclass, field
-from typing import Any, Protocol, cast
+from typing import Any, Protocol
 
 import pytest
 from service_commons.exceptions import ServiceError
@@ -49,7 +49,20 @@ def _entry_point() -> _CompleteBankOperation:
     value = getattr(module, "complete_bank_operation", None)
     if not callable(value):
         pytest.fail("Missing callable complete_bank_operation capability")
-    return cast("_CompleteBankOperation", value)
+
+    async def complete(
+        store: _StoreBoundary,
+        escrow_coordinator: _EscrowBoundary,
+        envelope: dict[str, Any],
+    ) -> dict[str, Any]:
+        return await value(
+            store,
+            escrow_coordinator,
+            envelope,
+            store_executor=None,
+        )
+
+    return complete
 
 
 def _release_financial() -> dict[str, object]:

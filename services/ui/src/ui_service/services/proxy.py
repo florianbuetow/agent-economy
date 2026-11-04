@@ -159,9 +159,11 @@ def _validate_operation(
         response_operation_id = validate_operation_id(operation["operation_id"])
     except ValueError:
         _invalid_response(error_code)
+    protocol_version = operation["protocol_version"]
+    allowed_protocol_versions = {1, 2} if command == "submit_deliverable" else {1}
     if (
-        type(operation["protocol_version"]) is not int
-        or operation["protocol_version"] != 1
+        type(protocol_version) is not int
+        or protocol_version not in allowed_protocol_versions
         or response_operation_id != operation_id
         or operation["task_id"] != task_id
         or operation["command"] != command
@@ -235,7 +237,39 @@ def _validate_operation(
         or (command == "cancel_task" and not isinstance(operation["effect_intent"], dict))
     ):
         _invalid_response(error_code)
-    return _validate_operation_state(operation, error_code)
+    state = _validate_operation_state(operation, error_code)
+    if command == "submit_deliverable" and protocol_version == 2 and state == "completed":
+        result = cast("dict[str, Any]", operation["result"])
+        operator_agent_id = _get_user_agent().agent_id
+        expected_fields = {
+            "task_id",
+            "command",
+            "status",
+            "lifecycle_version",
+            "event_id",
+            "worker_id",
+            "manifest_id",
+            "manifest_sha256",
+        }
+        manifest_sha256 = result.get("manifest_sha256")
+        if (
+            set(result) != expected_fields
+            or result.get("task_id") != task_id
+            or result.get("command") != command
+            or result.get("status") != operation["target_status"]
+            or result.get("lifecycle_version") != operation["target_lifecycle_version"]
+            or result.get("event_id") != operation["event_id"]
+            or not isinstance(operator_agent_id, str)
+            or not operator_agent_id
+            or result.get("worker_id") != operator_agent_id
+            or not isinstance(result.get("manifest_id"), str)
+            or not result["manifest_id"]
+            or not isinstance(manifest_sha256, str)
+            or len(manifest_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in manifest_sha256)
+        ):
+            _invalid_response(error_code)
+    return state
 
 
 def _ensure_mutation_response(

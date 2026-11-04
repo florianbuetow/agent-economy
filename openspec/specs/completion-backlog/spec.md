@@ -1,5 +1,13 @@
 ## Purpose
 
+> **Completion reconciliation — 2026-11-04:** The integrated root gate passed.
+> See [current result](../../../docs/plans/2026-11-04-completion-result.md) for
+> verified scope and the remaining real-judge limitation. Historical entries
+> without closure evidence, including the earlier wave tickets, remain open;
+> a green aggregate gate alone does not close them or call for reimplementing
+> already delivered behavior. The owner's current `GOAL.md` excludes second-host,
+> SSH and new agent-stream requirements.
+
 > **Owner scope update — 2026-10-23:** Follow `MASTERPLAN-TO-COMPLETE-THE-PROJECT.md` and `FEATURE-COMPLETENESS.md` for feature-first execution. Existing data is disposable test data: old-schema/data migration, historical asset conversion and backward compatibility are out of scope. Initialize fresh databases directly. Reuse existing tests and add only missing basic feature checks; no exhaustive fault matrices or repeated planning/review gates. Older migration/testing obligations below are historical where they conflict with this update. Completed work stays complete; no feature is closed by this scope change.
 
 
@@ -606,28 +614,29 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-15 is selected
 - **THEN** the acceptance proof demonstrates the gap: Real browser actions cannot finish the operator poster and worker journeys, inspect artifacts/payments, or recover actionable errors and ambiguous writes.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-11-04 — Real proxy/browser failures were retained before fixes; governed files, operator-bound submissions, browser poster/worker journeys, payment conservation and existing entitlement/recovery checks pass. Independent review and final root CI R6 passed. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 #### Scenario: T-139 Deliver complete human participation
 - **WHEN** T-138 is red-proven and the prerequisites are satisfied: MP-04, MP-05, MP-09, MP-12, MP-13, MP-19; MP-14 for scores
 - **THEN** Through the UI the operator posts/works as itself, sees funding and real bids, transfers supported artifacts, accepts/submits/approves/disputes/rebuts/cancels/gives feedback when entitled, and sees matching receipts with no duplicate effects or impersonation.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-11-04 — Current governed artifacts and protocol-2 acknowledgments work through the actual browser; poster and worker journeys reach approval/payment. Existing cancel, feedback, dispute and rebuttal checks pass in the full gate; no operator impersonation or weakened assertions. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 ### Requirement: MP-16 Independent external agent participation
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-16. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
 
 #### Scenario: T-140 Write acceptance tests for independent external agent participation
 - **WHEN** the test ticket for MP-16 is selected
-- **THEN** the acceptance proof demonstrates the gap: An unlisted participant on a separate host/network namespace exposes any reliance on server roster, shared files, gateway/operator access or privileged keys.
+- **THEN** the acceptance proof demonstrates any reliance of an independently keyed public-API participant on the server roster, shared files, Gateway/operator access or privileged keys
+- **AND** local isolated verification is sufficient under the owner's 2026-11-04 scope correction; no second physical host, SSH access or separate network namespace is required
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-11-04 — Input-helper red proof retained, independent public-SDK input/earn-then-post journey passed, and final root CI R6 passed. Verification uses own keys and local isolated public URLs per owner scope; no second-host requirement. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 #### Scenario: T-141 Deliver independent external agent participation
 - **WHEN** T-140 is red-proven and the prerequisites are satisfied: MP-02, MP-03, MP-04, MP-05, MP-09
 - **THEN** Using only its own persistent keys and documented agent-facing URLs, an external agent completes work, reads its payment and posts a funded job; any initial grant is administrator-invoked and platform-signed; zero-balance working remains allowed.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-11-04 — External example handles input publication/download verification and earned-money reposting. Two ordinary identities, one initial platform grant, accepted-price payments and conserved final balances verified; independent review and root CI R6 passed. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 ### Requirement: MP-17 Worker commitment recovery
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-17. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -681,13 +690,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-20 is selected
 - **THEN** the acceptance proof demonstrates the gap: Malformed success bodies and conflated errors appear as plausible empty/zero results, and a slow persistence request stalls unrelated Task Board requests or deadline progress.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** IN PROGRESS 2026-11-04 — Task Board malformed-read, responsiveness, cancellation and trace-context proofs are red/green with root CI R6 passed. This verifies the Task Board scope; the broader historical shared-client contract scope is not blanket-closed. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 #### Scenario: T-149 Deliver strict service contracts and responsive task processing
 - **WHEN** T-148 is red-proven and the prerequisites are satisfied: producer contracts from MP-04, MP-07, MP-10
 - **THEN** Invalid upstream contracts fail visibly and distinctly; production/fake contracts agree; Task Board health, unrelated requests and deadline progress meet the documented bounds during slow dependency failures.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** IN PROGRESS 2026-11-04 — Task Board repairs are implemented, independently reviewed, and pass root CI R6. Shared-library success-response readers were not changed or comprehensively audited by this bounded pass; broader MP-20 closure is not claimed. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 ### Requirement: MP-21 Operational readiness and restoration
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-21. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -696,13 +705,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-21 is selected
 - **THEN** the acceptance proof demonstrates the gap: Missing services, wrong port ownership, incomplete schema/keys/assets and interrupted restoration expose false readiness or unrecoverable work.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-11-04 — Current-format restore startup permission failure red-proven; restored submitted work retains keys/files/balances and settles once under replay. Focused operations checks and full root CI R6 passed. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 #### Scenario: T-151 Deliver operational readiness and restoration
 - **WHEN** T-150 is red-proven and the prerequisites are satisfied: MP-01, MP-03, MP-06, MP-08, MP-10
 - **THEN** Startup/teardown honor exact process ownership and readiness; restore recovers matching keys/evidence/money and pending work once; current-format backups preserve the running economy; diagnostics and recovery operations are actionable and do not expose secrets.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-11-04 — Restore reapplies private directory permissions after safe extraction; actual restored pending work resumes and pays once. Existing startup, cleanup, backup and recovery coverage passed the root gate; independent review approved. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 ### Requirement: MP-22 Honest comprehensive verification
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-22. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -741,13 +750,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-24 is selected
 - **THEN** the acceptance proof demonstrates the gap: The non-math input/output and multi-round examples expose unsupported participation or claims of price formation/specialization that the active policy does not justify.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-11-04 — Real zero-bid run and exact-ID prompt failures retained; focused regressions passed after repair. Final bounded two-worker experiment and full root CI R6 passed; small-sample and mock-Court limitations are explicit. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 #### Scenario: T-157 Deliver measured non-math economic behavior
 - **WHEN** T-156 is red-proven and the prerequisites are satisfied: MP-04, MP-14, MP-16, MP-17, MP-18; Q-M2 and Q-M3
 - **THEN** Real public APIs drive reproducible non-math work and measured adaptation/quality/cost; pricing matches the accepted fixed-reward or post-v1 contract, with conserved rounding/refunds and protected outstanding tasks; failed hypotheses are reported honestly.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** CLOSED 2026-11-04 — Public-API non-math run recorded eight tasks, thirteen bids, both workers paid, and journal-derived per-type adaptation without scripting winners. Payments and partial awards are distinguished; real Court quality remains separately open under T-159. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 ### Requirement: MP-25 Empirical real judge readiness
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-25. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.
@@ -756,13 +765,13 @@ The completion backlog SHALL retain the paired proof and implementation obligati
 - **WHEN** the test ticket for MP-25 is selected
 - **THEN** the acceptance proof demonstrates the gap: The baseline real panel is evaluated against predeclared precise/vague, compliant/noncompliant and malicious-evidence cases; fixed mock output is excluded from quality proof.
 - **AND** the exact baseline, command and observed failing assertion are recorded before implementation
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** IN PROGRESS 2026-11-04 — Current qwen3-0.6b profile was evaluated against the unchanged corpus. Quality failures and bounded unsuccessful general repairs are retained. Code CI passes, but the real-panel quality gate does not. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 #### Scenario: T-159 Deliver empirical real judge readiness
 - **WHEN** T-158 is red-proven and the prerequisites are satisfied: MP-10, MP-11, MP-14
 - **THEN** A configured three-judge real profile satisfies predeclared quality/robustness and operating-budget criteria with traceable immutable evidence, valid output, recoverable provider failure and independently verified retry stability.
 - **AND** the corresponding product spec, master-plan release gates and fresh isolated root `just ci-quiet` proof agree before closure
-- **Status:** OPEN — Implementation and item-specific proof pending.
+- **Status:** OPEN 2026-11-04 — Requested qwen3-0.6b with /no_think fails semantic judgment acceptance, including injected evidence. Original prompt retained after bounded unsuccessful repairs; no model substitution or weakened expectation. Overall judge readiness is not achieved. [Evidence](../../../docs/plans/2026-11-04-completion-evidence/acceptance.md).
 
 ### Requirement: MP-26 Consistent specifications and evidence
 The completion backlog SHALL retain the paired proof and implementation obligations for MP-26. Implementation SHALL wait for its red proof and the prerequisite packages or decisions. Both tickets SHALL remain OPEN until their own proof and the universal closure gate are satisfied.

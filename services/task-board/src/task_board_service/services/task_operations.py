@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from service_commons.exceptions import ServiceError
 
+from task_board_service.services.async_store import store_call
 from task_board_service.services.task_db_client import PlatformHttpError
 from task_board_service.services.task_helpers import task_to_response
 from task_board_service.task_operation_contract import (
@@ -16,6 +17,8 @@ from task_board_service.task_operation_contract import (
 )
 
 if TYPE_CHECKING:
+    from concurrent.futures import Executor
+
     from service_auth.platform import PlatformAgent
 
     from task_board_service.services.escrow_coordinator import EscrowCoordinator
@@ -61,6 +64,25 @@ def operation_response(
 ) -> dict[str, Any]:
     """Keep the immutable command outcome separate from the current task view."""
     task = store.get_task(envelope["task_id"])
+    if task is None:
+        raise invalid_gateway_response()
+    response = task_to_response(task)
+    response["operation"] = envelope
+    return response
+
+
+async def async_operation_response(
+    store: TaskStorageInterface,
+    envelope: dict[str, Any],
+    *,
+    store_executor: Executor | None,
+) -> dict[str, Any]:
+    """Build an operation response without blocking the request event loop."""
+    task = await store_call(
+        store.get_task,
+        envelope["task_id"],
+        executor=store_executor,
+    )
     if task is None:
         raise invalid_gateway_response()
     response = task_to_response(task)
@@ -127,11 +149,17 @@ def _reject_unbuildable_command(
     )
 
 
-def _finalize_same_operation(
+async def _finalize_same_operation(
     store: TaskStorageInterface,
     envelope: dict[str, Any],
+    *,
+    store_executor: Executor | None,
 ) -> dict[str, Any]:
-    finalized = store.finalize_task_operation(envelope["operation_id"])
+    finalized = await store_call(
+        store.finalize_task_operation,
+        envelope["operation_id"],
+        executor=store_executor,
+    )
     if any(finalized[field] != envelope[field] for field in _IMMUTABLE_FIELDS):
         raise invalid_gateway_response()
     return finalized
@@ -141,11 +169,17 @@ async def complete_bank_operation(
     store: TaskStorageInterface,
     escrow_coordinator: EscrowCoordinator,
     envelope: dict[str, Any],
+    *,
+    store_executor: Executor | None,
 ) -> dict[str, Any]:
     """Deliver stored intent once per invocation and finalize only from Gateway evidence."""
     if envelope["operation_state"] == "completed":
         return envelope
-    pending = _finalize_same_operation(store, envelope)
+    pending = await _finalize_same_operation(
+        store,
+        envelope,
+        store_executor=store_executor,
+    )
     if pending["operation_state"] == "completed":
         return pending
     financial = pending["effect_intent"]["financial_request"]
@@ -179,22 +213,36 @@ async def complete_bank_operation(
             raise invalid_gateway_response()
     except ServiceError:
         # A failed response does not establish that the Bank transaction failed.
-        finalized = _finalize_same_operation(store, envelope)
+        finalized = await _finalize_same_operation(
+            store,
+            envelope,
+            store_executor=store_executor,
+        )
         if finalized["operation_state"] == "completed":
             return finalized
         raise
-    return _finalize_same_operation(store, envelope)
+    return await _finalize_same_operation(
+        store,
+        envelope,
+        store_executor=store_executor,
+    )
 
 
 async def complete_court_operation(
     store: TaskStorageInterface,
     platform_agent: PlatformAgent,
     envelope: dict[str, Any],
+    *,
+    store_executor: Executor | None,
 ) -> dict[str, Any]:
     """Find or deliver the claimed Court effect using Gateway-owned claim evidence."""
     if envelope["operation_state"] == "completed":
         return envelope
-    pending = _finalize_same_operation(store, envelope)
+    pending = await _finalize_same_operation(
+        store,
+        envelope,
+        store_executor=store_executor,
+    )
     if pending["operation_state"] == "completed":
         return pending
     if pending["effect_kind"] != "court_claim":
@@ -210,10 +258,18 @@ async def complete_court_operation(
             escrow_id=intent["expected_escrow"]["escrow_id"],
         )
     except (PlatformHttpError, ServiceError, JSONDecodeError) as exc:
-        finalized = _finalize_same_operation(store, envelope)
+        finalized = await _finalize_same_operation(
+            store,
+            envelope,
+            store_executor=store_executor,
+        )
         if finalized["operation_state"] == "completed":
             return finalized
         if isinstance(exc, ServiceError):
             raise
         raise ServiceError("court_unavailable", "Court claim delivery failed", 502, {}) from exc
-    return _finalize_same_operation(store, envelope)
+    return await _finalize_same_operation(
+        store,
+        envelope,
+        store_executor=store_executor,
+    )

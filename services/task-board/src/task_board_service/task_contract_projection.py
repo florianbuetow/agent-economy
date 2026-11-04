@@ -38,6 +38,56 @@ class GatewayBid(StrictModel):
     submitted_at: Text
 
 
+class GatewayAsset(StrictModel):
+    """Stored asset metadata must be complete and cannot coerce corrupt values."""
+
+    asset_id: Text
+    task_id: Text
+    uploader_id: Text
+    filename: Text
+    content_type: Text
+    size_bytes: Integer
+    storage_path: Text
+    content_hash: str | None
+    uploaded_at: Text
+
+
+class GatewayTaskFields(StrictModel):
+    """Required ordinary fields in the Gateway's persisted task projection."""
+
+    task_id: Text
+    poster_id: Text
+    title: Text
+    spec: Text
+    reward: Annotated[int, Field(strict=True, gt=0)]
+    bidding_deadline_seconds: Integer
+    deadline_seconds: Integer
+    review_deadline_seconds: Integer
+    status: Literal[
+        "open", "accepted", "submitted", "approved", "cancelled", "expired", "disputed", "ruled"
+    ]
+    escrow_id: Text
+    bid_count: Integer
+    worker_id: Text | None
+    accepted_bid_id: Text | None
+    created_at: Text
+    accepted_at: Text | None
+    submitted_at: Text | None
+    approved_at: Text | None
+    cancelled_at: Text | None
+    disputed_at: Text | None
+    dispute_reason: str | None
+    dispute_id: Text | None
+    rebuttal_deadline: Text | None
+    rebuttal_submitted_at: Text | None
+    ruling_id: Text | None
+    ruled_at: Text | None
+    worker_pct: Annotated[int, Field(strict=True, ge=0, le=100)] | None
+    ruling_summary: str | None
+    expired_at: Text | None
+    escrow_pending: Annotated[int, Field(strict=True, ge=0, le=1)]
+
+
 class LegacyReconciliation(StrictModel):
     """An observed historical effect, never a fabricated native command."""
 

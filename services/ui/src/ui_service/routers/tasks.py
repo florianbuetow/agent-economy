@@ -169,6 +169,7 @@ async def get_task_drilldown(
             size_bytes=a["size_bytes"],
             content_hash=a["content_hash"],
             uploaded_at=a["uploaded_at"],
+            role=a["role"],
         )
         for a in data["assets"]
     ]

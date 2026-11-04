@@ -11,9 +11,12 @@ routers/conftest.py) keep working unchanged for every coordinator too.
 
 from __future__ import annotations
 
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Any
 
 from task_board_service.logging import get_logger
+from task_board_service.services.async_store import store_read
 from task_board_service.services.task_bidding import TaskBiddingCoordinator
 from task_board_service.services.task_creation import TaskCreationCoordinator
 from task_board_service.services.task_helpers import VALID_STATUSES
@@ -63,6 +66,11 @@ class TaskManager:
         self._platform_signer = platform_signer
         self._platform_agent_id = platform_agent_id
         self._logger = get_logger(__name__)
+        self._operation_executor = ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="task-board-operations",
+        )
+        self._deadline_evaluator.use_store_executor(self._operation_executor)
 
         self._creation = TaskCreationCoordinator(self)
         self._bidding = TaskBiddingCoordinator(self)
@@ -117,6 +125,11 @@ class TaskManager:
     def logger(self) -> logging.Logger:
         """The task manager's logger."""
         return self._logger
+
+    @property
+    def operation_executor(self) -> ThreadPoolExecutor:
+        """Thread-affine worker for ordered Gateway mutation claims and finalization."""
+        return self._operation_executor
 
     # ------------------------------------------------------------------
     # Public methods — called by routers. Each delegates to the coordinator
@@ -204,11 +217,19 @@ class TaskManager:
     # Statistics — used by health endpoint
     # ------------------------------------------------------------------
 
-    def get_stats(self) -> dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Return aggregate task statistics for health reporting."""
+        total_tasks, status_counts = await asyncio.gather(
+            store_read(self._store.count_tasks),
+            store_read(self._store.count_tasks_by_status),
+        )
+        counts: dict[str, int] = dict.fromkeys(VALID_STATUSES, 0)
+        for status_val, count in status_counts.items():
+            if status_val in counts:
+                counts[status_val] = int(count)
         return {
-            "total_tasks": self.count_tasks(),
-            "tasks_by_status": self.count_tasks_by_status(),
+            "total_tasks": total_tasks,
+            "tasks_by_status": counts,
         }
 
     def count_tasks(self) -> int:
@@ -225,4 +246,5 @@ class TaskManager:
 
     def close(self) -> None:
         """Close the database connection."""
+        self._operation_executor.shutdown(wait=True, cancel_futures=False)
         self._store.close()

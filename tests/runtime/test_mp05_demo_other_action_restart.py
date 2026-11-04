@@ -338,6 +338,18 @@ def other_action_harness(
             ownership=ownership,
             cleanup_failures=cleanup_failures,
         )
+        # This proof drives Court actions explicitly. Keep Task Board's separate
+        # autonomous ruling sweep outside the case so it cannot acquire the
+        # judging lease before the crash snapshot and race the action under test.
+        task_board_config_path = runtime.config_paths["task-board"]
+        task_board_config = yaml.safe_load(
+            task_board_config_path.read_text(encoding="utf-8")
+        )
+        task_board_config["deadline_evaluation"]["evaluation_interval_seconds"] = 3_600
+        task_board_config_path.write_text(
+            yaml.safe_dump(task_board_config, sort_keys=False),
+            encoding="utf-8",
+        )
         runtime.start()
         court_config = yaml.safe_load(runtime.config_paths["court"].read_text(encoding="utf-8"))
         assert court_config["judges"]["judges"] == [

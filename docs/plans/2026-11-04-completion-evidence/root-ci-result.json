@@ -1,0 +1,12 @@
+{
+  "command": [
+    "just",
+    "ci-quiet"
+  ],
+  "exit_code": 0,
+  "finished_at_utc": "2026-11-04T04:36:54.503109+00:00",
+  "source_inputs": 1497,
+  "source_changes_during_ci": [],
+  "normal_path_preserved": true,
+  "verification_scope": "Full configured root gate with disposable integration and E2E runtimes. Real judge evaluation is separate and remains failing."
+}

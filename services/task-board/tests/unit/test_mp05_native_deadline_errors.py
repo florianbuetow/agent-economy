@@ -81,7 +81,12 @@ async def test_minimum_explicit_acceptance_window_remains_valid() -> None:
     published = TaskPostingResponse(201, {"publication_state": "published"})
     store = SimpleNamespace(admit_task_publication=Mock(return_value=published))
     bank = AsyncMock()
-    manager = SimpleNamespace(token_validator=tokens, store=store, central_bank_client=bank)
+    manager = SimpleNamespace(
+        token_validator=tokens,
+        store=store,
+        central_bank_client=bank,
+        operation_executor=None,
+    )
     result = await TaskCreationCoordinator(cast("TaskManager", manager)).create_task(
         "task-token", "escrow-token"
     )

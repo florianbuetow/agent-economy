@@ -22,7 +22,7 @@ async def health_check() -> HealthResponse | JSONResponse:
     total_tasks = 0
     tasks_by_status: dict[str, int] = {}
     if state.task_manager is not None:
-        stats = state.task_manager.get_stats()
+        stats = await state.task_manager.get_stats()
         total_tasks = stats["total_tasks"]
         tasks_by_status = stats["tasks_by_status"]
     background_loops = state.background_loops()

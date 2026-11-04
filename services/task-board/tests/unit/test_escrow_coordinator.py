@@ -224,7 +224,9 @@ async def test_claimed_expiry_completes_only_after_persisted_release(
     native_tasks.clock.at_seconds(3600)
     claimed = claim_expiry(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID)
     assert_pending(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID, "open")
-    result = await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+    result = await complete_bank_operation(
+        native_tasks.store, native_tasks.escrow, claimed, store_executor=None
+    )
     assert result["operation_state"] == "completed"
     native_tasks.assert_settlement(
         _TASK_ID,
@@ -243,7 +245,9 @@ async def test_failed_delivery_does_not_complete_expiry(native_tasks: NativeTask
     expected = ServiceError("central_bank_unavailable", "injected", 502, {})
     native_tasks.bank.escrow_release.side_effect = expected
     with pytest.raises(ServiceError) as caught:
-        await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+        await complete_bank_operation(
+            native_tasks.store, native_tasks.escrow, claimed, store_executor=None
+        )
     assert caught.value is expected
     assert_pending(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID, "open")
     assert (
@@ -298,10 +302,14 @@ async def test_pending_retry_completes_the_same_owner(
         "central_bank_unavailable", "injected", 502, {}
     )
     with pytest.raises(ServiceError):
-        await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+        await complete_bank_operation(
+            native_tasks.store, native_tasks.escrow, claimed, store_executor=None
+        )
     assert_pending(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID, source)
     native_tasks.bank.escrow_release.side_effect = native_tasks.persist_release
-    completed = await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+    completed = await complete_bank_operation(
+        native_tasks.store, native_tasks.escrow, claimed, store_executor=None
+    )
     assert completed["operation_state"] == "completed"
     assert (
         native_tasks.assert_settlement(
@@ -315,7 +323,9 @@ async def test_pending_retry_completes_the_same_owner(
     assert calls[0].kwargs["operation_id"] == _APPROVAL_OPERATION_ID
     assert calls[0].kwargs["recipient_account_id"] == recipient
     assert (
-        await complete_bank_operation(native_tasks.store, native_tasks.escrow, completed)
+        await complete_bank_operation(
+            native_tasks.store, native_tasks.escrow, completed, store_executor=None
+        )
         == completed
     )
     assert native_tasks.bank.escrow_release.await_count == 2
@@ -332,7 +342,12 @@ async def test_repeated_delivery_failure_keeps_native_ownership(
     )
     for _ in range(2):
         with pytest.raises(ServiceError):
-            await complete_bank_operation(native_tasks.store, native_tasks.escrow, claimed)
+            await complete_bank_operation(
+                native_tasks.store,
+                native_tasks.escrow,
+                claimed,
+                store_executor=None,
+            )
         assert_pending(native_tasks, _TASK_ID, _APPROVAL_OPERATION_ID, "submitted")
     assert (
         native_tasks.store.writer.connection.execute(

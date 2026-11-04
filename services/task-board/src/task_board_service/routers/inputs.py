@@ -24,6 +24,7 @@ from task_board_service.routers.validation import (
     parse_json_body,
 )
 from task_board_service.schemas import IDEMPOTENCY_KEY_HEADER
+from task_board_service.services.async_store import store_read
 from task_board_service.services.input_manager import (
     PosterInputCoordinator,
     public_input_manifest,
@@ -113,7 +114,7 @@ async def get_task_inputs(task_id: str) -> dict[str, Any]:
     store = get_app_state().store
     if store is None:
         raise _not_ready("Task store")
-    manifest = cast("PrepublicationStore", store).get_task_input_manifest(task_id)
+    manifest = await store_read(cast("PrepublicationStore", store).get_task_input_manifest, task_id)
     raw = manifest["input_manifest"]
     return {
         "task_id": task_id,

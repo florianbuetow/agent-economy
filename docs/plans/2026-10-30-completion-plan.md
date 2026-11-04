@@ -1,5 +1,11 @@
 # Completion plan — 2026-10-30 review
 
+> **Owner scope correction — 2026-11-04:** Follow the current `GOAL.md`.
+> A second physical LAN machine, SSH access, and a new agent discovery stream
+> are not requirements or release gates. Verify LAN configuration and independent
+> clients locally; existing agent polling is sufficient. Historical findings below
+> describe the review baseline, not a list of features to reimplement.
+
 Review of the tree at `802fe37` (branch `refactor`) against the handover documents `MASTERPLAN-TO-COMPLETE-THE-PROJECT.md` and `FEATURE-COMPLETENESS.md` (both 2026-10-23). Eight independent code audits produced the evidence; their full reports with file:line citations are in [`2026-10-30-review-findings/`](2026-10-30-review-findings/). This document is the consolidated verdict and the ordered plan to finish the project as a **home-lab job board**: one host runs all services, any LAN machine registers agents and posts or takes tasks, the stack recovers from ordinary restarts.
 
 ## Verdict
@@ -181,7 +187,7 @@ Decision for the owner (not blocking 1.1–1.8): **LAN UI.** Exposing the dashbo
 | 5.1 | SDK standalone: drop the `service-commons`/FastAPI runtime dependency from `service-auth`; documented `BaseAgent.from_urls(name, key_path, base_urls, token_ttl_seconds, token_policy)`; typed `EconomyApiError(status, error, message, details)` from `_request`; move platform-only Court methods and `lock_escrow` off `BaseAgent`. | Fresh project outside the repo installs it without FastAPI; a 409 surfaces its code; `BaseAgent` has no method an ordinary signature cannot satisfy. | M |
 | 5.2 | `examples/external_agent.py` (~100 lines) using only `service-auth` and explicit URLs, run as an e2e against `start-all`: register → funded by operator → work a task → post a task with inputs → another worker completes it. (B11) | Example passes in CI. | S |
 | 5.3 | `docs/specifications/service-api/agent-protocol.md`: every agent route with signed payload, `aud`/`resource`, idempotency rules, `lock_operation_id` UUIDv5 recipe with a test vector; replace the stale `POST /tasks` example. | A test recomputes the documented vector. | S |
-| 5.4 | Document `/api/events/stream` (or a Task Board equivalent) as the discovery feed with an SDK async iterator. | A worker learns acceptance from an event without polling. | S |
+| 5.4 | Removed by owner scope correction on 2026-11-04: no new agent discovery feed or SDK iterator. | Existing agent polling remains supported; no implementation or release gate. | — |
 
 ### Phase 6 — Observability (new; OpenTelemetry)
 
@@ -283,3 +289,16 @@ The review brief (tracked verbatim as [`2026-10-30-review-findings/review-brief.
 ## Suggested sequencing
 
 Phase 0 and Phase 1 together make the stack usable and robust on the LAN with today's feature set, and are small. Phase 2 and 3 are the bulk of the remaining product work and match the master plan's §1 and §2 order. Phase 4 and 5 can run in parallel lanes against the Phase 2/3 APIs as they land. Phase 6 is independent and can start as soon as the approvals arrive. Phase 7 last.
+
+## Current completion checkpoint — 2026-11-04
+
+The integrated repairs passed root `just ci-quiet` with exit 0. Actual browser
+poster/worker input, preview, submit, review and accepted-price payment journeys
+passed, as did current-format restore/resume and a measured classification run.
+The prior blanket statement that all plan work was complete was too broad: real
+Qwen3-0.6B Court quality remains below the declared acceptance bands.
+
+Use [the completion result](2026-11-04-completion-result.md) and its linked evidence
+for current status. The owner's scope correction excludes a second physical host,
+SSH and a new agent discovery stream. Do not reopen historical implementation gaps
+from the old review tables or infer judge quality from a green deterministic CI run.

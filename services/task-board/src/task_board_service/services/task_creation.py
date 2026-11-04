@@ -16,10 +16,11 @@ from service_auth.financial_responses import SQLITE_MAX_INTEGER
 from service_auth.task_postings import TaskPostingIntent, TaskPostingResponse
 from service_commons.exceptions import ServiceError
 
+from task_board_service.services.async_store import store_call, store_read
 from task_board_service.services.task_helpers import task_to_response, task_to_summary
 from task_board_service.services.task_operations import (
+    async_operation_response,
     complete_bank_operation,
-    operation_response,
     public_operation_identity,
 )
 from task_board_service.task_operation_contract import validate_operation_id
@@ -181,13 +182,22 @@ class TaskCreationCoordinator:
         escrow_payload = await manager.token_validator.validate_escrow_jws_token(escrow_token)
         _validate_escrow_payload(escrow_payload, intent)
 
-        admitted = manager.store.admit_task_publication(intent)
+        admitted = await store_call(
+            manager.store.admit_task_publication,
+            intent,
+            executor=manager.operation_executor,
+        )
         if admitted.status_code == 409:
             _raise_blocked(admitted)
         if admitted.body["publication_state"] == "published":
             return admitted
 
-        reconciled = manager.store.reconcile_task_publication(intent.operation_id, intent)
+        reconciled = await store_call(
+            manager.store.reconcile_task_publication,
+            intent.operation_id,
+            intent,
+            executor=manager.operation_executor,
+        )
         if reconciled.status_code == 409:
             _raise_blocked(reconciled)
         if reconciled.body["publication_state"] == "published":
@@ -196,7 +206,12 @@ class TaskCreationCoordinator:
         try:
             await manager.central_bank_client.escrow_lock(escrow_token)
         except ServiceError as bank_error:
-            after_error = manager.store.reconcile_task_publication(intent.operation_id, intent)
+            after_error = await store_call(
+                manager.store.reconcile_task_publication,
+                intent.operation_id,
+                intent,
+                executor=manager.operation_executor,
+            )
             if after_error.status_code == 409:
                 _raise_blocked(after_error)
             if after_error.body["publication_state"] == "published":
@@ -205,7 +220,12 @@ class TaskCreationCoordinator:
                 raise bank_error
             return after_error
 
-        published = manager.store.reconcile_task_publication(intent.operation_id, intent)
+        published = await store_call(
+            manager.store.reconcile_task_publication,
+            intent.operation_id,
+            intent,
+            executor=manager.operation_executor,
+        )
         if published.status_code == 409:
             _raise_blocked(published)
         return published
@@ -236,7 +256,9 @@ class TaskCreationCoordinator:
         poster_id = payload["poster_id"]
         if not isinstance(poster_id, str) or payload["_signer_id"] != poster_id:
             raise ServiceError("forbidden", "Signer does not match poster_id", 403, {})
-        return self._manager.store.get_task_publication(validated_operation_id, poster_id)
+        return await store_read(
+            lambda: self._manager.store.get_task_publication(validated_operation_id, poster_id)
+        )
 
     async def get_task(self, task_id: str) -> dict[str, Any]:
         """
@@ -246,7 +268,7 @@ class TaskCreationCoordinator:
             ServiceError: task_not_found
         """
         manager = self._manager
-        task = manager.store.get_task(task_id)
+        task = await store_read(lambda: manager.store.get_task(task_id))
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
         task = await manager.deadline_evaluator.evaluate_deadline(task)
@@ -266,12 +288,14 @@ class TaskCreationCoordinator:
         Returns a list of task summary dicts.
         """
         manager = self._manager
-        tasks = manager.store.list_tasks(
-            status=status,
-            poster_id=poster_id,
-            worker_id=worker_id,
-            limit=limit,
-            offset=offset,
+        tasks = await store_read(
+            lambda: manager.store.list_tasks(
+                status=status,
+                poster_id=poster_id,
+                worker_id=worker_id,
+                limit=limit,
+                offset=offset,
+            )
         )
 
         # Evaluate deadlines for all tasks
@@ -324,33 +348,43 @@ class TaskCreationCoordinator:
             raise ServiceError("forbidden", "Signer does not match poster_id", 403, {})
 
         # Step 10: Load task
-        task = manager.store.get_task(task_id)
+        task = await store_read(lambda: manager.store.get_task(task_id))
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
 
         # Gateway rechecks actual bid existence if a bid races this strict read.
-        has_bids = bool(manager.store.get_bids_for_task(task_id))
+        has_bids = bool(await store_read(lambda: manager.store.get_bids_for_task(task_id)))
         cutoff = task["acceptance_cutoff_us"] if has_bids else task["bidding_cutoff_us"]
-        envelope = manager.store.claim_task_operation(
-            {
-                "protocol_version": 1,
-                "operation_id": operation_id,
-                "task_id": task_id,
-                "command": "cancel_task",
-                "expected_status": "open",
-                "expected_lifecycle_version": expected_version,
-                "actor_kind": "agent",
-                "actor_id": signer_id,
-                "arguments": {
-                    "poster_id": task["poster_id"],
-                    "escrow_id": task["escrow_id"],
-                    "reward": task["reward"],
-                    "source_reference": f"task:{task_id}:cancelled",
-                    "cutoff_us": cutoff,
-                },
-            }
+        envelope = await store_call(
+            lambda: manager.store.claim_task_operation(
+                {
+                    "protocol_version": 1,
+                    "operation_id": operation_id,
+                    "task_id": task_id,
+                    "command": "cancel_task",
+                    "expected_status": "open",
+                    "expected_lifecycle_version": expected_version,
+                    "actor_kind": "agent",
+                    "actor_id": signer_id,
+                    "arguments": {
+                        "poster_id": task["poster_id"],
+                        "escrow_id": task["escrow_id"],
+                        "reward": task["reward"],
+                        "source_reference": f"task:{task_id}:cancelled",
+                        "cutoff_us": cutoff,
+                    },
+                }
+            ),
+            executor=manager.operation_executor,
         )
         finalized = await complete_bank_operation(
-            manager.store, manager.escrow_coordinator, envelope
+            manager.store,
+            manager.escrow_coordinator,
+            envelope,
+            store_executor=manager.operation_executor,
         )
-        return operation_response(manager.store, finalized)
+        return await async_operation_response(
+            manager.store,
+            finalized,
+            store_executor=manager.operation_executor,
+        )

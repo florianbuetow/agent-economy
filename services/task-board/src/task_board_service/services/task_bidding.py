@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, cast
 from service_commons.exceptions import ServiceError
 from service_commons.telemetry import annotate
 
+from task_board_service.services.async_store import store_call, store_read
 from task_board_service.services.task_helpers import is_positive_int, task_to_response
 from task_board_service.services.task_operations import public_operation_identity
 from task_board_service.task_operation_contract import (
@@ -93,22 +94,25 @@ class TaskBiddingCoordinator:
 
         bid_id = f"bid-{operation_id[3:]}"
         try:
-            envelope = manager.store.claim_task_operation(
-                {
-                    "protocol_version": 1,
-                    "operation_id": operation_id,
-                    "task_id": task_id,
-                    "command": "submit_bid",
-                    "expected_status": "open",
-                    "expected_lifecycle_version": expected_version,
-                    "actor_kind": "agent",
-                    "actor_id": bidder_id,
-                    "arguments": {
-                        "bid_id": bid_id,
-                        "bidder_id": bidder_id,
-                        "amount": amount_int,
-                    },
-                }
+            envelope = await store_call(
+                lambda: manager.store.claim_task_operation(
+                    {
+                        "protocol_version": 1,
+                        "operation_id": operation_id,
+                        "task_id": task_id,
+                        "command": "submit_bid",
+                        "expected_status": "open",
+                        "expected_lifecycle_version": expected_version,
+                        "actor_kind": "agent",
+                        "actor_id": bidder_id,
+                        "arguments": {
+                            "bid_id": bid_id,
+                            "bidder_id": bidder_id,
+                            "amount": amount_int,
+                        },
+                    }
+                ),
+                executor=manager.operation_executor,
             )
         except ServiceError as exc:
             if exc.status_code == 409 and exc.error == "bid_exists":
@@ -117,7 +121,7 @@ class TaskBiddingCoordinator:
                 ) from exc
             raise
         result = _operation_result(envelope, "submit_bid")
-        bid = manager.store.get_bid(bid_id, task_id)
+        bid = await store_read(lambda: manager.store.get_bid(bid_id, task_id))
         if bid is None or any(
             result.get(key) != value
             for key, value in {
@@ -162,7 +166,7 @@ class TaskBiddingCoordinator:
         # come before task lookup in standard precedence, BUT the task_id
         # is in the URL (not the token), so we need the task to determine
         # if auth is required. Load task, then check status, then enforce auth.
-        task = manager.store.get_task(task_id)
+        task = await store_read(lambda: manager.store.get_task(task_id))
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
 
@@ -216,7 +220,7 @@ class TaskBiddingCoordinator:
                 "amount": int(row["amount"]),
                 "submitted_at": str(row["submitted_at"]),
             }
-            for row in manager.store.get_bids_for_task(task_id)
+            for row in await store_read(lambda: manager.store.get_bids_for_task(task_id))
         ]
 
         return {"task_id": task_id, "bids": bids}
@@ -277,12 +281,28 @@ class TaskBiddingCoordinator:
             raise ServiceError("forbidden", "Signer does not match poster_id", 403, {})
 
         # Step 10: Load task
-        task = manager.store.get_task(task_id)
+        task = await store_read(lambda: manager.store.get_task(task_id))
         if task is None:
             raise ServiceError("task_not_found", "Task not found", 404, {})
 
+        # At the selected acceptance cutoff the automatic expiry and this
+        # poster command are simultaneously eligible. Finish the same
+        # deterministic deadline operation first so the public command keeps
+        # its documented cutoff-before-bid precedence instead of exposing the
+        # internal transition owner as ``transition_pending``.
+        if task["status"] == "open" and signer_id == task["poster_id"]:
+            current = await manager.deadline_evaluator.evaluate_deadline(task)
+            if current["status"] == "expired":
+                raise ServiceError(
+                    "cutoff_reached",
+                    "Task operation cutoff has been reached",
+                    409,
+                    {},
+                )
+            task = current
+
         # Load only immutable command facts. Gateway owns mutable eligibility.
-        bid = manager.store.get_bid(bid_id, task_id)
+        bid = await store_read(lambda: manager.store.get_bid(bid_id, task_id))
         if bid is None:
             raise ServiceError("bid_not_found", "Bid not found", 404, {})
 
@@ -290,24 +310,27 @@ class TaskBiddingCoordinator:
         bid_amount = bid["amount"]
         if type(bid_amount) is not int or not 0 <= bid_amount <= MAX_INTEGER:
             raise invalid_gateway_response()
-        envelope = manager.store.claim_task_operation(
-            {
-                "protocol_version": 1,
-                "operation_id": operation_id,
-                "task_id": task_id,
-                "command": "accept_bid",
-                "expected_status": "open",
-                "expected_lifecycle_version": expected_version,
-                "actor_kind": "agent",
-                "actor_id": signer_id,
-                "arguments": {
-                    "bid_id": bid_id,
-                    "worker_id": worker_id,
-                    "escrow_id": str(task["escrow_id"]),
-                    "reward": task["reward"],
-                    "bid_amount": bid_amount,
-                },
-            }
+        envelope = await store_call(
+            lambda: manager.store.claim_task_operation(
+                {
+                    "protocol_version": 1,
+                    "operation_id": operation_id,
+                    "task_id": task_id,
+                    "command": "accept_bid",
+                    "expected_status": "open",
+                    "expected_lifecycle_version": expected_version,
+                    "actor_kind": "agent",
+                    "actor_id": signer_id,
+                    "arguments": {
+                        "bid_id": bid_id,
+                        "worker_id": worker_id,
+                        "escrow_id": str(task["escrow_id"]),
+                        "reward": task["reward"],
+                        "bid_amount": bid_amount,
+                    },
+                }
+            ),
+            executor=manager.operation_executor,
         )
         result = _operation_result(envelope, "accept_bid")
         if any(
@@ -322,7 +345,7 @@ class TaskBiddingCoordinator:
         ):
             raise invalid_gateway_response()
 
-        updated = manager.store.get_task(task_id)
+        updated = await store_read(lambda: manager.store.get_task(task_id))
         if updated is None:
             msg = f"Task {task_id} not found after update"
             raise RuntimeError(msg)

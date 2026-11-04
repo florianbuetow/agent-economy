@@ -1,0 +1,30 @@
+{
+  "trace_id": "1234567890abcdef1234567890abcdef",
+  "runtime": "/private/tmp/agent-economy-goal-2026-11-04/telemetry/runtime-79828af9cf89408cadcf3b4407ba8bd6-wxbed3s0",
+  "health": {
+    "db-gateway": "ok",
+    "identity": "ok",
+    "central-bank": "ok",
+    "task-board": "ok",
+    "reputation": "ok",
+    "court": "ok",
+    "ui": "ok"
+  },
+  "request_status": 404,
+  "correlated_logs": [
+    {
+      "logger": "task-board.task_board_service.core.exceptions",
+      "message": "Service error",
+      "trace_id": "1234567890abcdef1234567890abcdef",
+      "span_id": "cd638e241bb5e709"
+    },
+    {
+      "logger": "task-board.task_board_service.core.exceptions",
+      "message": "Service error",
+      "trace_id": "1234567890abcdef1234567890abcdef",
+      "span_id": "cd638e241bb5e709"
+    }
+  ],
+  "viewer_verified": false,
+  "scope": "Real HTTP propagation and structured file-log correlation; no collector/viewer is installed or claimed."
+}

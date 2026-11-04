@@ -12,6 +12,7 @@ no platform key. Run one process per role:
 
 A poster uses ``--min-balance`` as both the coins it waits for and the task reward. The
 operator grants them with the ``just fund-agent`` command the script prints.
+Pass ``--input <path>`` one or more times to publish immutable input attachments.
 Every step prints the HTTP route it uses.
 """
 
@@ -19,6 +20,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
+import mimetypes
 import sys
 import time
 import uuid
@@ -41,6 +44,29 @@ class Timing:
 
     poll_seconds: float
     timeout_seconds: float
+
+
+@dataclass(frozen=True)
+class TaskInput:
+    """One caller-owned input attachment for a protocol-2 task publication."""
+
+    filename: str
+    content: bytes
+    content_type: str
+    idempotency_key: str
+
+    @classmethod
+    def from_path(cls, path: Path) -> TaskInput:
+        """Read one CLI input and derive a stable upload identity from its bytes."""
+        content = path.read_bytes()
+        content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        identity = hashlib.sha256(path.name.encode("utf-8") + b"\x00" + content).hexdigest()
+        return cls(
+            filename=path.name,
+            content=content,
+            content_type=content_type,
+            idempotency_key=f"input-{identity}",
+        )
 
 
 def say(route: str, detail: str) -> None:
@@ -119,10 +145,65 @@ async def wait_until_funded(agent: BaseAgent, amount: int, timing: Timing) -> in
     return balance
 
 
+async def download_task_inputs(agent: BaseAgent, task_id: str) -> dict[str, bytes]:
+    """Download and verify a task's frozen public input manifest."""
+    response = await agent.get_task_inputs(task_id)
+    if response.get("task_id") != task_id:
+        raise RuntimeError("input manifest belongs to a different task")
+    manifest = response.get("input_manifest")
+    if manifest is None:
+        return {}
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("files"), list):
+        raise RuntimeError("input manifest has an invalid shape")
+
+    inputs: dict[str, bytes] = {}
+    for item in manifest["files"]:
+        if not isinstance(item, dict):
+            raise RuntimeError("input manifest has an invalid file entry")
+        asset_id = item.get("asset_id")
+        filename = item.get("filename")
+        size_bytes = item.get("size_bytes")
+        content_sha256 = item.get("content_sha256")
+        if (
+            not isinstance(asset_id, str)
+            or not asset_id
+            or not isinstance(filename, str)
+            or not filename
+            or isinstance(size_bytes, bool)
+            or not isinstance(size_bytes, int)
+            or size_bytes < 0
+            or not isinstance(content_sha256, str)
+            or len(content_sha256) != 64
+            or filename in inputs
+        ):
+            raise RuntimeError("input manifest has invalid file metadata")
+        content = await agent.download_asset(task_id, asset_id)
+        if len(content) != size_bytes or hashlib.sha256(content).hexdigest() != content_sha256:
+            raise RuntimeError("input manifest does not match downloaded bytes")
+        inputs[filename] = content
+    say(f"GET /tasks/{task_id}/inputs", f"{len(inputs)} verified inputs")
+    return inputs
+
+
 async def work_one_task(
     agent: BaseAgent, solve: Callable[[str], bytes], timing: Timing, poster_id: str | None
 ) -> dict[str, Any]:
-    """Worker journey: find an open task (of ``poster_id`` if given), bid, deliver, submit."""
+    """Worker journey for a solver that only consumes the inline specification."""
+    return await work_one_task_with_inputs(
+        agent,
+        lambda spec, _inputs: solve(spec),
+        timing,
+        poster_id,
+    )
+
+
+async def work_one_task_with_inputs(
+    agent: BaseAgent,
+    solve: Callable[[str, dict[str, bytes]], bytes],
+    timing: Timing,
+    poster_id: str | None,
+) -> dict[str, Any]:
+    """Worker journey that verifies and supplies frozen inputs to its solver."""
 
     async def find_open() -> dict[str, Any] | None:
         tasks = await agent.list_tasks(status="open", poster_id=poster_id)
@@ -151,7 +232,15 @@ async def work_one_task(
         say(f"GET /tasks/{task_id}", f"lost the bid, status={task['status']}")
         return task
     say(f"GET /tasks/{task_id}", "bid accepted")
-    await agent.upload_asset(task_id, "answer.txt", solve(task["spec"]))
+    inputs = await download_task_inputs(agent, task_id)
+    output = solve(task["spec"], inputs)
+    output_identity = hashlib.sha256(output).hexdigest()
+    await agent.upload_asset(
+        task_id,
+        "answer.txt",
+        output,
+        idempotency_key=f"output-{output_identity}",
+    )
     say(f"POST /tasks/{task_id}/assets", "answer.txt uploaded")
     task = await agent.get_task(task_id)
     await agent.submit_deliverable(
@@ -198,6 +287,68 @@ async def post_task(
     return intent.task_id
 
 
+async def post_task_with_inputs(
+    agent: BaseAgent,
+    title: str,
+    spec: str,
+    reward: int,
+    windows: dict[str, int],
+    inputs: tuple[TaskInput, ...],
+    timing: Timing,
+) -> str:
+    """Publish a protocol-2 task with an immutable input manifest."""
+    if not inputs:
+        raise ValueError("post_task_with_inputs requires at least one input")
+    filenames = {item.filename for item in inputs}
+    idempotency_keys = {item.idempotency_key for item in inputs}
+    if len(filenames) != len(inputs) or len(idempotency_keys) != len(inputs):
+        raise ValueError("task inputs require unique filenames and idempotency keys")
+
+    task_id = f"t-{uuid.uuid4()}"
+    intent = agent.new_task_publication(
+        task_id=task_id,
+        title=title,
+        spec=spec,
+        reward=reward,
+        bidding_deadline_seconds=windows["bidding_deadline_seconds"],
+        acceptance_window_seconds=windows["acceptance_window_seconds"],
+        execution_deadline_seconds=windows["execution_deadline_seconds"],
+        review_deadline_seconds=windows["review_deadline_seconds"],
+        expected_input_count=len(inputs),
+    )
+    if intent.get("task_id") != task_id:
+        raise RuntimeError("task publication intent returned a different task id")
+    await agent.admit_task_publication(intent)
+    say("POST /task-publications", f"task_id={task_id}")
+    for item in inputs:
+        await agent.upload_task_input(
+            intent["publication_operation_id"],
+            item.filename,
+            item.content,
+            content_type=item.content_type,
+            idempotency_key=item.idempotency_key,
+        )
+        say(
+            f"POST /task-publications/{intent['publication_operation_id']}/inputs",
+            f"{item.filename} uploaded",
+        )
+
+    async def published() -> str | None:
+        status_code, body = await agent.publish_task_publication(intent)
+        state = body.get("publication_state")
+        say(
+            f"POST /task-publications/{intent['publication_operation_id']}/publish",
+            f"http={status_code} state={state}",
+        )
+        if status_code == 201 and state == "published" and body.get("task_id") == task_id:
+            return task_id
+        if status_code == 202 and state == "awaiting_lock":
+            return None
+        raise RuntimeError("task publication returned an invalid state")
+
+    return await wait_for(published, timing, "input-bearing task publication")
+
+
 async def settle_task(
     agent: BaseAgent, task_id: str, accept: Callable[[bytes], bool], timing: Timing
 ) -> dict[str, Any]:
@@ -225,8 +376,14 @@ async def settle_task(
     task = await wait_for(submitted, timing, "submission")
     # Download before approving: bytes are unavailable once the task is terminal.
     assets = await agent.list_assets(task_id)
-    say(f"GET /tasks/{task_id}/assets", f"{len(assets)} assets")
-    content = b"".join([await agent.download_asset(task_id, a["asset_id"]) for a in assets])
+    outputs = [asset for asset in assets if asset.get("role") == "output"]
+    say(
+        f"GET /tasks/{task_id}/assets",
+        f"{len(outputs)} outputs ({len(assets)} total assets)",
+    )
+    content = b"".join(
+        [await agent.download_asset(task_id, asset["asset_id"]) for asset in outputs]
+    )
     say(f"GET /tasks/{task_id}/assets/{{asset_id}}", f"{len(content)} bytes")
     if accept(content):
         await agent.approve_task(
@@ -257,7 +414,11 @@ def parse_args() -> argparse.Namespace:
         parser.add_argument(f"--{flag}", type=int, required=True)
     parser.add_argument("--poll-seconds", type=float, required=True)
     parser.add_argument("--timeout-seconds", type=float, required=True)
-    return parser.parse_args()
+    parser.add_argument("--input", action="append", type=Path)
+    args = parser.parse_args()
+    if args.role == "worker" and args.input is not None:
+        parser.error("--input is valid only for the poster role")
+    return args
 
 
 async def main() -> int:
@@ -283,7 +444,14 @@ async def main() -> int:
         if args.min_balance > 0:
             await wait_until_funded(agent, args.min_balance, timing)
         if args.role == "worker":
-            await work_one_task(agent, lambda spec: spec.encode(), timing, None)
+            await work_one_task_with_inputs(
+                agent,
+                lambda spec, inputs: (
+                    b"\n".join(inputs[name] for name in sorted(inputs)) if inputs else spec.encode()
+                ),
+                timing,
+                None,
+            )
         else:
             windows = {
                 "bidding_deadline_seconds": 120,
@@ -291,11 +459,27 @@ async def main() -> int:
                 "execution_deadline_seconds": 300,
                 "review_deadline_seconds": 120,
             }
-            task_id = await post_task(
-                agent, "External task", "Reply with any text.", args.min_balance, windows, timing
-            )
+            if args.input is None:
+                task_id = await post_task(
+                    agent,
+                    "External task",
+                    "Reply with any text.",
+                    args.min_balance,
+                    windows,
+                    timing,
+                )
+            else:
+                task_id = await post_task_with_inputs(
+                    agent,
+                    "External task",
+                    "Process the attached inputs and upload the result.",
+                    args.min_balance,
+                    windows,
+                    tuple(TaskInput.from_path(path) for path in args.input),
+                    timing,
+                )
             await settle_task(agent, task_id, lambda content: len(content) > 0, timing)
-    except (httpx.HTTPError, RuntimeError, TimeoutError) as exc:
+    except (httpx.HTTPError, OSError, RuntimeError, TimeoutError, ValueError) as exc:
         print(f"FAILED: {exc}", file=sys.stderr)
         return 1
     finally:

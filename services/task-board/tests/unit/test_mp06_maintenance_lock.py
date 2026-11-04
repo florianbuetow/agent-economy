@@ -57,6 +57,9 @@ class _DeadlineEvaluator:
     async def run_periodic_sweep(self, _interval: int) -> None:
         await asyncio.Event().wait()
 
+    def close(self) -> None:
+        return None
+
 
 async def _idle_loop(_interval: float) -> None:
     await asyncio.Event().wait()

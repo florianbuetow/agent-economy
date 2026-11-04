@@ -89,7 +89,9 @@ async def _cancel(scenario: NativeTaskFixture) -> None:
             },
         )
     )
-    settled = await complete_bank_operation(scenario.store, scenario.escrow, claimed)
+    settled = await complete_bank_operation(
+        scenario.store, scenario.escrow, claimed, store_executor=None
+    )
     assert settled["operation_state"] == "completed"
 
 
@@ -132,7 +134,9 @@ async def _worker_status(scenario: NativeTaskFixture, status: str) -> None:
     command = scenario.command(_TASK_ID, "record_ruling", "disputed", 3, "a-platform", arguments)
     command["actor_kind"] = "platform"
     claimed = scenario.store.claim_task_operation(command)
-    settled = await complete_bank_operation(scenario.store, scenario.escrow, claimed)
+    settled = await complete_bank_operation(
+        scenario.store, scenario.escrow, claimed, store_executor=None
+    )
     assert settled["operation_state"] == "completed"
 
 

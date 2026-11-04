@@ -1,0 +1,13 @@
+{
+  "command": "uv run --project agents scripts/service_host.py services/<service>/config.yaml",
+  "observed": {
+    "identity": "0.0.0.0",
+    "central-bank": "0.0.0.0",
+    "task-board": "0.0.0.0",
+    "reputation": "0.0.0.0",
+    "court": "127.0.0.1",
+    "db-gateway": "127.0.0.1",
+    "ui": "127.0.0.1"
+  },
+  "scope": "Configured launch-helper values; independent public-client behavior verified separately on isolated loopback runtimes. No physical LAN connectivity claim."
+}
