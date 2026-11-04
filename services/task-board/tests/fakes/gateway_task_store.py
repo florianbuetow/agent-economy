@@ -6,6 +6,8 @@ The fixture owns the database path; close releases this adapter's connection onl
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from threading import RLock
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -23,7 +25,7 @@ from service_commons.exceptions import ServiceError
 from task_board_service.services.task_db_client import TaskDbClient
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
     from pathlib import Path
 
     from db_gateway_service.board_authority import BoardAuthority
@@ -52,6 +54,7 @@ class GatewayTaskStore(TaskDbClient):
             raise ValueError("Test database path must be an explicit absolute file path")
         if not caller_kid or caller_kid.strip() != caller_kid:
             raise ValueError("Test caller KID must be a nonblank canonical string")
+        self._connection_lock = RLock()
         self._writer = DbWriter(
             str(db_path),
             busy_timeout_ms,
@@ -78,6 +81,17 @@ class GatewayTaskStore(TaskDbClient):
         self._caller_kid = caller_kid
         self._clock_us = clock_us
         self._closed = False
+
+    @contextmanager
+    def connection_access(self) -> Iterator[None]:
+        """Serialize adapter and external fake effects on the shared connection.
+
+        Direct reader/writer calls that overlap asynchronous operations must use
+        this boundary, matching the production Gateway's synchronous dispatch.
+        """
+        with self._connection_lock:
+            self._require_open()
+            yield
 
     @property
     def writer(self) -> DbWriter:
@@ -108,17 +122,17 @@ class GatewayTaskStore(TaskDbClient):
         params: dict[str, Any] | None,
     ) -> httpx.Response:
         """Translate only the existing client boundary; never make a network call."""
-        self._require_open()
-        try:
-            if method == "GET":
-                status, result = self._read(path, {} if params is None else params)
-            elif method == "POST" and json is not None:
-                status, result = self._write(path, json)
-            else:
-                raise AssertionError(f"Unsupported test store request: {method} {path}")
-        except ServiceError as error:
-            status = error.status_code
-            result = {"error": error.error, "message": error.message, "details": error.details}
+        with self.connection_access():
+            try:
+                if method == "GET":
+                    status, result = self._read(path, {} if params is None else params)
+                elif method == "POST" and json is not None:
+                    status, result = self._write(path, json)
+                else:
+                    raise AssertionError(f"Unsupported test store request: {method} {path}")
+            except ServiceError as error:
+                status = error.status_code
+                result = {"error": error.error, "message": error.message, "details": error.details}
         return httpx.Response(
             status,
             json=result,
@@ -229,6 +243,7 @@ class GatewayTaskStore(TaskDbClient):
 
     def close(self) -> None:
         """Release this connection while retaining caller-owned persistent evidence."""
-        if not self._closed:
-            self._writer.close()
-            self._closed = True
+        with self._connection_lock:
+            if not self._closed:
+                self._writer.close()
+                self._closed = True

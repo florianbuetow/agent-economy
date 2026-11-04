@@ -65,7 +65,7 @@
     var el = document.getElementById('filter-btns');
     if (!el) return;
     el.innerHTML = EVENT_TYPES.map(function(type) {
-      return '<button class="feed-btn' + (type === activeFilter ? ' active' : '') + '" data-filter="' + type + '">' + type + '</button>';
+      return '<button class="feed-btn' + (type === activeFilter ? ' active' : '') + '" aria-pressed="' + String(type === activeFilter) + '" data-filter="' + type + '">' + type + '</button>';
     }).join('');
     el.querySelectorAll('[data-filter]').forEach(function(button) {
       button.addEventListener('click', function() { window.setFilter(button.getAttribute('data-filter')); });
@@ -195,6 +195,8 @@
     var postersTab = document.getElementById('tab-posters');
     if (workersTab) workersTab.classList.toggle('active', tab === 'workers');
     if (postersTab) postersTab.classList.toggle('active', tab === 'posters');
+    if (workersTab) workersTab.setAttribute('aria-pressed', String(tab === 'workers'));
+    if (postersTab) postersTab.setAttribute('aria-pressed', String(tab === 'posters'));
     renderLeaderboard();
   };
 

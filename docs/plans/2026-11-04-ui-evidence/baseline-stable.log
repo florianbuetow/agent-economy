@@ -1,0 +1,33 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 39 items / 24 deselected / 15 selected
+
+tests/e2e/test_ui_usability.py .FF.FF.........                           [100%]
+
+=================================== FAILURES ===================================
+_________________ test_navigation_and_content_fit[/-768-1024] __________________
+tests/e2e/test_ui_usability.py:43: in test_navigation_and_content_fit
+    assert box["x"] >= 0 and box["x"] + box["width"] <= width + 1
+E   assert (679.546875 >= 0 and (679.546875 + 108.8125) <= (768 + 1))
+__________________ test_navigation_and_content_fit[/-390-844] __________________
+tests/e2e/test_ui_usability.py:43: in test_navigation_and_content_fit
+    assert box["x"] >= 0 and box["x"] + box["width"] <= width + 1
+E   assert (279.328125 >= 0 and (279.328125 + 162.8125) <= (390 + 1))
+_____________ test_navigation_and_content_fit[/task.html-768-1024] _____________
+tests/e2e/test_ui_usability.py:48: in test_navigation_and_content_fit
+    assert box["width"] >= 200
+E   assert 166.5 >= 200
+_____________ test_navigation_and_content_fit[/task.html-390-844] ______________
+tests/e2e/test_ui_usability.py:48: in test_navigation_and_content_fit
+    assert box["width"] >= 200
+E   assert 22 >= 200
+=========================== short test summary info ============================
+FAILED tests/e2e/test_ui_usability.py::test_navigation_and_content_fit[/-768-1024]
+FAILED tests/e2e/test_ui_usability.py::test_navigation_and_content_fit[/-390-844]
+FAILED tests/e2e/test_ui_usability.py::test_navigation_and_content_fit[/task.html-768-1024]
+FAILED tests/e2e/test_ui_usability.py::test_navigation_and_content_fit[/task.html-390-844]
+================= 4 failed, 11 passed, 24 deselected in 17.61s =================

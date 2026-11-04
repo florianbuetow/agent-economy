@@ -1,0 +1,58 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/services/ui
+configfile: pyproject.toml
+plugins: playwright-0.7.2, anyio-4.14.2, asyncio-1.3.0, base-url-2.1.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 37 items / 33 deselected / 4 selected
+
+tests/e2e/test_ui_usability.py FFFF                                      [100%]
+
+=================================== FAILURES ===================================
+________________ test_input_files_are_not_presented_as_outputs _________________
+tests/e2e/test_ui_usability.py:120: in test_input_files_are_not_presented_as_outputs
+    expect(e2e_page.get_by_text("request.txt", exact=True)).to_have_count(1)
+E   AssertionError: Locator expected to have count '1'
+E   Actual value: 3 
+E   Call log:
+E     - Expect "to_have_count" with timeout 5000ms
+E     - waiting for get_by_text("request.txt", exact=True)
+E       3 × locator resolved to 0 elements
+E         - unexpected value "0"
+E       6 × locator resolved to 3 elements
+E         - unexpected value "3"
+____________________ test_monitoring_selection_is_announced ____________________
+tests/e2e/test_ui_usability.py:129: in test_monitoring_selection_is_announced
+    expect(selected).to_have_attribute("aria-pressed", "true")
+E   AssertionError: Locator expected to have attribute 'true'
+E   Actual value: None 
+E   Call log:
+E     - Expect "to_have_attribute" with timeout 5000ms
+E     - waiting for locator("[data-filter=\"ALL\"]")
+E       4 × locator resolved to <button data-filter="ALL" class="feed-btn active">ALL</button>
+E         - unexpected value "null"
+______________ test_agent_network_failure_is_not_missing_identity ______________
+tests/e2e/test_ui_usability.py:145: in test_agent_network_failure_is_not_missing_identity
+    expect(e2e_page.get_by_role("alert")).to_contain_text("could not be loaded")
+E   AssertionError: Locator expected to contain text 'could not be loaded'
+E   Actual value: None
+E   Error: element(s) not found 
+E   Call log:
+E     - Expect "to_contain_text" with timeout 5000ms
+E     - waiting for get_by_role("alert")
+_____________________ test_open_task_explains_bidder_role ______________________
+tests/e2e/test_ui_usability.py:153: in test_open_task_explains_bidder_role
+    expect(e2e_page.locator("#task-orientation")).to_contain_text("Potential bidder")
+E   AssertionError: Locator expected to contain text 'Potential bidder'
+E   Actual value: Mobile AppActing as: a-e2e-operator · ObserverNext step: Read the specification and input files before placing a binding bid. Bid details are visible only to the poster.Input files and uploaded outputs 
+E   Call log:
+E     - Expect "to_contain_text" with timeout 5000ms
+E     - waiting for locator("#task-orientation")
+E       9 × locator resolved to <section id="task-orientation" class="task-orientation" aria-label="Job overview">…</section>
+E         - unexpected value "Mobile AppActing as: a-e2e-operator · ObserverNext step: Read the specification and input files before placing a binding bid. Bid details are visible only to the poster.Input files and uploaded outputs"
+=========================== short test summary info ============================
+FAILED tests/e2e/test_ui_usability.py::test_input_files_are_not_presented_as_outputs
+FAILED tests/e2e/test_ui_usability.py::test_monitoring_selection_is_announced
+FAILED tests/e2e/test_ui_usability.py::test_agent_network_failure_is_not_missing_identity
+FAILED tests/e2e/test_ui_usability.py::test_open_task_explains_bidder_role - ...
+====================== 4 failed, 33 deselected in 28.45s =======================

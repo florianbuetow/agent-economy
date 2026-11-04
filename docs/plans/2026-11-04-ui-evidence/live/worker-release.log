@@ -1,0 +1,37 @@
+Isolated runtime: /private/tmp/ate-ui-journey-validation/worker-release-runtime/runtime-99086470fe2144eaacc3b3a3bbe1aadd-atj82xhy
+provisioned handle=alice fingerprint_sha256=a8db6fbdaf02812898ed00999cc28e47954b9a5fcdc2a8bebe4570968a1a902f
+provisioned handle=bob fingerprint_sha256=9c04fffe0b88d2cfe1ab5fc78f47d8ba00a6372c7cc9747cc18ada57e2ba6787
+provisioned handle=classbot_keyword fingerprint_sha256=1695933270e9b7ff89ba89f5cd8eb152a026de505b372ee9ad78d9fae0b1b6ab
+provisioned handle=classbot_llm fingerprint_sha256=c29bfe828f28d1943ddfcab56bed4638cde6e96dd57817bd4c3534d14a548620
+provisioned handle=feeder fingerprint_sha256=adb597747f6ac66d251d2f997312650845a4ebacd89043473f8e23939a4680a4
+provisioned handle=mathbot fingerprint_sha256=5e5434f2b22af87c4c4f6fc98a50b92aa9148e17273ef01f1f0d1612d73b75dc
+provisioned handle=mathbot_mistral fingerprint_sha256=5758a05f685166e4e86cc7b78a29c54b398bff28745364ce05265be9dbf45a10
+provisioned handle=mathbot_openai fingerprint_sha256=ff5d2641adf19e34d01d2ed3d2e48ef4824b2ed8ed4b9953e88b8047171de6f0
+provisioned handle=operator fingerprint_sha256=0104e984bec92db18fa0056a831004904e622e3ec65ca74db4b0773f1b91afea
+provisioned handle=platform fingerprint_sha256=9b03be59c994273bf43d8b2a44895aac013bd872652c770ed12e7766e0bef0ee
+provisioned handle=gateway-central-bank fingerprint_sha256=d2a08e9e27ff37e3b3a4a0274ed8146f7a9ccc404903cee73c21e2fc05d8e742
+provisioned handle=gateway-court fingerprint_sha256=eb3e48bdacbcb2a3d6435a68ec810fa8e0b7553dd4174e4049d9bb305806439c
+provisioned handle=gateway-identity fingerprint_sha256=d004459e4d67542658d8068dec045e3947188c713c9f8aec8ce64ad5fca26620
+provisioned handle=gateway-reputation fingerprint_sha256=2ef1345d5ea98658dbb3593e877e7826cfbb80861e70d70141940dddee5d4f1c
+provisioned handle=gateway-task-board fingerprint_sha256=0cce32c09896c1e341855ce658927fe26d037ae47d7f6948b33f4cb922ca0308
+2026-11-04T15:30:26 [INFO] httpx: HTTP Request: POST http://127.0.0.1:53013/agents/register "HTTP/1.1 409 Conflict"
+2026-11-04T15:30:26 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53013/agents "HTTP/1.1 200 OK"
+2026-11-04T15:30:26 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53013/agents/a-4f893b6a-ba85-44d8-b451-5751c42320d0 "HTTP/1.1 200 OK"
+2026-11-04T15:30:26 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53013/agents/a-4f893b6a-ba85-44d8-b451-5751c42320d0 "HTTP/1.1 200 OK"
+2026-11-04T15:30:26 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-4f893b6a-ba85-44d8-b451-5751c42320d0
+2026-11-04T15:30:26 [INFO] httpx: HTTP Request: POST http://127.0.0.1:53013/agents/register "HTTP/1.1 409 Conflict"
+2026-11-04T15:30:26 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53013/agents "HTTP/1.1 200 OK"
+2026-11-04T15:30:26 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53013/agents/a-4f893b6a-ba85-44d8-b451-5751c42320d0 "HTTP/1.1 200 OK"
+2026-11-04T15:30:26 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53013/agents/a-5cd34b20-e288-41c9-91de-c6fca19b7f2c "HTTP/1.1 200 OK"
+2026-11-04T15:30:26 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53013/agents/a-5cd34b20-e288-41c9-91de-c6fca19b7f2c "HTTP/1.1 200 OK"
+2026-11-04T15:30:26 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-5cd34b20-e288-41c9-91de-c6fca19b7f2c
+2026-11-04T15:30:27 [INFO] httpx: HTTP Request: POST http://127.0.0.1:53014/accounts "HTTP/1.1 201 Created"
+2026-11-04T15:30:27 [INFO] treasury_provision_cli: Bank account created for operator
+2026-11-04T15:30:27 [INFO] httpx: HTTP Request: POST http://127.0.0.1:53014/accounts/a-5cd34b20-e288-41c9-91de-c6fca19b7f2c/credit "HTTP/1.1 200 OK"
+2026-11-04T15:30:27 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-900e8e6a-f861-5b3d-88da-aa13a00e79e1, tx_id=tx-785c96b8-4b6d-4cd7-bba4-59be384d4b6c, balance_after=1000000)
+2026-11-04T15:30:27 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53014/accounts/a-5cd34b20-e288-41c9-91de-c6fca19b7f2c "HTTP/1.1 200 OK"
+agent_id=a-5cd34b20-e288-41c9-91de-c6fca19b7f2c
+genesis_amount=1000000
+balance=1000000
+operation_id=op-900e8e6a-f861-5b3d-88da-aa13a00e79e1
+{"accepted_price": 60, "final_status": "approved", "input_bytes": 33, "operator_balance_delta": 60, "operator_id": "a-5cd34b20-e288-41c9-91de-c6fca19b7f2c", "output_bytes": 9, "poster_balance_delta": -60, "poster_id": "a-085ed834-8b87-4b76-b431-31b8e7b237e7", "result": "passed", "scope": "live isolated browser UI worker journey", "task_id": "t-eae6edd7-34d5-4d48-93f7-4806316a569c"}
