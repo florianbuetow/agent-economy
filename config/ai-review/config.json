@@ -1,0 +1,68 @@
+{
+  "providers": {
+    "claude": {
+      "model": "claude-opus-5-5"
+    },
+    "codex": {
+      "model": "gpt-6-astra"
+    },
+    "grok": {
+      "model": "grok-build"
+    }
+  },
+  "agents": [
+    {
+      "name": "correctness",
+      "description": "Correctness review",
+      "prompt": "correctness-reviewer.md",
+      "enabled": true
+    },
+    {
+      "name": "security",
+      "description": "Security review",
+      "prompt": "security-reviewer.md",
+      "enabled": true
+    },
+    {
+      "name": "performance",
+      "description": "Performance review",
+      "prompt": "performance-reviewer.md",
+      "enabled": true
+    },
+    {
+      "name": "architecture",
+      "description": "Architecture review",
+      "prompt": "architecture-reviewer.md",
+      "enabled": true
+    },
+    {
+      "name": "test-coverage",
+      "description": "Test coverage review",
+      "prompt": "test-coverage-reviewer.md",
+      "enabled": true
+    },
+    {
+      "name": "error-handling",
+      "description": "Error handling review",
+      "prompt": "error-handling-reviewer.md",
+      "enabled": true
+    },
+    {
+      "name": "specs-review",
+      "description": "Specifications and documentation review",
+      "prompt": "specs-reviewer.md",
+      "enabled": true
+    },
+    {
+      "name": "adversarial",
+      "description": "Adversarial review",
+      "prompt": "adversarial-reviewer.md",
+      "enabled": true
+    }
+  ],
+  "verifier": {
+    "prompt": "finding-verifier.md"
+  },
+  "timeout_seconds": 600,
+  "report_directory": "/tmp"
+}

@@ -1158,3 +1158,6 @@ format-all:
         fi
     done
     echo ""
+
+# AI review commands: run `just ci-ai` for dynamic help.
+import 'config/ai-review/ai-review.just'
