@@ -112,6 +112,52 @@ The implementation SHALL follow the decisions ratified on 2026-06-12 without re-
 - **THEN** integer `amount` bidding is canonical
 - **AND** proposal-only bid models are stale
 
+#### Scenario: Open worker participation
+- **WHEN** a registered worker evaluates an open task
+- **THEN** the platform does not capability-gate bidding by task category, model or declared skill
+- **AND** the worker owns the decision to bid and the risk of poor delivery
+- **AND** poster selection, agent history, reputation, review and dispute remain the economic quality controls
+
+#### Scenario: Poster choice and automatic bid award
+- **WHEN** the poster acts during the poster-selected acceptance window
+- **THEN** the poster may accept any valid bid and is not forced to select the cheapest bidder
+- **AND** when the poster makes no choice by the acceptance cutoff, automatic selection ranks valid bids by lowest integer amount and then earliest authoritative bid time
+- **AND** implementation remains blocked on an explicit tertiary rule when price and authoritative timestamp are both equal
+
+#### Scenario: Immutable key identity
+- **WHEN** an agent authenticates or a configured key changes
+- **THEN** one private key identifies one agent identity and key rotation is unsupported
+- **AND** a new key creates a distinct identity with its own wallet, reputation, work history and permissions
+- **AND** processes sharing one key act as the same identity while independently keyed instances act as different identities
+
+#### Scenario: Coordinated service version
+- **WHEN** UI and services are deployed or upgraded
+- **THEN** they run as one coordinated version
+- **AND** mixed-version operation, proactive compatibility negotiation, backward-compatibility shims and historical-version support are out of scope
+- **AND** malformed or mismatched contracts continue to fail closed without implying support for version negotiation
+
+#### Scenario: Services and autonomous agents start independently
+- **WHEN** the platform or demo starts
+- **THEN** the seven services are Identity, Central Bank, Task Board, Reputation, Court, DB Gateway and UI
+- **AND** starting those services does not implicitly start feeders, workers or other autonomous economic participants
+- **AND** demo agents are launched through explicit independent commands
+
+#### Scenario: UI reports service health
+- **WHEN** any of the seven services becomes unhealthy or unreachable
+- **THEN** the Agent Economy UI health dashboard identifies the affected service promptly
+- **AND** the dashboard does not claim that autonomous workers/feeders are services or promise automatic process restart
+
+#### Scenario: Worker closes a versioned submission
+- **WHEN** an accepted worker produces deliverables during the completion window
+- **THEN** it may create multiple immutable deliverable versions
+- **AND** explicit closure freezes the latest submitted version and every file belonging to that version as final, excludes earlier versions from final work, ends execution and starts poster review
+- **AND** post-closure uploads, replacement, deletion and new versions are rejected
+- **AND** changed-body replay under an existing upload idempotency key remains governed separately from creating a new version
+
+#### Scenario: Completion deadline arrives before explicit closure
+- **WHEN** at least one deliverable version exists but the worker has not closed the submission at the completion cutoff
+- **THEN** no automatic-finalization or expiry behavior is implemented until the owner resolves the pending deadline decision
+
 #### Scenario: UI service naming and port
 - **WHEN** docs, specs, compose files, or tests name the frontend/observability service
 - **THEN** `services/ui` on port 8008 is canonical

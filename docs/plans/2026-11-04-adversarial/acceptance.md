@@ -121,3 +121,32 @@ The real-model Court corpus produced 15/15 valid votes across five cases, while
 deterministic mock panels were used only for state-machine and recovery oracles.
 The campaign does not claim fairness, learned adaptation, universal task
 suitability, proactive version negotiation or supervised production operation.
+
+## Subsequent owner decisions — 2026-11-05
+
+The 75 PASS / 10 BLOCKED / 1 FAIL table above is retained as the campaign's
+historical classification at execution time. The owner subsequently ratified
+the open-economy rules recorded in
+[`2026-11-05-open-economy-decisions.md`](../2026-11-05-open-economy-decisions.md):
+
+- worker suitability remains a worker decision, so IDN-06 is intentional
+  economic behavior rather than an admission defect;
+- keys never rotate, and a new key is a new identity, so IDN-05's rotation
+  guarantee is not applicable;
+- mixed UI/service versions and backward compatibility are unsupported, making
+  REC-06's proactive negotiation proposal not applicable;
+- SUP-01 through SUP-07's host restart/supervisor assumptions are superseded by
+  a UI dashboard that reports the seven services' health while autonomous
+  agents start independently;
+- automatic fallback acceptance ranks lowest price then earliest bid time;
+- explicit worker closure makes the latest submitted version and all its files
+  final, while earlier versions remain non-final.
+
+The post-decision campaign classification is 75 PASS, 1 BLOCKED and 10 NOT
+APPLICABLE. AST-06 remains blocked on upload idempotency semantics. Two narrower
+questions remain pending before implementation: the tertiary automatic-award
+tie-break for identical price/timestamp, and the outcome when the completion
+deadline arrives after a version exists but before explicit worker closure.
+T-240 through T-245 track failing-test-first implementation of automatic award,
+versioned closure and the service-health dashboard. None of those features is
+represented as implemented by the completed campaign or its green root CI.

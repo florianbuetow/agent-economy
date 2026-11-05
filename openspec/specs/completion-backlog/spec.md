@@ -1328,4 +1328,61 @@ contracts; a completed assessment does not declare unresolved gaps production-re
 - **WHEN** the owner reviews the evidence-backed IDN-05/IDN-06, REC-06 and SUP-01 through SUP-07 dispositions in GOAL.md
 - **THEN** record explicit choices for worker capability admission, key-rotation guarantees, proactive service-version compatibility, service-only supervision, restart/mixed-mode behavior and environment refresh
 - **AND** any approved implementation receives its own failing-test/implementation pair before code changes; no persistent host installation occurs without explicit authorization
-- **Status:** OPEN — IDN-06 is a reproduced capability gap; the remaining listed scenarios depend on proposed-policy choices. Independent current-contract testing continues. Upload-key semantics are separately tracked by T-235/T-236. No policy choice is inferred from unanswered questions.
+- **Status:** CLOSED 2026-11-05 — owner decisions recorded in `docs/plans/2026-11-05-open-economy-decisions.md`: bidding remains open and worker-selected; keys never rotate; a new key is a new identity; mixed versions/backward compatibility are unsupported; agents start independently from seven services; UI service-health visibility replaces the proposed host-restart contract. Upload-key semantics remain separately open under T-235/T-236. No implementation is claimed by this decision closure.
+
+### Requirement: Poster choice with deterministic automatic award
+Posters SHALL retain free bid choice during the acceptance window. If no poster
+choice is made, the platform SHALL award the best valid bid using the ratified
+price/time ranking without adding a capability gate.
+
+#### Scenario: T-240 Write acceptance tests for automatic best-bid award
+- **WHEN** several independently keyed workers bid and the poster does not choose before the acceptance cutoff
+- **THEN** failing-first tests require the lowest amount to win, then the earliest authoritative bid time
+- **AND** tests preserve manual poster choice of any valid bid during the window, sealed bids, accepted-price settlement, exact replay and one lifecycle winner
+- **AND** an exact same-price/same-timestamp case remains explicitly unresolved until a tertiary rule is chosen
+- **Status:** OPEN — owner selected lowest price then earliest bid on 2026-11-05; exact timestamp tie-break remains pending.
+
+#### Scenario: T-241 Implement automatic best-bid award after poster inaction
+- **WHEN** T-240 has failing-first proof and the exact-timestamp tertiary tie-break is ratified
+- **THEN** Task Board performs one idempotent automatic acceptance at the acceptance cutoff without requiring the feeder process
+- **AND** manual poster acceptance before the cutoff remains authoritative and autonomous workers/feeders receive no platform capability preference
+- **AND** focused lifecycle/race/payment checks, independent review and final root CI pass
+- **Status:** OPEN — depends on T-240 and the pending tertiary tie decision; current feeder ranking by reputation is superseded for this fallback but no implementation change has begun.
+
+### Requirement: Versioned work and explicit submission closure
+An accepted worker SHALL be able to create multiple immutable deliverable
+versions during execution and explicitly close the latest version as final.
+
+#### Scenario: T-242 Write acceptance tests for versioned deliverables and closure
+- **WHEN** a worker uploads files, freezes more than one version and closes the submission
+- **THEN** failing-first tests require each version to retain exact file membership and hashes
+- **AND** closure ends execution, makes the latest version and all its files final, excludes prior versions from final work and starts poster review
+- **AND** post-closure upload/version changes fail, exact retries remain idempotent and another identity cannot version or close the work
+- **AND** upload-key replay behavior remains governed separately by T-235/T-236
+- **Status:** OPEN — owner selected latest submitted version plus all of its files on 2026-11-05; completion-deadline behavior without explicit closure remains pending.
+
+#### Scenario: T-243 Implement versioned deliverables and worker closure
+- **WHEN** T-242 has failing-first proof and the no-close-at-deadline policy is ratified
+- **THEN** public SDK, Task Board, Gateway schema/operations, Court evidence and UI expose immutable versions plus an explicit worker close action
+- **AND** the final version alone drives review, dispute, ruling and payment while prior versions remain non-final audit history under existing access policy
+- **AND** focused file/lifecycle/recovery/browser checks, independent review and final root CI pass
+- **Status:** OPEN — depends on T-242 and the pending deadline decision; the current single submit-and-freeze transition is unchanged.
+
+### Requirement: Seven-service health dashboard
+The Agent Economy UI SHALL report the health of the seven platform services and
+flag unhealthy services promptly. Autonomous agents are not services and SHALL
+remain independently launched.
+
+#### Scenario: T-244 Write acceptance tests for the service-health dashboard
+- **WHEN** Identity, Central Bank, Task Board, Reputation, Court, DB Gateway or UI becomes unhealthy or unreachable
+- **THEN** failing-first API/browser tests require the dashboard to identify the affected service by the next configured health poll
+- **AND** healthy, degraded, unavailable and recovery states are textual and accessible rather than color-only
+- **AND** feeder/worker state is absent from the seven-service health contract and no automatic restart is asserted
+- **Status:** OPEN — owner ratified the dashboard and independent-agent boundary on 2026-11-05; no product dashboard exists yet.
+
+#### Scenario: T-245 Implement the service-health dashboard
+- **WHEN** T-244 has failing-first proof
+- **THEN** the UI obtains bounded health results for exactly the seven services, reports partial failure without hiding healthy services or leaking internals and refreshes at an explicit configured interval
+- **AND** demo startup keeps feeder/workers under separate explicit commands
+- **AND** focused outage/accessibility checks, independent review and final root CI pass
+- **Status:** OPEN — depends on T-244; automatic restart and persistent host installation are out of scope.

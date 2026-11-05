@@ -1,5 +1,13 @@
 # Supervision
 
+> **Current utility versus product direction:** this existing optional host
+> utility installs units for seven services **and** feeder/mathbot. The
+> owner-ratified 2026-11-05 product contract keeps autonomous agents independent
+> and calls for a seven-service health dashboard in the Agent Economy UI. Do not
+> use installation of this utility as evidence that the dashboard exists or that
+> demo agents were launched independently. See
+> `docs/plans/2026-11-05-open-economy-decisions.md`.
+
 Supervision restarts a crashed service within seconds. On macOS it uses launchd
 LaunchAgents, on Linux systemd user units. One unit exists per service (db-gateway,
 identity, reputation, central-bank, task-board, court, ui), plus the task feeder and
