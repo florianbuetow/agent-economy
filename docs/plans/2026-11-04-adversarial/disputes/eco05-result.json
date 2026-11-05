@@ -1,0 +1,10 @@
+{
+  "accepted_price": 60,
+  "asset_id": "asset-98ed9149-ac60-483a-bf29-b13158223871",
+  "dispute_id": "disp-5495b5e8-63f0-45c6-8563-e0f7f6b60832",
+  "poster_refund": 100,
+  "task_id": "t-845bd108-4058-4cf0-b8a1-f2a978d228d3",
+  "votes": 3,
+  "winner": "a-14322fec-c900-428b-9019-020b313d30cc",
+  "worker_payment": 0
+}

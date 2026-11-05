@@ -1,0 +1,45 @@
+Isolated runtime: /private/tmp/ate-campaign-process-final/runtime-58b4ef451bbd4d9e8c86dc683e0f5496-yvb5zdhp
+provisioned handle=alice fingerprint_sha256=489c5408afb14034ea2b7d99e41b23c1334e4280e0a1ca26ef9b02c385b83948
+provisioned handle=bob fingerprint_sha256=9db48e4bd6b93c1fe12975a303f857a03a8b7b9aca74c6ab389097abbaa6a994
+provisioned handle=classbot_keyword fingerprint_sha256=cdc63a7d6fa9df429548d75908b132088260f815b13411ca5b08bc035e99431f
+provisioned handle=classbot_llm fingerprint_sha256=f12276314fed4d02336bc44f01cbcce3b74bb5ae3702c43bec471c57b102c78b
+provisioned handle=feeder fingerprint_sha256=c0a7f7a94d66e469cc4a0ab59ed6fd795c02202662ed7e4f9f115ff6f228f6a0
+provisioned handle=mathbot fingerprint_sha256=250eef9f412f78f84ca76388328f435f2f8c426b6e4ca97514b4e45fa1361b11
+provisioned handle=mathbot_mistral fingerprint_sha256=38b8f9f609200251583d5558936eabd80a4240ec7117566b076bbf1374994dbe
+provisioned handle=mathbot_openai fingerprint_sha256=622911cca8600549449a7c3892a685f2ec953803d160a6fbb488953ae6f9a4c5
+provisioned handle=operator fingerprint_sha256=52a170077c3decda434816ee11c932c0c81c7338eda3cc858706ce1be676c62e
+provisioned handle=platform fingerprint_sha256=5d473b9a3e24367ced1b726815cdb859d7ccbfd23e3752afac88fe393df3c688
+provisioned handle=gateway-central-bank fingerprint_sha256=673a81bddec19f036e15bea45e5def8f85df277f2e3378f0a141c0c64646e5f9
+provisioned handle=gateway-court fingerprint_sha256=5ff8c56bf0f7222a467fed9219c1e62f7cee75ac41022fa8e2a64ab41d85be1d
+provisioned handle=gateway-identity fingerprint_sha256=3e607ab8bf33966d56d4921aab3ecdccec5f2337e0e4c8093daebfb74741be40
+provisioned handle=gateway-reputation fingerprint_sha256=15e49fe62020bda62c2a6cf3b8094a6357238cfa7c7baf05c0e15839c2d369bd
+provisioned handle=gateway-task-board fingerprint_sha256=5f243e3d0b4329da24cf77656f4fd5d5c7993c0c616254c133df9b959979fdc3
+2026-11-05T00:44:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:51817/agents/register "HTTP/1.1 409 Conflict"
+2026-11-05T00:44:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:51817/agents "HTTP/1.1 200 OK"
+2026-11-05T00:44:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:51817/agents/a-8ac0addb-5eca-4270-8aef-3bf036b872e0 "HTTP/1.1 200 OK"
+2026-11-05T00:44:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:51817/agents/a-8ac0addb-5eca-4270-8aef-3bf036b872e0 "HTTP/1.1 200 OK"
+2026-11-05T00:44:44 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-8ac0addb-5eca-4270-8aef-3bf036b872e0
+2026-11-05T00:44:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:51817/agents/register "HTTP/1.1 201 Created"
+2026-11-05T00:44:44 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-9d58f09d-a837-4c13-9f44-5e7005e480bc
+2026-11-05T00:44:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:51818/accounts "HTTP/1.1 201 Created"
+2026-11-05T00:44:44 [INFO] treasury_provision_cli: Bank account created for operator
+2026-11-05T00:44:44 [INFO] httpx: HTTP Request: POST http://127.0.0.1:51818/accounts/a-9d58f09d-a837-4c13-9f44-5e7005e480bc/credit "HTTP/1.1 200 OK"
+2026-11-05T00:44:44 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-809b26db-00a4-549a-8aeb-545b7d598cb6, tx_id=tx-45feb23d-ad04-471a-9503-d9767dcc6f58, balance_after=1000000)
+2026-11-05T00:44:44 [INFO] httpx: HTTP Request: GET http://127.0.0.1:51818/accounts/a-9d58f09d-a837-4c13-9f44-5e7005e480bc "HTTP/1.1 200 OK"
+agent_id=a-9d58f09d-a837-4c13-9f44-5e7005e480bc
+genesis_amount=1000000
+balance=1000000
+operation_id=op-809b26db-00a4-549a-8aeb-545b7d598cb6
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items
+
+agents/tests/e2e/test_adversarial_shared_key_processes.py .              [ 25%]
+agents/tests/e2e/test_adversarial_multi_job_process_restart.py .         [ 50%]
+agents/tests/unit/test_adversarial_process_cleanup.py ..                 [100%]
+
+============================== 4 passed in 3.25s ===============================

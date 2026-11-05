@@ -1,0 +1,50 @@
+Isolated runtime: /private/tmp/ate-campaign-economic-final/runtime-478eb406b558460db615d882ae65a94a-_rbip1xe
+provisioned handle=alice fingerprint_sha256=e991bcd1f7c5c6007b97233586e789af9f5eb0bf253b6353ef45a9a4df3aa57e
+provisioned handle=bob fingerprint_sha256=e4bec44676954a985779179f277d1de3e8438f6ebe2fb4b24d8645de2bc2b8b5
+provisioned handle=classbot_keyword fingerprint_sha256=78242e20e3c2bca3d87d97ffdf5f709c5225b65692b4759da8fda4cc250cb4f2
+provisioned handle=classbot_llm fingerprint_sha256=4985d67d8fbf582f3c9c7064b38d82d00cb548dffa6335f4ea05f8b440a65fb9
+provisioned handle=feeder fingerprint_sha256=3d1fc8f66666a083aa60f097073760d679c86db5591ad824c6c8e63442ee2189
+provisioned handle=mathbot fingerprint_sha256=c39d6315d1ae3cb13412cc688a9d407626781e83dedaa342d05f7c8715d113ea
+provisioned handle=mathbot_mistral fingerprint_sha256=90fc9996da5781010c09c9678f75dce1dc6566ef70b144eb5396955b82707334
+provisioned handle=mathbot_openai fingerprint_sha256=74d1aa0721ea673f16f3dcc203225fe88a207059c9e89315ce78b07d8af60e6f
+provisioned handle=operator fingerprint_sha256=5d9ee478d54a09ba55538614d18159b3f45546e59bb8218dcde6693262bb00b0
+provisioned handle=platform fingerprint_sha256=7002a1435647361091607e9de9d450d14d5440e7a83e56bbd7be3b0c534dae25
+provisioned handle=gateway-central-bank fingerprint_sha256=66a3867666663d9ee5782a428d00578e9ad93e80241ff722aeb1829f71504fec
+provisioned handle=gateway-court fingerprint_sha256=8df540c500b9f039d25222fb062347ee2459cea94d485cf2a0425d05a8648a9a
+provisioned handle=gateway-identity fingerprint_sha256=cdc4d3c1bb01048b1a944919c33c595f498334057a75bc14d69960e51ba1dd03
+provisioned handle=gateway-reputation fingerprint_sha256=6e16861786cc98f7a988eab7759e1f9254c849447dbf4ceea93c2250eb3dc021
+provisioned handle=gateway-task-board fingerprint_sha256=a86745595f6d6fbc5ae64c409598e71a6c96374d7baccf2602804bb4667b441f
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: POST http://127.0.0.1:62858/agents/register "HTTP/1.1 409 Conflict"
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62858/agents "HTTP/1.1 200 OK"
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62858/agents/a-a8dce30d-a097-4099-864c-a14cbdeefacb "HTTP/1.1 200 OK"
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62858/agents/a-a8dce30d-a097-4099-864c-a14cbdeefacb "HTTP/1.1 200 OK"
+2026-11-04T23:57:12 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-a8dce30d-a097-4099-864c-a14cbdeefacb
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: POST http://127.0.0.1:62858/agents/register "HTTP/1.1 409 Conflict"
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62858/agents "HTTP/1.1 200 OK"
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62858/agents/a-a8dce30d-a097-4099-864c-a14cbdeefacb "HTTP/1.1 200 OK"
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62858/agents/a-da335c7f-de66-49ce-a114-994d39d579ef "HTTP/1.1 200 OK"
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62858/agents/a-da335c7f-de66-49ce-a114-994d39d579ef "HTTP/1.1 200 OK"
+2026-11-04T23:57:12 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-da335c7f-de66-49ce-a114-994d39d579ef
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: POST http://127.0.0.1:62859/accounts "HTTP/1.1 201 Created"
+2026-11-04T23:57:12 [INFO] treasury_provision_cli: Bank account created for operator
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: POST http://127.0.0.1:62859/accounts/a-da335c7f-de66-49ce-a114-994d39d579ef/credit "HTTP/1.1 200 OK"
+2026-11-04T23:57:12 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-c2dc5645-6879-5cdc-932d-d9ec617be274, tx_id=tx-858b08ea-bc29-4279-85a6-32000bad8cdd, balance_after=1000000)
+2026-11-04T23:57:12 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62859/accounts/a-da335c7f-de66-49ce-a114-994d39d579ef "HTTP/1.1 200 OK"
+agent_id=a-da335c7f-de66-49ce-a114-994d39d579ef
+genesis_amount=1000000
+balance=1000000
+operation_id=op-c2dc5645-6879-5cdc-932d-d9ec617be274
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 5 items
+
+agents/tests/e2e/test_external_agent_input_economic_cycle.py .           [ 20%]
+agents/tests/e2e/test_unattended_economy.py .                            [ 40%]
+agents/tests/e2e/test_mp05_posting_response_loss.py ..                   [ 80%]
+agents/tests/e2e/test_mp05_posting_server_restart.py .                   [100%]
+
+============================== 5 passed in 15.78s ==============================

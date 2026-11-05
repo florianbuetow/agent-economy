@@ -1,0 +1,45 @@
+warning: `--no-sync` has no effect when used outside of a project
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-9ac89cf62b0a412ebd002c90a5574946-caxp5i8b
+provisioned handle=alice fingerprint_sha256=291e2e4fac5c91b001d3d7fceb4a20b1e05f941b8a9bd7edcfa34b627bb5773c
+provisioned handle=bob fingerprint_sha256=2b28a10a7d3f0876d54548bea0b5967cf9c204e7f1cd8878f9be3ddaabd82353
+provisioned handle=classbot_keyword fingerprint_sha256=797e2374736d404828dab60de3393400b4d68370e171f163f488bba113f68895
+provisioned handle=classbot_llm fingerprint_sha256=7ea98d7aa95ea075022476fc57e9b901ab190e82e58af86450f242c79fee929e
+provisioned handle=feeder fingerprint_sha256=df3aa411eb2fb6ad96cb734243f77aa67d392d44f0e494395a7b84ef5d4a02fa
+provisioned handle=mathbot fingerprint_sha256=fffc69a5b75387c7e39716971f445083b452b18665b74ae5abaa3cf1aa9feb20
+provisioned handle=mathbot_mistral fingerprint_sha256=8aa9b3098e2b0a0a386f00699df6c555aeb6f079fc38e310264d364ab96e0e3c
+provisioned handle=mathbot_openai fingerprint_sha256=4f0c6f206561824a9647760df2c0cc58edc6833732e86e200879ffae19adff71
+provisioned handle=operator fingerprint_sha256=f8e78b983c0bd2d7291236aba6ec40e40467ce179aed5a330b000fd5ad2f3529
+provisioned handle=platform fingerprint_sha256=022a8fe352f7eebb5dcfe34b0f77e9f298eb48d9afff5a577e9297b9dd2a6c3c
+provisioned handle=gateway-central-bank fingerprint_sha256=a44526f4ad4c8e6fcbdab18138498bc42ad3af41d16a1464df12bb8d38bc6610
+provisioned handle=gateway-court fingerprint_sha256=798748c40a9cdae2c4823c54e0a4dc0d110e160733c07339adc6803f9db02107
+provisioned handle=gateway-identity fingerprint_sha256=9298e426fddeb87482a1ecd6cb66983073959973997d11563c232b1e07f001ad
+provisioned handle=gateway-reputation fingerprint_sha256=4327648b89a6c3a01135f07f222f22f965c15cd9bce69be368031372b7e6bdd1
+provisioned handle=gateway-task-board fingerprint_sha256=f25699a951e5b72347dbd281fda88f4d87953a1d81ce6c4d34fd51e71b87d26a
+2026-11-05T00:25:15 [INFO] httpx: HTTP Request: POST http://127.0.0.1:60547/agents/register "HTTP/1.1 409 Conflict"
+2026-11-05T00:25:15 [INFO] httpx: HTTP Request: GET http://127.0.0.1:60547/agents "HTTP/1.1 200 OK"
+2026-11-05T00:25:15 [INFO] httpx: HTTP Request: GET http://127.0.0.1:60547/agents/a-852cf50e-795e-4a58-966c-3a31c44cca5d "HTTP/1.1 200 OK"
+2026-11-05T00:25:15 [INFO] httpx: HTTP Request: GET http://127.0.0.1:60547/agents/a-852cf50e-795e-4a58-966c-3a31c44cca5d "HTTP/1.1 200 OK"
+2026-11-05T00:25:15 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-852cf50e-795e-4a58-966c-3a31c44cca5d
+2026-11-05T00:25:15 [INFO] httpx: HTTP Request: POST http://127.0.0.1:60547/agents/register "HTTP/1.1 201 Created"
+2026-11-05T00:25:15 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-3731f54a-7b6b-4e81-9b7f-48a1807541a8
+2026-11-05T00:25:15 [INFO] httpx: HTTP Request: POST http://127.0.0.1:60548/accounts "HTTP/1.1 201 Created"
+2026-11-05T00:25:15 [INFO] treasury_provision_cli: Bank account created for operator
+2026-11-05T00:25:15 [INFO] httpx: HTTP Request: POST http://127.0.0.1:60548/accounts/a-3731f54a-7b6b-4e81-9b7f-48a1807541a8/credit "HTTP/1.1 200 OK"
+2026-11-05T00:25:15 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-3031ff5f-d356-5de9-900b-74a4ee6bd9c4, tx_id=tx-01b632c3-8e24-4336-aef3-9317cce57f28, balance_after=1000000)
+2026-11-05T00:25:15 [INFO] httpx: HTTP Request: GET http://127.0.0.1:60548/accounts/a-3731f54a-7b6b-4e81-9b7f-48a1807541a8 "HTTP/1.1 200 OK"
+agent_id=a-3731f54a-7b6b-4e81-9b7f-48a1807541a8
+genesis_amount=1000000
+balance=1000000
+operation_id=op-3031ff5f-d356-5de9-900b-74a4ee6bd9c4
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 2 items
+
+agents/tests/e2e/test_adversarial_unattended_expiry.py .                 [ 50%]
+agents/tests/e2e/test_adversarial_valid_workloads.py .                   [100%]
+
+============================== 2 passed in 5.33s ===============================

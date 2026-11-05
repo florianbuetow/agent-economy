@@ -1,0 +1,36 @@
+provisioned handle=alice fingerprint_sha256=6eb488e214d638f7059dad4254cbed4a6103e9206638aa99b9b39e773a709a3e
+provisioned handle=bob fingerprint_sha256=b301bebc9509f5af296fea16fe1eb4f7d6c96a2f6e590334ce845a19c30b1fec
+provisioned handle=classbot_keyword fingerprint_sha256=96da6198d6de14c0e6185d98a96332954815146e8f9871991e8ab9d1dfd27802
+provisioned handle=classbot_llm fingerprint_sha256=e2eac23180e6558be245b32021ca650571f39d7dcfe48bf3bcc6e07c70b2c222
+provisioned handle=feeder fingerprint_sha256=0982371f77963622057d52328b5ca3b37b31d77e5fea312ccca7d5eba73f6fd3
+provisioned handle=mathbot fingerprint_sha256=3bd9dbd9878b3bc0f12ed20649bbcb8d7970a8075de256ee4b44f39037cd0720
+provisioned handle=mathbot_mistral fingerprint_sha256=a54ebb0cb8b699f3371cc96b3e19759b4cc5fc875fd1905ffe7107a5f3596369
+provisioned handle=mathbot_openai fingerprint_sha256=b2f19024a2661a30a420823a65a6541a3781c03512c41f5c5de1300eeb2bde58
+provisioned handle=operator fingerprint_sha256=57bb38f32b7f26b2021f9cd0451bf446ffc151cf91589ce237685ca51802aff0
+provisioned handle=platform fingerprint_sha256=45dea28cc72916646ef5add8ad7c647c04f5e5bdbf17808a1cc56ec6ceae6d44
+provisioned handle=gateway-central-bank fingerprint_sha256=f8c0d005a97bf7c5ce2c758404a589f6b79eaecd7a111e91100a2f6b51a8118f
+provisioned handle=gateway-court fingerprint_sha256=613e5ca3681ee2cd5941b3181d1dc1a065ab1e0f244d0ca57dbe54aca49ae15a
+provisioned handle=gateway-identity fingerprint_sha256=c71daf25cc68348dfc5a7a6be03635cfad7e53bf56c0d28e1d57a9d023130368
+provisioned handle=gateway-reputation fingerprint_sha256=27882cd5f56ae79754225168081c2bdc810a01b8a71cb2549e91f1fe9cd5096a
+provisioned handle=gateway-task-board fingerprint_sha256=026a6df50f8d96aa20333453fda80a16b5cf79773d9a9700188e6287303bb86c
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: POST http://127.0.0.1:63583/agents/register "HTTP/1.1 409 Conflict"
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: GET http://127.0.0.1:63583/agents "HTTP/1.1 200 OK"
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: GET http://127.0.0.1:63583/agents/a-0ae716a5-54a8-45f8-a8f2-01000ca83afc "HTTP/1.1 200 OK"
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: GET http://127.0.0.1:63583/agents/a-0ae716a5-54a8-45f8-a8f2-01000ca83afc "HTTP/1.1 200 OK"
+2026-11-05T00:33:19 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-0ae716a5-54a8-45f8-a8f2-01000ca83afc
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: POST http://127.0.0.1:63583/agents/register "HTTP/1.1 409 Conflict"
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: GET http://127.0.0.1:63583/agents "HTTP/1.1 200 OK"
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: GET http://127.0.0.1:63583/agents/a-0ae716a5-54a8-45f8-a8f2-01000ca83afc "HTTP/1.1 200 OK"
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: GET http://127.0.0.1:63583/agents/a-716b1e82-c5b3-40ab-83f6-eac62a1411fe "HTTP/1.1 200 OK"
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: GET http://127.0.0.1:63583/agents/a-716b1e82-c5b3-40ab-83f6-eac62a1411fe "HTTP/1.1 200 OK"
+2026-11-05T00:33:19 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-716b1e82-c5b3-40ab-83f6-eac62a1411fe
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: POST http://127.0.0.1:63584/accounts "HTTP/1.1 201 Created"
+2026-11-05T00:33:19 [INFO] treasury_provision_cli: Bank account created for operator
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: POST http://127.0.0.1:63584/accounts/a-716b1e82-c5b3-40ab-83f6-eac62a1411fe/credit "HTTP/1.1 200 OK"
+2026-11-05T00:33:19 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-b93d4606-e5eb-543e-9da6-178bf7c8b7ba, tx_id=tx-e8c63285-6230-446a-99ac-e2faef97a91b, balance_after=1000000)
+2026-11-05T00:33:19 [INFO] httpx: HTTP Request: GET http://127.0.0.1:63584/accounts/a-716b1e82-c5b3-40ab-83f6-eac62a1411fe "HTTP/1.1 200 OK"
+agent_id=a-716b1e82-c5b3-40ab-83f6-eac62a1411fe
+genesis_amount=1000000
+balance=1000000
+operation_id=op-b93d4606-e5eb-543e-9da6-178bf7c8b7ba
+{"accepted_price": 60, "asset_id": "asset-98ed9149-ac60-483a-bf29-b13158223871", "dispute_id": "disp-5495b5e8-63f0-45c6-8563-e0f7f6b60832", "poster_refund": 100, "task_id": "t-845bd108-4058-4cf0-b8a1-f2a978d228d3", "votes": 3, "winner": "a-14322fec-c900-428b-9019-020b313d30cc", "worker_payment": 0}

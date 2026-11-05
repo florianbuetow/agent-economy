@@ -1,0 +1,36 @@
+provisioned handle=alice fingerprint_sha256=f8969307ad9eb5798b4caafe130d0781f73abc40605155a8466ed3a2a097c63f
+provisioned handle=bob fingerprint_sha256=61f3a5c97698d0a9aebb2bd1b058df9dabeaed6fb9c098f4ae63f33f23243014
+provisioned handle=classbot_keyword fingerprint_sha256=2c121b4fbdcebb1b2db1677f440232a36c27fa36d276f29a905515fde24a7d4b
+provisioned handle=classbot_llm fingerprint_sha256=39f4e994c5dd093ec5411f61f72d3b16af1560eda7298b81d5a1e4e1e4801e17
+provisioned handle=feeder fingerprint_sha256=98c0fa9760f487f59fba3c3d82d4cbb7d87d2be67d88d0500312eb4ed316e250
+provisioned handle=mathbot fingerprint_sha256=88719b3a6aee6747bf8379d2e2b70cf4a588ff4535bad27e70c25a9c76021325
+provisioned handle=mathbot_mistral fingerprint_sha256=5377eef40437553125b19ec8d0c9106bc7cd64b191ff627f1ec0432c54370201
+provisioned handle=mathbot_openai fingerprint_sha256=4bbdcc01bf679479872e1a5d90973e4eeadd7ddcd0f592188e0ef74baaed650a
+provisioned handle=operator fingerprint_sha256=6a5db048e36be1dc799234ee047361d8fcb6cb994125a219bc9f5e18f2459204
+provisioned handle=platform fingerprint_sha256=570def9e5903f33715cc4bc4e2d0b3f51cb5154363c85f74a9fc714540c87eb7
+provisioned handle=gateway-central-bank fingerprint_sha256=076be7fcccd1bfaf8c3da5e02a4db6d33126f62feaa969dc3da275025db95c42
+provisioned handle=gateway-court fingerprint_sha256=73c48c98517b988633e4057b5caa997f3c99aace81fcc9e4639e86585b9b7b7e
+provisioned handle=gateway-identity fingerprint_sha256=815081fed3fe11ca2cff5d86e03d99547c02a77227d6afc99b03dd2d0b572c90
+provisioned handle=gateway-reputation fingerprint_sha256=a4d64b9d293cd44a7e1a8b5e953e310171e8745e84a17b977a940adeae7a7434
+provisioned handle=gateway-task-board fingerprint_sha256=f87ef146ef6c51c7fb42d7239d9ff2b85b44878bf96a80343f11c3c2f8e180c8
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: POST http://127.0.0.1:62654/agents/register "HTTP/1.1 409 Conflict"
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62654/agents "HTTP/1.1 200 OK"
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62654/agents/a-7a6c577c-8c72-444c-a35a-5d4adc64c0a6 "HTTP/1.1 200 OK"
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62654/agents/a-7a6c577c-8c72-444c-a35a-5d4adc64c0a6 "HTTP/1.1 200 OK"
+2026-11-05T00:31:31 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-7a6c577c-8c72-444c-a35a-5d4adc64c0a6
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: POST http://127.0.0.1:62654/agents/register "HTTP/1.1 409 Conflict"
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62654/agents "HTTP/1.1 200 OK"
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62654/agents/a-7a6c577c-8c72-444c-a35a-5d4adc64c0a6 "HTTP/1.1 200 OK"
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62654/agents/a-9f6d5cff-9207-423b-b0d8-ef849e244b4b "HTTP/1.1 200 OK"
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62654/agents/a-9f6d5cff-9207-423b-b0d8-ef849e244b4b "HTTP/1.1 200 OK"
+2026-11-05T00:31:31 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-9f6d5cff-9207-423b-b0d8-ef849e244b4b
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: POST http://127.0.0.1:62655/accounts "HTTP/1.1 201 Created"
+2026-11-05T00:31:31 [INFO] treasury_provision_cli: Bank account created for operator
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: POST http://127.0.0.1:62655/accounts/a-9f6d5cff-9207-423b-b0d8-ef849e244b4b/credit "HTTP/1.1 200 OK"
+2026-11-05T00:31:31 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-a08e6fea-e5db-5c64-b1e8-9847db8753f3, tx_id=tx-9512c406-f08e-4fdf-8017-78e5a018bf8d, balance_after=1000000)
+2026-11-05T00:31:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:62655/accounts/a-9f6d5cff-9207-423b-b0d8-ef849e244b4b "HTTP/1.1 200 OK"
+agent_id=a-9f6d5cff-9207-423b-b0d8-ef849e244b4b
+genesis_amount=1000000
+balance=1000000
+operation_id=op-a08e6fea-e5db-5c64-b1e8-9847db8753f3
+{"claim_count": 1, "dispute_id": "disp-4e8087f8-351b-482e-9350-8f29b2726e2d", "invalid_output_bytes": 1, "judge_votes": 3, "outage_observation": "unknown_outcome_timeout", "poster_balance": 1000, "poster_id": "a-ebed14db-cf84-43f0-b5fd-fc74dc4ade0c", "poster_refund": 100, "task_id": "t-dfb090a7-ad23-4e64-961a-1a02f406a82a", "worker_balance": 0, "worker_id": "a-b09754a1-10b1-42d4-9744-60a485c620e7", "worker_payment": 0, "worker_pct": 0}

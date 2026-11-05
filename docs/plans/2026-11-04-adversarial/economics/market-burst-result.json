@@ -1,0 +1,18 @@
+{
+  "scenario": "ECO-04",
+  "cwd": "/Users/flo/Developer/github/agent-economy",
+  "command": "uv run --project services/db-gateway scripts/isolated_test_runtime.py --artifacts-root /tmp/ate-campaign-market-burst-final --provision -- uv run --project agents pytest agents/tests/e2e/test_adversarial_market_burst.py -q",
+  "exit_code": 0,
+  "test_result": "1 passed in 0.54s",
+  "test_sha256": "ade185953cae3d50b6f9e8822b82a1ba3147d6e31fb5c8228fc05bbec5481364",
+  "log_sha256": "7a3621672118fdc71b646fd933a822f70b5999a7fdffcd6d1c68ca076ceb6a83",
+  "source_base": "35cf0e3a5fcfd3c6a92d6c2e305bdfd711c7aa16",
+  "source_note": "Current campaign working tree; new test only in this parent-owned slice. No production code changed by this slice.",
+  "actors": 7,
+  "tasks": 5,
+  "bids": 25,
+  "final_poster_balances": [934, 956],
+  "final_worker_balances": [20, 21, 22, 23, 24],
+  "conserved_total": 2000,
+  "cleanup": "Repository isolated runtime returned exit 0 after owned cleanup; ordinary runtime was not targeted."
+}

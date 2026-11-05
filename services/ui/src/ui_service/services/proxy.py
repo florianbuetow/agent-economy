@@ -322,7 +322,7 @@ def _raise_task_board_error(exc: httpx.HTTPStatusError, error_code: str) -> NoRe
     except (ValueError, TypeError):
         body = None
     if (
-        400 <= response.status_code < 500
+        400 <= response.status_code < 600
         and isinstance(body, dict)
         and set(body) == {"error", "message", "details"}
         and isinstance(body["error"], str)

@@ -237,6 +237,7 @@ async def _load_dispute(
     db: aiosqlite.Connection,
     task_id: str,
     *,
+    rebuttal_deadline: str | None,
     ruling_id: str | None,
     worker_pct: int | None,
     ruling_summary: str | None,
@@ -281,6 +282,7 @@ async def _load_dispute(
         "claim_id": claim_id,
         "reason": reason,
         "filed_at": filed_at,
+        "rebuttal_deadline": rebuttal_deadline,
         "rebuttal": rebuttal,
         "ruling": ruling,
     }
@@ -323,6 +325,7 @@ async def get_task_drilldown(
     dispute = await _load_dispute(
         db,
         task_id,
+        rebuttal_deadline=task.rebuttal_deadline,
         ruling_id=task.ruling_id,
         worker_pct=task.worker_pct,
         ruling_summary=task.ruling_summary,

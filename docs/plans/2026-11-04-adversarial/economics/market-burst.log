@@ -1,0 +1,43 @@
+Isolated runtime: /private/tmp/ate-campaign-market-burst-final/runtime-d113cd4dc4dd4a21961585e03791ace5-r188syz7
+provisioned handle=alice fingerprint_sha256=6674a64e1c4ae29054de59298102fd8ece2fa1740aa15a74b2ca93ce287bea2a
+provisioned handle=bob fingerprint_sha256=5fde487b7f743cba5069cea48e8946bb35367cc25539172a03524cb089891f0a
+provisioned handle=classbot_keyword fingerprint_sha256=9c702d487455bd84cd840390d0c2fbbe85804744192d4bfa7654b212d6ab8c00
+provisioned handle=classbot_llm fingerprint_sha256=775296cb6b8ac76d0157edc16aa869377c99e993f5119f42e1ca59c2a699cd08
+provisioned handle=feeder fingerprint_sha256=27f2d5d450cad17b085d851dae40624811937333ac2c52c87d30c0c238e64657
+provisioned handle=mathbot fingerprint_sha256=601c0573cff93f021aa711ba669cdf8268be0608cce6e1accee72de8f805fcb1
+provisioned handle=mathbot_mistral fingerprint_sha256=9c9fd43813668cd9b04bdde7d7408238665b1570ffcd8ffb071856e4c078158d
+provisioned handle=mathbot_openai fingerprint_sha256=6b9b80ae10f152faa0cedc944df269ce80ff4db20fe5a5c15e832e86c45d884f
+provisioned handle=operator fingerprint_sha256=85df89f570adcdcf663dcdf8b55ae5cb5d00cab675b1b521fe9b09ba1e00d645
+provisioned handle=platform fingerprint_sha256=8ec83a93fc5f0dcdfab89f84e79c339ab0cf60e9ab781606747221fe58876adb
+provisioned handle=gateway-central-bank fingerprint_sha256=7fcb28c9d13d12569bf9ca69b1faaa9a370954c1495fb2c16ae8987010bd8478
+provisioned handle=gateway-court fingerprint_sha256=7dd67bb37eb47d3bda4f1b5f9c746489a97eff77584edbd33aa0cbf1a0457c71
+provisioned handle=gateway-identity fingerprint_sha256=ce3190ed500d92b7d8c0106b51db9707495e5ea823431d10ad7340bbf5bffd43
+provisioned handle=gateway-reputation fingerprint_sha256=24776f62ba81fefcf599410347dd9e58d39f246012340e14987503b279af8058
+provisioned handle=gateway-task-board fingerprint_sha256=f43a34dc1878fb471b3997bd4e4977706bbe7a1d24babb3162dda65ed16ed65d
+2026-11-05T00:10:28 [INFO] httpx: HTTP Request: POST http://127.0.0.1:53863/agents/register "HTTP/1.1 409 Conflict"
+2026-11-05T00:10:28 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53863/agents "HTTP/1.1 200 OK"
+2026-11-05T00:10:28 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53863/agents/a-e35e2e39-b5e6-4387-860f-ff50e05774f6 "HTTP/1.1 200 OK"
+2026-11-05T00:10:28 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53863/agents/a-e35e2e39-b5e6-4387-860f-ff50e05774f6 "HTTP/1.1 200 OK"
+2026-11-05T00:10:28 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-e35e2e39-b5e6-4387-860f-ff50e05774f6
+2026-11-05T00:10:28 [INFO] httpx: HTTP Request: POST http://127.0.0.1:53863/agents/register "HTTP/1.1 201 Created"
+2026-11-05T00:10:28 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-dc9ebd1a-4cbf-46c0-8452-c2fe26ef50c0
+2026-11-05T00:10:28 [INFO] httpx: HTTP Request: POST http://127.0.0.1:53864/accounts "HTTP/1.1 201 Created"
+2026-11-05T00:10:28 [INFO] treasury_provision_cli: Bank account created for operator
+2026-11-05T00:10:28 [INFO] httpx: HTTP Request: POST http://127.0.0.1:53864/accounts/a-dc9ebd1a-4cbf-46c0-8452-c2fe26ef50c0/credit "HTTP/1.1 200 OK"
+2026-11-05T00:10:28 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-4c1f41b7-3fcc-58bd-8eff-48af39b5b885, tx_id=tx-6348ba8f-c2ba-4ef1-920d-9dd4f5c2a6f6, balance_after=1000000)
+2026-11-05T00:10:28 [INFO] httpx: HTTP Request: GET http://127.0.0.1:53864/accounts/a-dc9ebd1a-4cbf-46c0-8452-c2fe26ef50c0 "HTTP/1.1 200 OK"
+agent_id=a-dc9ebd1a-4cbf-46c0-8452-c2fe26ef50c0
+genesis_amount=1000000
+balance=1000000
+operation_id=op-4c1f41b7-3fcc-58bd-8eff-48af39b5b885
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+agents/tests/e2e/test_adversarial_market_burst.py .                      [100%]
+
+============================== 1 passed in 0.54s ===============================

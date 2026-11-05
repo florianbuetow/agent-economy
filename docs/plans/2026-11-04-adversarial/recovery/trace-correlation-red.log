@@ -1,0 +1,48 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____ test_real_dispute_traces_correlate_authoritative_task_and_dispute_ids _____
+../../tests/runtime/test_adversarial_real_telemetry.py:375: in test_real_dispute_traces_correlate_authoritative_task_and_dispute_ids
+    assert any(
+E   AssertionError: {191409318851268368198575390558234191905: ['court', 'db-gateway', 'reputation', 'task-board']}
+E   assert False
+E    +  where False = any(<generator object test_real_dispute_traces_correlate_authoritative_task_and_dispute_ids.<locals>.<genexpr> at 0x107e43b50>)
+----------------------------- Captured stdout call -----------------------------
+provisioned handle=alice fingerprint_sha256=dc32f946f3f7b0c992ac0ad96d6474b29c77462d45bba23177b0649d5e9131e7
+provisioned handle=bob fingerprint_sha256=5e21975830b23fc61b14ae0a6f92e900636a54d1bd5ae9a3bd983cefab4b41ad
+provisioned handle=classbot_keyword fingerprint_sha256=26a0c484eba24b21f0c9bde5a50ca483a25bd1c040ec408b68761a2c418c3ebe
+provisioned handle=classbot_llm fingerprint_sha256=8665fb7f9b4f66093ba13b177fca6008fe8c363c5b9784c345a27d895126a0d1
+provisioned handle=feeder fingerprint_sha256=de5f8dcb3d737a3bf649f28d0c508edd24db5ec1cb033249bd51a02c67635cfb
+provisioned handle=mathbot fingerprint_sha256=468b7c87bd304228833833961a9b0ece66e330169b7dbd4aae9eede035e11d09
+provisioned handle=mathbot_mistral fingerprint_sha256=802be8eca4f7bda9b1fdcf6f625c49c5ae686d730978fd35bc6a2a5d55902834
+provisioned handle=mathbot_openai fingerprint_sha256=2ca365e46a94e42f543b3395f7777b6d58894bf5cb9433035a0dd600af83b2c7
+provisioned handle=operator fingerprint_sha256=f38b346d74984ad5a2addfbd6a0492fc7217928529e65ff6cd654fd9a03d1a81
+provisioned handle=platform fingerprint_sha256=1fad51f9b16903f1bb4b89d92e106e33b3ebea9ee37dd2b88f2d148f5ff45eba
+provisioned handle=gateway-central-bank fingerprint_sha256=2c24ee412b766826bec0e26aa4be66d29149babaa024b277b0e1228ee8179e4c
+provisioned handle=gateway-court fingerprint_sha256=d0ad2e54d4bb0b3bb64add030f061ca6db832fffe43f62f41a15ad6e45c60c35
+provisioned handle=gateway-identity fingerprint_sha256=a5e806733953f0b84970e32ed9113282938f36f65328821248f91401e3a78360
+provisioned handle=gateway-reputation fingerprint_sha256=e5e3bd20e1c5cfce64ca3ad0394f3c0b524735f832339a4bd301457c3e0e4457
+provisioned handle=gateway-task-board fingerprint_sha256=b4835a7664fe1d2d2961aaa74e312fb34a9a2d49f2a49b2e90a140e514cb6441
+agent_id=a-14e1199d-cb7f-42be-816e-88f55dd654ac
+genesis_amount=1000000
+balance=1000000
+operation_id=op-3851d7a9-165f-5550-9b25-2bffad1ed8b6
+----------------------------- Captured stderr call -----------------------------
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: POST http://127.0.0.1:61578/agents/register "HTTP/1.1 409 Conflict"
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61578/agents "HTTP/1.1 200 OK"
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61578/agents/a-37e81961-7890-47ba-898d-03a22131be85 "HTTP/1.1 200 OK"
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61578/agents/a-37e81961-7890-47ba-898d-03a22131be85 "HTTP/1.1 200 OK"
+2026-11-05T00:27:37 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-37e81961-7890-47ba-898d-03a22131be85
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: POST http://127.0.0.1:61578/agents/register "HTTP/1.1 409 Conflict"
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61578/agents "HTTP/1.1 200 OK"
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61578/agents/a-37e81961-7890-47ba-898d-03a22131be85 "HTTP/1.1 200 OK"
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61578/agents/a-14e1199d-cb7f-42be-816e-88f55dd654ac "HTTP/1.1 200 OK"
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61578/agents/a-14e1199d-cb7f-42be-816e-88f55dd654ac "HTTP/1.1 200 OK"
+2026-11-05T00:27:37 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-14e1199d-cb7f-42be-816e-88f55dd654ac
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: POST http://127.0.0.1:61579/accounts "HTTP/1.1 201 Created"
+2026-11-05T00:27:37 [INFO] treasury_provision_cli: Bank account created for operator
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: POST http://127.0.0.1:61579/accounts/a-14e1199d-cb7f-42be-816e-88f55dd654ac/credit "HTTP/1.1 200 OK"
+2026-11-05T00:27:37 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-3851d7a9-165f-5550-9b25-2bffad1ed8b6, tx_id=tx-7121f9e7-2ac0-41bc-908c-c8c8da6f7691, balance_after=1000000)
+2026-11-05T00:27:37 [INFO] httpx: HTTP Request: GET http://127.0.0.1:61579/accounts/a-14e1199d-cb7f-42be-816e-88f55dd654ac "HTTP/1.1 200 OK"
+=========================== short test summary info ============================
+FAILED ../../tests/runtime/test_adversarial_real_telemetry.py::test_real_dispute_traces_correlate_authoritative_task_and_dispute_ids
+1 failed in 13.64s

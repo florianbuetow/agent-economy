@@ -1,0 +1,26 @@
+{
+  "command": "just ci-quiet",
+  "cwd": "/Users/flo/Developer/github/agent-economy",
+  "exit_code": 0,
+  "tool_session_id": 40865,
+  "source_manifest": "final-source-r2.json",
+  "source_files_verified_unchanged": 1808,
+  "log": "root-ci-final.log",
+  "log_sha256": "8e0f4eb1ef2b30470be5ec7819d7c56b08122d553f9151ef528c0a1148c4d4e7",
+  "results": {
+    "ui_integration_passed": 344,
+    "agent_passed": 1013,
+    "existing_agent_skips": 3,
+    "agent_e2e_deselected_then_run_in_final_phase": 124,
+    "tool_passed": 334,
+    "cross_service_runtime_passed": 504,
+    "ui_browser_passed": 367,
+    "live_e2e_passed": 124
+  },
+  "scenario_counts": {
+    "PASS": 75,
+    "BLOCKED": 10,
+    "FAIL": 1
+  },
+  "readiness": "Campaign assessment complete; proposed-policy scenarios and capability admission gap remain unresolved. Not a claim of full product readiness."
+}

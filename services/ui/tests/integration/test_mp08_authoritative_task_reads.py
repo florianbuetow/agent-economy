@@ -70,6 +70,7 @@ def _detail(
         "accepted_at": "2026-10-22T10:30:00Z" if accepted_bid_id is not None else None,
         "submitted_at": "2026-10-22T11:00:00Z" if status == "ruled" else None,
         "approved_at": None,
+        "rebuttal_deadline": None,
         "ruling_id": "rul-authoritative" if worker_pct is not None else None,
         "worker_pct": worker_pct,
         "ruling_summary": "Authoritative Board ruling" if worker_pct is not None else None,

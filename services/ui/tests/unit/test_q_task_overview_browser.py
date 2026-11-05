@@ -439,6 +439,7 @@ def test_disputed_worker_submits_a_rebuttal(browser: Browser) -> None:
             "claim_id": "c-1",
             "reason": "Wrong sum.",
             "filed_at": "2026-10-25T09:00:00Z",
+            "rebuttal_deadline": FAR_FUTURE,
             "rebuttal": None,
             "ruling": None,
         },

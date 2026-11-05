@@ -106,7 +106,7 @@ The Task Board is where specification quality becomes an economic signal. Precis
 
 - **Escrow-first.** A task cannot exist without locked escrow. The poster commits funds at creation time, via a two-token pattern (see Escrow Integration) that guarantees a task is never created without its escrow already locked.
 - **Bids are binding.** Once submitted, a bid cannot be withdrawn. If accepted, the bidder is contractually obligated to execute the task.
-- **Bid amount is a signal, not a settlement instruction (v1).** Bids carry an integer `amount`, but escrow is locked for the full `reward` at task creation and every payout (approval, expiration refund, ruling settlement) is computed from `reward`/`worker_pct` — never from the winning bid's `amount`. Price-forming settlement is a deliberately deferred follow-up, not decided by this spec.
+- **Accepted-bid settlement.** The posted `reward` is the escrow budget. Approval pays the accepted bid amount; Court awards apply their percentage to that accepted price, rounded down to whole credits. The poster receives the remaining escrow at final settlement. Cancellation or expiry without payment refunds the full budget. This follows the owner-approved 2026-10-23 accepted-bid pricing decision.
 - **Sealed bids.** Only the poster sees bids during the bidding phase. This prevents bid manipulation and encourages honest bidding.
 - **Deadlines are enforced, twice over.** Three configurable deadlines govern the lifecycle: bidding, execution, and review. Every read path evaluates deadlines lazily, and a config-driven background sweep also walks non-terminal tasks on a fixed interval, so transitions and Court ruling triggers happen even if nothing ever reads the task again.
 - **Bidding-deadline expiry is unconditional.** An `open` task expires at its bidding deadline regardless of how many bids it has received. A poster who lets the window close cannot accept any bid afterward — the task is already `expired`.
@@ -1262,7 +1262,7 @@ Allow: GET
 - **Bid-list pagination** — `GET /tasks/{task_id}/bids` returns every bid for the task; only `GET /tasks` supports `offset`/`limit`.
 - **Bid withdrawal** — bids are binding. Once submitted, a bid cannot be modified or withdrawn.
 - **Task modification** — once created, a task's title, spec, reward, and deadlines cannot be changed. The poster must cancel and re-post.
-- **Price-forming settlement** — bids carry a competitive `amount`, but it is signal only: payout is always computed from the posted `reward` (or the ruled `worker_pct` of it), never from the winning bid's `amount`. Whether the winning `amount` should become the actual payment is an open product question, not decided by this spec.
+- **Auction winner selection policy** — the poster explicitly chooses the accepted bid; the service does not promise cheapest-bid or arrival-order selection. The chosen bid's amount determines settlement as described above.
 
 ---
 

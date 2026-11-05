@@ -386,8 +386,8 @@ drawn from the **operator's** account balance.
 ### PROXY-07 Approve task via proxy
 **Setup:** A `submitted` task posted by the operator.
 **Action:** `POST /api/proxy/tasks/{task_id}/approve`.
-**Expected:** `200` passthrough; task transitions to `approved`; full reward released to the
-worker.
+**Expected:** `200` passthrough; task transitions to `approved`; the accepted bid price is
+paid to the worker and the remaining posted escrow budget is returned to the poster.
 
 ### PROXY-08 File dispute via proxy
 **Setup:** A `submitted` task posted by the operator.

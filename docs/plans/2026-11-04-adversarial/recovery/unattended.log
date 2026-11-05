@@ -1,0 +1,44 @@
+warning: `--no-sync` has no effect when used outside of a project
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-e8a62b49c2424fe89af5f56c6bdf4417-_mcruf19
+provisioned handle=alice fingerprint_sha256=769047677e933e151962b624b03ad1356c1396b5967af771a3247389d4068006
+provisioned handle=bob fingerprint_sha256=91aafcce5a43c487caa5132549046cf4b4e194f00069b177ac42c97f81d9ee7f
+provisioned handle=classbot_keyword fingerprint_sha256=dda967e804df3d69cc2f75a5311ef7b8cedbacccd73b5e2f2483edc9dd301628
+provisioned handle=classbot_llm fingerprint_sha256=fa3ac27a3ae4e124fabff4f063ac2b66878d6901f269120ac40dbb612f613d91
+provisioned handle=feeder fingerprint_sha256=d4fbb4f3e366ab28803457d1745125a60041bd27a3313146d28be4453870ecf3
+provisioned handle=mathbot fingerprint_sha256=9853f6810952a0cb9e1bd4568b36715a69d27c8c84619ff81583d17168504c91
+provisioned handle=mathbot_mistral fingerprint_sha256=e268e0e970c02ec634c27aea4955cec428d1fb28b1073effdbdc5e9b1aa6dfa1
+provisioned handle=mathbot_openai fingerprint_sha256=a4b0546c32f50d3d6db57bf2be51fba4e24ead256c80e5b9e85a407077383f7f
+provisioned handle=operator fingerprint_sha256=e21d1ba71d497b30697d195468ac2a86a48ac2b6abfed1e1772bfaa37bbb0892
+provisioned handle=platform fingerprint_sha256=43c23823cf5b53e5fbd7c477157ed4c33daadbd210dbc6cd1ac4155eb23f3180
+provisioned handle=gateway-central-bank fingerprint_sha256=f5f8af1e86d933b9701a6da9cc8100e66487eef74d344d6ffe691c1f219f0de5
+provisioned handle=gateway-court fingerprint_sha256=7e48b61a74a9d029d6d8206eb20dfeda6a2293aad076e1377e2823ec4b98dd12
+provisioned handle=gateway-identity fingerprint_sha256=db2176a204e6390754f52ec3767c74455eddf07090a0263ca6b736f13ca240d4
+provisioned handle=gateway-reputation fingerprint_sha256=14a4c339a5f58bc4bc2e327a4d3eec8fabbc6bb7b2654f8a6fd991b4fa2ac09a
+provisioned handle=gateway-task-board fingerprint_sha256=592a690b67c495de5ef3472c7646b750efe12350a5582211df24b88430b426b7
+2026-11-04T23:43:33 [INFO] httpx: HTTP Request: POST http://127.0.0.1:56789/agents/register "HTTP/1.1 409 Conflict"
+2026-11-04T23:43:33 [INFO] httpx: HTTP Request: GET http://127.0.0.1:56789/agents "HTTP/1.1 200 OK"
+2026-11-04T23:43:33 [INFO] httpx: HTTP Request: GET http://127.0.0.1:56789/agents/a-5a14896f-b205-486c-bd32-91789aa66043 "HTTP/1.1 200 OK"
+2026-11-04T23:43:33 [INFO] httpx: HTTP Request: GET http://127.0.0.1:56789/agents/a-5a14896f-b205-486c-bd32-91789aa66043 "HTTP/1.1 200 OK"
+2026-11-04T23:43:33 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-5a14896f-b205-486c-bd32-91789aa66043
+2026-11-04T23:43:33 [INFO] httpx: HTTP Request: POST http://127.0.0.1:56789/agents/register "HTTP/1.1 201 Created"
+2026-11-04T23:43:33 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-8eb0b88a-c7b8-4996-91b8-bbbc5e8a141a
+2026-11-04T23:43:33 [INFO] httpx: HTTP Request: POST http://127.0.0.1:56790/accounts "HTTP/1.1 201 Created"
+2026-11-04T23:43:33 [INFO] treasury_provision_cli: Bank account created for operator
+2026-11-04T23:43:33 [INFO] httpx: HTTP Request: POST http://127.0.0.1:56790/accounts/a-8eb0b88a-c7b8-4996-91b8-bbbc5e8a141a/credit "HTTP/1.1 200 OK"
+2026-11-04T23:43:33 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-de9d0bac-899e-50ce-a536-17c28295aee2, tx_id=tx-64b01eb9-143a-4790-bc22-b6ae3b0f42c5, balance_after=1000000)
+2026-11-04T23:43:33 [INFO] httpx: HTTP Request: GET http://127.0.0.1:56790/accounts/a-8eb0b88a-c7b8-4996-91b8-bbbc5e8a141a "HTTP/1.1 200 OK"
+agent_id=a-8eb0b88a-c7b8-4996-91b8-bbbc5e8a141a
+genesis_amount=1000000
+balance=1000000
+operation_id=op-de9d0bac-899e-50ce-a536-17c28295aee2
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+agents/tests/e2e/test_unattended_economy.py .                            [100%]
+
+============================== 1 passed in 4.89s ===============================

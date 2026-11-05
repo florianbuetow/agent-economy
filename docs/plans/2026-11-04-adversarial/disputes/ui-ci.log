@@ -1,0 +1,15 @@
+=== Running CI Checks (Quiet Mode) ===
+✓ Init passed
+✓ Test prerequisites passed
+✓ Code-style passed
+✓ Code-typecheck passed
+✓ Code-security passed
+✓ Code-deptry passed
+✓ Code-spell passed
+✓ Code-semgrep passed
+✓ Code-audit passed
+✓ Unit tests passed
+✓ Architecture tests passed
+✓ Code-lspchecks passed
+
+✓ All CI checks passed

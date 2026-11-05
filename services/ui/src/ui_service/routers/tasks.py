@@ -210,6 +210,7 @@ async def get_task_drilldown(
             claim_id=d["claim_id"],
             reason=d["reason"],
             filed_at=d["filed_at"],
+            rebuttal_deadline=d["rebuttal_deadline"],
             rebuttal=rebuttal,
             ruling=ruling,
         )

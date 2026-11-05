@@ -52,6 +52,7 @@ class AuthoritativeTaskDetail(_AuthoritativeTaskSummary):
     accepted_at: str | None
     submitted_at: str | None
     approved_at: str | None
+    rebuttal_deadline: str | None
     ruling_id: str | None
     ruled_at: str | None
     worker_pct: Annotated[int, Field(ge=0, le=100)] | None

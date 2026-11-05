@@ -425,7 +425,7 @@
     }
 
     // Rebuttal form for the disputed worker, until a rebuttal is on record
-    if (isWorker(task) && task.status === 'disputed' && task.dispute && !task.dispute.rebuttal) {
+    if (isWorker(task) && workerCanRebut(task)) {
       html += '<div class="operator-action"><label class="operator-action-label" for="f-rebuttal">Your rebuttal</label>' +
         '<textarea class="form-textarea" id="f-rebuttal" data-preserve placeholder="Explain why the delivery meets the specification..."></textarea>' +
         '<button class="btn btn-amber" id="btn-submit-rebuttal">Submit rebuttal to the court</button></div>';
@@ -455,7 +455,8 @@
 
   function renderRulingPhase(task) {
     if (!task.dispute || !task.dispute.ruling) {
-      return task.dispute ? '<div style="padding:20px;text-align:center;color:var(--text-dim)">Awaiting court ruling...</div>' : '';
+      if (!task.dispute) return '';
+      return '<div style="padding:20px;text-align:center;color:var(--text-dim)">' + disputeWaitingText(task) + '</div>';
     }
     var ruling = task.dispute.ruling;
     return '<div class="ruling-card" style="animation:scale-in .5s ease-out">' +
@@ -982,13 +983,26 @@
     var element = document.getElementById('action-error');
     if (!element) return;
     element.textContent = message;
-    element.classList.remove('action-success');
+    element.classList.remove('action-pending', 'action-success');
+    element.setAttribute('role', 'alert');
     element.hidden = false;
+  }
+
+  function showActionPending() {
+    var element = document.getElementById('action-error');
+    if (!element) return;
+    element.textContent = 'Sending this action to the platform...';
+    element.classList.remove('action-success');
+    element.classList.add('action-pending');
+    element.setAttribute('role', 'status');
+    element.hidden = false;
+    element.setAttribute('tabindex', '-1');
+    element.focus();
   }
 
   var SUCCESS_MESSAGES = {
     accept_bid: 'Bid accepted. The worker can now start.',
-    approve_task: 'Delivery approved. The reward is released to the worker.',
+    approve_task: 'Delivery approved. The accepted price is paid to the worker and the unused reward is returned to the poster.',
     dispute_task: 'Dispute filed. The court will rule after the worker can respond.',
     cancel_task: 'Task cancelled. The reward is refunded to your balance.',
     submit_bid: 'Your bid was placed. It stays sealed until the poster decides.',
@@ -999,7 +1013,9 @@
     var element = document.getElementById('action-error');
     if (!element) return;
     element.textContent = message;
+    element.classList.remove('action-pending');
     element.classList.add('action-success');
+    element.setAttribute('role', 'status');
     element.hidden = false;
   }
 
@@ -1012,8 +1028,29 @@
     var element = document.getElementById('action-error');
     if (!element) return;
     element.textContent = '';
-    element.classList.remove('action-success');
+    element.classList.remove('action-pending', 'action-success');
+    element.setAttribute('role', 'alert');
     element.hidden = true;
+  }
+
+  var MUTATION_CONTROLS = '.btn-accept-bid, #btn-approve, #btn-dispute-show, ' +
+    '#btn-submit-dispute, #btn-cancel-task, #btn-submit-bid, #btn-upload-asset, ' +
+    '#btn-submit-deliverable, #btn-submit-rebuttal, #btn-submit-feedback';
+
+  function disableMutationControls() {
+    var controls = Array.from(document.querySelectorAll(MUTATION_CONTROLS));
+    var originalStates = controls.map(function(element) {
+      return { element: element, disabled: element.disabled };
+    });
+    controls.forEach(function(element) { element.disabled = true; });
+    return originalStates;
+  }
+
+  function restoreMutationControls(originalStates) {
+    if (!originalStates) return;
+    originalStates.forEach(function(original) {
+      if (original.element.isConnected) original.element.disabled = original.disabled;
+    });
   }
 
   function freezeIntent(action, terms) {
@@ -1021,7 +1058,9 @@
       throw new Error('This task has not finished loading.');
     }
     if (!state.myAgentId) throw new Error('The operator account could not be identified.');
-    if (state.pendingIntent) return state.pendingIntent;
+    if (state.pendingIntent) {
+      throw new Error('Another action is already pending. Use the saved action recovery control.');
+    }
     var operationId = canonicalOperationId();
     var path;
     var body = {
@@ -1124,6 +1163,8 @@
     state.intentMessage = message;
     saveIntent(intent);
     updateView();
+    var recovery = document.querySelector('[data-operation-recovery]');
+    if (recovery) recovery.focus();
   }
 
   async function submitFrozenIntent(intent) {
@@ -1195,6 +1236,7 @@
       MSG_INTENT_OTHER_OPERATOR;
     var panel = document.createElement('div');
     panel.className = 'card operation-recovery';
+    panel.setAttribute('role', state.pendingIntent.intent_state === 'claimed' ? 'status' : 'alert');
     panel.innerHTML = '<div class="card-header"><span class="card-label">Your last action is not finished</span></div>' +
       '<div class="card-body"><div class="operation-recovery-message">' + esc(message) + '</div>' +
       '<button class="btn btn-cyan solid" data-operation-recovery' + (matchesOperator ? '' : ' disabled') +
@@ -1320,11 +1362,11 @@
       'Download the inputs, upload your output files, then submit them for review before the delivery deadline.' :
       'Waiting for the assigned worker to submit output files before the delivery deadline.';
     if (task.status === 'submitted') next = isPoster(task) ?
-      'Inspect the output files, then approve payment or dispute the delivery before the review deadline. No response means automatic approval.' :
-      'Waiting for the poster to approve or dispute the delivery. The review deadline is shown below.';
-    if (task.status === 'disputed') next = isWorker(task) && task.dispute && !task.dispute.rebuttal ?
-      'Read the claim and submit your rebuttal using the control below. The Court will decide the outcome.' :
-      'Read the claim and any rebuttal below. Waiting for the Court ruling and confirmed settlement.';
+      'The submitted files are frozen and cannot be replaced. The platform does not verify worker suitability, so inspect them, then approve or dispute the delivery before the review deadline. No response means automatic approval.' :
+      'Your submitted files are frozen and cannot be replaced. The platform does not verify worker suitability. Waiting for the poster to approve or dispute the delivery. The review deadline is shown below.';
+    if (task.status === 'disputed') next = isWorker(task) && workerCanRebut(task) ?
+      'Read the claim and submit your rebuttal using the control below. ' + disputeWaitingText(task) :
+      disputeWaitingText(task);
     if (task.status === 'cancelled' || task.status === 'expired') next =
       'This job no longer accepts bids. Check the refund status below or browse other jobs.';
     if (feedbackForm(task)) next = 'Leave feedback using the form below, and check the payment status.';
@@ -1334,6 +1376,30 @@
       (state.myAgentId ? agentLink(state.myAgentId, state.myAgentId) : 'Identity unavailable') +
       ' · ' + role + '</p><p><strong>What happens now:</strong> ' + next + '</p>' +
       '<p><a class="agent-link" href="#documents">Input files and uploaded outputs</a></p></section>';
+  }
+
+  function disputeWaitingText(task) {
+    var dispute = task.dispute;
+    if (!dispute) return 'Dispute details are unavailable.';
+    if (dispute.rebuttal) return 'The worker rebuttal is recorded. Waiting for the Court ruling and confirmed settlement.';
+    var deadline = dispute.rebuttal_deadline;
+    var deadlineMs = typeof deadline === 'string' ? Date.parse(deadline) : NaN;
+    if (!isNaN(deadlineMs) && deadlineMs > Date.now()) {
+      return 'Waiting for the worker to submit a rebuttal by ' + deadlineValue(deadline, 'the response deadline') +
+        '. Court review starts after the worker responds or this deadline passes.';
+    }
+    if (!isNaN(deadlineMs)) {
+      return 'The worker rebuttal deadline has passed. Waiting for the Court ruling and confirmed settlement.';
+    }
+    return 'The worker rebuttal timing is unavailable. Reload the page to check when Court review can start.';
+  }
+
+  function workerCanRebut(task) {
+    var dispute = task.dispute;
+    if (task.status !== 'disputed' || !dispute || dispute.rebuttal) return false;
+    var deadlineMs = typeof dispute.rebuttal_deadline === 'string' ?
+      Date.parse(dispute.rebuttal_deadline) : NaN;
+    return !isNaN(deadlineMs) && deadlineMs > Date.now();
   }
 
   function renderOverview(task, maxPhase) {
@@ -1401,13 +1467,15 @@
     document.querySelectorAll('.btn-accept-bid').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var bidId = this.getAttribute('data-bid-id');
-        this.disabled = true;
+        var originalStates;
         try {
           var intent = freezeIntent('accept_bid', { bid_id: bidId });
+          originalStates = disableMutationControls();
+          showActionPending();
           await submitFrozenIntent(intent);
         } catch (e) {
           showActionError(e);
-          this.disabled = false;
+          restoreMutationControls(originalStates);
         }
       });
     });
@@ -1416,13 +1484,15 @@
     var approveBtn = document.getElementById('btn-approve');
     if (approveBtn) {
       approveBtn.addEventListener('click', async function() {
-        this.disabled = true;
+        var originalStates;
         try {
           var intent = freezeIntent('approve_task', {});
+          originalStates = disableMutationControls();
+          showActionPending();
           await submitFrozenIntent(intent);
         } catch (e) {
           showActionError(e);
-          this.disabled = false;
+          restoreMutationControls(originalStates);
         }
       });
     }
@@ -1443,14 +1513,16 @@
         var reason = document.getElementById('f-dispute-reason').value.trim();
         var errEl = document.getElementById('dispute-error');
         if (!reason) { errEl.textContent = 'Reason is required.'; return; }
-        this.disabled = true;
         errEl.textContent = '';
+        var originalStates;
         try {
           var intent = freezeIntent('dispute_task', { reason: reason });
+          originalStates = disableMutationControls();
+          showActionPending();
           await submitFrozenIntent(intent);
         } catch (e) {
           errEl.textContent = e.message + ' Nothing was sent. Next step: reload the page and try again.';
-          this.disabled = false;
+          restoreMutationControls(originalStates);
         }
       });
     }
@@ -1488,11 +1560,12 @@
       rebuttalBtn.addEventListener('click', async function() {
         var text = document.getElementById('f-rebuttal').value.trim();
         if (!text) { showPageNotice('Write your rebuttal first. Nothing was sent.'); return; }
-        this.disabled = true;
+        var originalStates = disableMutationControls();
+        showActionPending();
         var ok = await postProxyJson('rebuttal', { rebuttal: text },
           'Rebuttal sent to the court. The ruling follows automatically.');
         if (ok) document.getElementById('f-rebuttal').value = '';
-        else this.disabled = false;
+        else restoreMutationControls(originalStates);
       });
     }
 
@@ -1501,7 +1574,8 @@
       feedbackBtn.addEventListener('click', async function() {
         var comment = document.getElementById('f-feedback-comment').value.trim();
         var taskId = state.task.task_id;
-        this.disabled = true;
+        var originalStates = disableMutationControls();
+        showActionPending();
         var ok = await postProxyJson('feedback', {
           rating: document.getElementById('f-feedback-rating').value,
           comment: comment || null
@@ -1510,7 +1584,7 @@
           state.feedbackSent[taskId] = true;
           updateView();
         } else {
-          this.disabled = false;
+          restoreMutationControls(originalStates);
         }
       });
     }
@@ -1549,14 +1623,16 @@
     var button = document.getElementById(id);
     if (!button) return;
     button.addEventListener('click', async function() {
-      this.disabled = true;
+      var originalStates;
       try {
         var intent = freeze();
-        if (!intent) { this.disabled = false; return; }
+        if (!intent) return;
+        originalStates = disableMutationControls();
+        showActionPending();
         await submitFrozenIntent(intent);
       } catch (e) {
         showActionError(e);
-        this.disabled = false;
+        restoreMutationControls(originalStates);
       }
     });
   }
@@ -1592,8 +1668,8 @@
   async function uploadSelectedFile() {
     var selected = state.selectedUpload;
     if (!selected) { showPageNotice('Choose a file to upload first. Nothing was sent.'); return; }
-    var button = document.getElementById('btn-upload-asset');
-    if (button) button.disabled = true;
+    var originalStates = disableMutationControls();
+    showActionPending();
     var taskId = state.task.task_id;
     var form = new FormData();
     form.append('file', selected.file, selected.file.name);
@@ -1607,12 +1683,12 @@
       var result = await readProxyResult(response);
       if (!result.ok) {
         showPageNotice(result.message);
-        if (button) button.disabled = false;
+        restoreMutationControls(originalStates);
         return;
       }
     } catch (_error) {
       showPageNotice('The upload did not finish. Next step: press "Upload file" again; the same file is not stored twice.');
-      if (button) button.disabled = false;
+      restoreMutationControls(originalStates);
       return;
     }
     state.selectedUpload = null;

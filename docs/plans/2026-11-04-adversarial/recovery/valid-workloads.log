@@ -1,0 +1,48 @@
+warning: `--no-sync` has no effect when used outside of a project
+Isolated runtime: /private/var/folders/d5/vbvfgyfs4757w9nrv35rn_7m0000gn/T/agent-economy-c4f2baab71b640c99d7c288d977a14d7-dic04v7h
+provisioned handle=alice fingerprint_sha256=2ad55acfa30515fd517eafae343539d340379ae39267ab6fbec787b94d99cf0c
+provisioned handle=bob fingerprint_sha256=2015a077bc3b3cb8d104d42fb9b3d5611f4f418518bc7c06b5a6b205b901ff7f
+provisioned handle=classbot_keyword fingerprint_sha256=a1781ffde594d8643cbe2b7dca92b8ad4b38d620185641e13f210b8d920edd1c
+provisioned handle=classbot_llm fingerprint_sha256=1d70c6a63e27b2849835b139c6254391dd9aa95707126cc19f0f6ed57a83c773
+provisioned handle=feeder fingerprint_sha256=30b06620f3e74325951895cb4346e1fe1830398568de020a4d94043b424ed686
+provisioned handle=mathbot fingerprint_sha256=c5de8ee70a7d1ac4aca165153a02045d81787b260e3785d15c12b953b276ee57
+provisioned handle=mathbot_mistral fingerprint_sha256=2779731b47e7dc97ef51066f2654c8e43ff8043b103bc179788c4e83663e9c14
+provisioned handle=mathbot_openai fingerprint_sha256=8550c8c41b16b81c8593e02ac1e8153c5d1b1b92bdac090e335cb14f8dd9a564
+provisioned handle=operator fingerprint_sha256=c3c6d57d2e115387cdc2524a2a0903bfea72879c8b1690658c471a8ade561c82
+provisioned handle=platform fingerprint_sha256=506a467ad3f26c32b7188a7b407b0d1f523b181b6a5b0b5683785275e96568b6
+provisioned handle=gateway-central-bank fingerprint_sha256=c00596c493e3e504ffbbf0f9182610fc0af420af4ef4c87f556f62b0726b75c6
+provisioned handle=gateway-court fingerprint_sha256=f0f32c52bc1c7835341e99820a1fb6f9bf233036dc4fc0aef7969f85173711fc
+provisioned handle=gateway-identity fingerprint_sha256=e0c4dd41d1d58a8cd1eaf18c0170f853f702324ca66f610c58f5565cb99622b9
+provisioned handle=gateway-reputation fingerprint_sha256=93f43d7dee727f38f439112d65b0cf3ddd47f22a2e3416c6eaf7f6f0c3ba400f
+provisioned handle=gateway-task-board fingerprint_sha256=c1f4b3e2e03ea83155f0464ffeb2b9137cec8ffa8193c9285038de0327ed3939
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: POST http://127.0.0.1:59345/agents/register "HTTP/1.1 409 Conflict"
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59345/agents "HTTP/1.1 200 OK"
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59345/agents/a-4dc02390-3b1c-4922-8967-f870a648c9c2 "HTTP/1.1 200 OK"
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59345/agents/a-4dc02390-3b1c-4922-8967-f870a648c9c2 "HTTP/1.1 200 OK"
+2026-11-05T00:23:31 [INFO] treasury_provision_cli: Platform agent registered: agent_id=a-4dc02390-3b1c-4922-8967-f870a648c9c2
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: POST http://127.0.0.1:59345/agents/register "HTTP/1.1 409 Conflict"
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59345/agents "HTTP/1.1 200 OK"
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59345/agents/a-4dc02390-3b1c-4922-8967-f870a648c9c2 "HTTP/1.1 200 OK"
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59345/agents/a-7816054f-a206-4157-8f7d-985ac7dafe60 "HTTP/1.1 200 OK"
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59345/agents/a-7816054f-a206-4157-8f7d-985ac7dafe60 "HTTP/1.1 200 OK"
+2026-11-05T00:23:31 [INFO] treasury_provision_cli: Operator agent registered: agent_id=a-7816054f-a206-4157-8f7d-985ac7dafe60
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: POST http://127.0.0.1:59346/accounts "HTTP/1.1 201 Created"
+2026-11-05T00:23:31 [INFO] treasury_provision_cli: Bank account created for operator
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: POST http://127.0.0.1:59346/accounts/a-7816054f-a206-4157-8f7d-985ac7dafe60/credit "HTTP/1.1 200 OK"
+2026-11-05T00:23:31 [INFO] treasury_provision_cli: Treasury funding confirmed (operation_id=op-0eb94464-710f-5de1-abba-6a803cb451d2, tx_id=tx-a99547c3-d403-4268-9fb5-c57838807fe4, balance_after=1000000)
+2026-11-05T00:23:31 [INFO] httpx: HTTP Request: GET http://127.0.0.1:59346/accounts/a-7816054f-a206-4157-8f7d-985ac7dafe60 "HTTP/1.1 200 OK"
+agent_id=a-7816054f-a206-4157-8f7d-985ac7dafe60
+genesis_amount=1000000
+balance=1000000
+operation_id=op-0eb94464-710f-5de1-abba-6a803cb451d2
+============================= test session starts ==============================
+platform darwin -- Python 3.13.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/flo/Developer/github/agent-economy/agents
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+agents/tests/e2e/test_adversarial_valid_workloads.py .                   [100%]
+
+============================== 1 passed in 0.60s ===============================

@@ -87,8 +87,15 @@ Automatic expiry/approval becomes eligible at equality; the corresponding intera
 no longer eligible. Accepted execution and submission review cutoffs preserve fractional seconds.
 Claim-time eligibility is retained while a claimed external effect completes after its cutoff.
 
-Publication freezes timing and reward. Acceptance freezes the chosen worker, bid amount and
-accepted reward. Settlement pays the frozen task reward, not the bid amount. Migrated timing-v1
+Publication freezes timing and the posted escrow budget. Acceptance freezes the chosen worker,
+accepted bid price, escrow budget and pricing-rule version. Under the accepted-bid pricing
+decision, approval and auto-approval pay the accepted bid price; a Court ruling pays
+`floor(accepted_bid_price * worker_pct / 100)`. The poster receives the entire remaining
+escrow budget at final settlement. For a budget of 100 and accepted price of 60, approval
+pays 60 and refunds 40; a 50% ruling pays 30 and refunds 70. This supersedes the historical
+fixed-posted-reward wording; see
+`docs/plans/2026-10-23-q-m2-accepted-bid-pricing-decision.md` (repository-root path).
+Migrated timing-v1
 tasks preserve their old cutoff: `acceptance_window_seconds` is null and acceptance cutoff equals
 bidding cutoff. Migration never silently supplies a new duration.
 

@@ -440,6 +440,7 @@ class DisputeInfo(BaseModel):
     claim_id: str
     reason: str
     filed_at: str
+    rebuttal_deadline: str | None
     rebuttal: DisputeRebuttal | None
     ruling: DisputeRuling | None
 

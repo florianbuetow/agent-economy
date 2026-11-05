@@ -1,0 +1,16 @@
+......................................                                   [100%]
+=============================== warnings summary ===============================
+../../tests/runtime/test_supervise.py:14
+  /Users/flo/Developer/github/agent-economy/tests/runtime/test_supervise.py:14: PytestUnknownMarkWarning: Unknown pytest.mark.unit - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.unit
+
+../../tests/runtime/test_service_stop_safety.py:23
+  /Users/flo/Developer/github/agent-economy/tests/runtime/test_service_stop_safety.py:23: PytestUnknownMarkWarning: Unknown pytest.mark.unit - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.unit
+
+../../tests/runtime/test_agent_stop_safety.py:21
+  /Users/flo/Developer/github/agent-economy/tests/runtime/test_agent_stop_safety.py:21: PytestUnknownMarkWarning: Unknown pytest.mark.unit - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.unit
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+38 passed, 3 warnings in 0.20s

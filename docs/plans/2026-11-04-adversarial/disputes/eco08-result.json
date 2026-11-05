@@ -1,0 +1,15 @@
+{
+  "claim_count": 1,
+  "dispute_id": "disp-4e8087f8-351b-482e-9350-8f29b2726e2d",
+  "invalid_output_bytes": 1,
+  "judge_votes": 3,
+  "outage_observation": "unknown_outcome_timeout",
+  "poster_balance": 1000,
+  "poster_id": "a-ebed14db-cf84-43f0-b5fd-fc74dc4ade0c",
+  "poster_refund": 100,
+  "task_id": "t-dfb090a7-ad23-4e64-961a-1a02f406a82a",
+  "worker_balance": 0,
+  "worker_id": "a-b09754a1-10b1-42d4-9744-60a485c620e7",
+  "worker_payment": 0,
+  "worker_pct": 0
+}

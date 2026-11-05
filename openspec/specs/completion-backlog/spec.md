@@ -1197,3 +1197,135 @@ scheduling or racing unrelated periodic maintenance against a single request.
 - **THEN** the fixture preserves the running event loop's real monotonic clock while business time remains freezeable, leaving periodic sweep functionality and existing cutoff assertions unchanged
 - **AND** the new regression, existing deadline cases, independent review and root CI pass
 - **Status:** CLOSED 2026-11-04 — authorized fixture clock isolation preserves real sweeps and unchanged cutoff assertions; focused 43 tests, independent review and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-ui-evidence/router-clock-repair.md).
+
+### Requirement: Actionable Task Board dependency errors in the UI
+The UI proxy SHALL preserve a well-formed Task Board error envelope for both
+client and server error statuses so operators see the actual recovery condition.
+
+#### Scenario: T-223 Prove a Court outage is mislabeled as a malformed response
+- **WHEN** Task Board returns a well-formed 502 `court_unavailable` envelope while a poster files a dispute
+- **THEN** a failing-first UI proxy regression records that the envelope is replaced by the generic malformed-response error
+- **Status:** CLOSED 2026-11-05 — failing-first proof reproduced the generic malformed-response message for a valid typed Task Board 502; focused checks, independent review, UI CI and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+#### Scenario: T-224 Preserve typed Task Board 5xx errors through the UI proxy
+- **WHEN** T-223 has failing-first evidence
+- **THEN** the UI returns the upstream status, error, message and details unchanged for a valid error envelope, while malformed envelopes still fail closed
+- **AND** focused proxy tests, UI CI and root CI pass before closure
+- **Status:** CLOSED 2026-11-05 — valid typed 5xx envelopes are preserved and malformed 502 bodies remain sanitized; focused checks, independent review, UI CI and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+### Requirement: Accurate dispute waiting state in the UI
+The task page SHALL identify which actor or deadline currently blocks Court
+review instead of describing every unresolved dispute as waiting on Court.
+
+#### Scenario: T-225 Prove the poster cannot see the rebuttal wait
+- **WHEN** a disputed task has no worker rebuttal and its rebuttal deadline is still open
+- **THEN** a failing-first browser regression records that the page says it is waiting for Court and omits the worker response deadline
+- **Status:** CLOSED 2026-11-05 — failing-first browser proof reproduced the premature Court-wait message while the worker response window was open; focused checks, independent review and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+#### Scenario: T-226 Show the worker response window before Court review
+- **WHEN** T-225 has failing-first evidence
+- **THEN** the poster sees that the worker may rebut, the exact deadline and what happens after it, while the worker sees the rebuttal action and deadline
+- **AND** after a rebuttal or deadline expiry the page accurately says Court review is pending
+- **AND** focused browser/API tests, UI CI and root CI pass before closure
+- **Status:** CLOSED 2026-11-05 — the authoritative deadline reaches the UI, actor-specific waiting states cover before/equality/after/missing/rebutted cases, and focused checks, independent review, UI CI and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+### Requirement: Keyboard continuity during durable UI actions
+Mutation feedback SHALL retain meaningful keyboard focus when a pending operation
+replaces the initiating control, without creating duplicate requests.
+
+#### Scenario: T-227 Prove pending-action rerender loses keyboard focus
+- **WHEN** an operator or worker activates an authorized action repeatedly while its response is delayed
+- **THEN** a deterministic browser test verifies one submitted intent and exposes focus falling out of the action/recovery context during rerender
+- **Status:** CLOSED 2026-11-05 — deterministic delayed-request browser proof reproduced focus leaving the pending/recovery context while retaining one POST; the complete nine-mutation matrix and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+#### Scenario: T-228 Preserve focus through pending-action recovery UI
+- **WHEN** T-227 has verified failing-first evidence
+- **THEN** focus moves to meaningful pending/recovery feedback or the appropriate resulting action, with announced outcomes and duplicate-intent protection preserved
+- **AND** affected browser tests, independent review, UI CI and final root CI pass
+- **Status:** CLOSED 2026-11-05 — pending feedback uses neutral status semantics, failures use alert semantics, focus moves to the meaningful recovery endpoint, duplicate requests remain gated, and independent review plus final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+### Requirement: Observable dependency-failure and telemetry boundaries
+The adversarial campaign SHALL verify actual service behavior under Gateway
+unavailability and telemetry delivery failures using disposable resources.
+
+#### Scenario: T-229 Exercise missing Gateway and telemetry fault sequences
+- **WHEN** REC-04 and OPS-04/OPS-05 execute through public service boundaries with controlled dependency failures
+- **THEN** retained tests establish whether writes fail honestly, correlated traces omit sensitive payloads, and exporter failures preserve business outcomes
+- **Status:** CLOSED 2026-11-05 — disposable Gateway-outage and real telemetry sequences proved honest write failure/reconciliation, correlated redacted traces and exporter-independent business outcomes; final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+#### Scenario: T-230 Repair demonstrated dependency or telemetry contract failures
+- **WHEN** T-229 produces a reproducible current-contract failure and its exact root cause is recorded
+- **THEN** a bounded fix preserves authoritative writes, trace safety and business outcomes, without disabling telemetry or skipping tests
+- **AND** targeted checks, independent review and final root CI pass before closure
+- **Status:** RETIRED 2026-11-05 — NOT APPLICABLE. T-229 demonstrated no current-contract production defect; the apparent trace failure was a collector batch-timing issue corrected in the test oracle, so no implementation is claimed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+### Requirement: Explain frozen submitted work
+Task review SHALL make the existing frozen-submission boundary understandable
+without implying a supported replacement or revision action.
+
+#### Scenario: T-231 Prove submitted-work recovery guidance is missing
+- **WHEN** a worker or poster opens a submitted task
+- **THEN** a browser regression checks explicit frozen-file guidance and the supported review/dispute next step
+- **Status:** CLOSED 2026-11-05 — failing-first browser proof showed that submitted work lacked explicit frozen-file and supported recovery guidance; the focused regression and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+#### Scenario: T-232 Explain existing submission immutability and review paths
+- **WHEN** T-231 has verified failing evidence
+- **THEN** worker and poster copy explains that submitted files cannot be replaced and identifies existing review/dispute options without claiming a revision feature
+- **AND** affected browser checks, independent review, UI CI and root CI pass
+- **Status:** CLOSED 2026-11-05 — worker/poster copy now explains immutable submitted files and existing approve/dispute recovery without inventing revision support; independent review, UI CI and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+### Requirement: Compound recovery campaign coverage
+Recovery acceptance SHALL exercise multiple lifecycle states and combined
+interruptions instead of inferring end-to-end correctness from separate checks.
+
+#### Scenario: T-233 Exercise multi-state restore and compound recovery
+- **WHEN** OPS-01, ECO-05 and ECO-06 execute using owned disposable runtimes
+- **THEN** tests cover the specified multi-state backup/resume, compound fault chain and unattended success/dispute/expiry outcomes with exact identities, files and conserved balances
+- **Status:** CLOSED 2026-11-05 — owned disposable runtimes completed multi-state restore, the combined ECO-05 interruption chain and unattended approved/disputed/expired outcomes with exact files, identities and conserved balances; final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+#### Scenario: T-234 Repair demonstrated compound recovery failures
+- **WHEN** T-233 demonstrates a reproducible current-contract defect with failing-first evidence
+- **THEN** a bounded root-cause fix preserves the requested lifecycle and financial outcomes through interruptions
+- **AND** affected tests, independent review and final root CI pass
+- **Status:** RETIRED 2026-11-05 — NOT APPLICABLE. T-233's combined recovery sequences passed without a current-contract production defect, so no implementation is claimed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+### Requirement: Honest upload replay content identity
+Upload replay SHALL follow the declared idempotency contract without presenting
+different requested bytes as a newly successful delivery of those bytes.
+
+#### Scenario: T-235 Prove changed upload bytes reuse a successful response
+- **WHEN** a committed upload key is retried with changed bytes
+- **THEN** a regression records the observed original-asset success and establishes the applicable content-binding contract before a fix
+- **Status:** OPEN — AST-06 reproduced HTTP 201 for original asset on changed-byte retry; contract confirmation and complete failing evidence pending parent review.
+
+#### Scenario: T-236 Enforce the ratified upload replay content contract
+- **WHEN** T-235 confirms a current-contract violation with failing-first proof
+- **THEN** changed-content reuse is rejected without overwriting the original bytes or duplicating assets, while exact replay remains recoverable
+- **AND** targeted upload/recovery checks, independent review and final root CI pass
+- **Status:** OPEN — economics lane owns bounded repair after contract confirmation; no broadened upload or revision policy.
+
+### Requirement: Preserve action identity while UI mutations are pending
+A pending intent SHALL never be silently reused for a different user action or
+different terms. UI financial confirmation SHALL describe accepted-price settlement.
+
+#### Scenario: T-237 Prove competing UI actions reuse the wrong intent
+- **WHEN** approval is delayed and the poster activates Dispute or another distinct mutation
+- **THEN** a deterministic regression records whether the second action reuses the approval request instead of rejecting the conflicting intent
+- **Status:** CLOSED 2026-11-05 — failing-first browser proof showed delayed approve→dispute resent approve and bid-2 resent bid-1; both cases were retained before the fix and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+#### Scenario: T-238 Guard conflicting pending mutations and describe actual payment
+- **WHEN** T-237 has failing-first evidence
+- **THEN** different action/terms cannot reuse a saved intent, all conflicting controls reflect pending state, and exact retry remains available through its explicit recovery control
+- **AND** approval confirmation distinguishes accepted-price payment from unused-budget refund
+- **AND** regressions, independent review, UI CI and final root CI pass
+- **Status:** CLOSED 2026-11-05 — distinct pending mutations are rejected, all conflicting controls disable synchronously, exact retry remains explicit, prior eligibility restores safely, and approval copy names accepted-price payment plus unused-budget refund; independent review, UI CI and final root CI passed. [Evidence](../../../docs/plans/2026-11-04-adversarial/acceptance.md).
+
+### Requirement: Explicit decisions for adversarial campaign gaps
+Proposed guarantees SHALL remain distinguishable from implemented current
+contracts; a completed assessment does not declare unresolved gaps production-ready.
+
+#### Scenario: T-239 Resolve capability and runtime policy gaps from the campaign
+- **WHEN** the owner reviews the evidence-backed IDN-05/IDN-06, REC-06 and SUP-01 through SUP-07 dispositions in GOAL.md
+- **THEN** record explicit choices for worker capability admission, key-rotation guarantees, proactive service-version compatibility, service-only supervision, restart/mixed-mode behavior and environment refresh
+- **AND** any approved implementation receives its own failing-test/implementation pair before code changes; no persistent host installation occurs without explicit authorization
+- **Status:** OPEN — IDN-06 is a reproduced capability gap; the remaining listed scenarios depend on proposed-policy choices. Independent current-contract testing continues. Upload-key semantics are separately tracked by T-235/T-236. No policy choice is inferred from unanswered questions.
